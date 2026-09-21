@@ -6,6 +6,8 @@ import { PrismaModule } from "./database/prisma.module";
 import { StaffAuthModule } from "./modules/staff-auth/staff-auth.module";
 import { PlatformSettingsModule } from "./modules/platform-settings/platform-settings.module";
 import { AuditModule } from "./modules/audit/audit.module";
+import { CustomersModule } from "./modules/customers/customers.module";
+import { CatalogueModule } from "./modules/catalogue/catalogue.module";
 
 @Module({
   imports: [
@@ -17,6 +19,8 @@ import { AuditModule } from "./modules/audit/audit.module";
     StaffAuthModule,
     PlatformSettingsModule,
     AuditModule,
+    CustomersModule,
+    CatalogueModule,
   ],
   controllers: [AppController],
   providers: [AppService],
