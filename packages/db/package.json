@@ -2,15 +2,33 @@
   "name": "@klarone/db",
   "version": "0.1.0",
   "private": true,
-  "type": "module",
-  "devDependencies": {
-    "@types/pg": "^8.23.1",
-    "prisma": "7.10.0"
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "require": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "generate": "prisma generate",
+    "validate": "prisma validate",
+    "format": "prisma format",
+    "build": "tsc -p tsconfig.json",
+    "migrate:dev": "prisma migrate dev",
+    "migrate:status": "prisma migrate status"
   },
   "dependencies": {
-    "@prisma/adapter-pg": "^7.10.0",
+    "@prisma/adapter-pg": "7.10.0",
     "@prisma/client": "7.10.0",
-    "dotenv": "^18.0.1",
-    "pg": "^8.23.0"
-  }
+    "pg": "^8.16.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "dotenv": "^17.2.2",
+    "prisma": "7.10.0",
+    "typescript": "^5.9.3"
+  },
+  "type": "commonjs"
 }

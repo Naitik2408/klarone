@@ -29,3 +29,8 @@ packages/db/generated/
 # OS files
 .DS_Store
 Thumbs.db
+
+
+# Generated Prisma client
+packages/db/src/generated/
+packages/db/dist/
