@@ -1,0 +1,1940 @@
+// ============================================================
+// KLARONE - FULL DOMAIN DATABASE SCHEMA
+// Prisma 7 + PostgreSQL / Supabase
+//
+// This schema models the complete planned Klarone domain:
+// - B2C laptop commerce
+// - AI recommendation
+// - Inventory / warehouses
+// - Customers
+// - Admin / staff / RBAC
+// - Physical device lifecycle
+// - Support / Care
+// - Repairs / upgrades
+// - Technician operations
+// - Rentals
+// - Subscriptions / Care plans
+// - Device replacement lifecycle
+// - Reviews / notifications
+// - Audit / security / integrations
+//
+// Implementation is phased. A full schema does NOT mean every
+// module must be implemented in V1.
+//
+// Key modeling rule:
+// PRODUCT_VARIANT = logical sellable configuration
+// DEVICE_ASSET    = actual physical laptop/unit
+// ============================================================
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================================
+// PLATFORM / IDENTITY
+// ============================================================
+
+model PlatformSetting {
+  id           Int      @id @default(autoincrement())
+  settingKey   String   @unique
+  settingValue String?
+  description  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Person {
+  id          BigInt    @id @default(autoincrement())
+  firstName   String
+  middleName  String?
+  lastName    String?
+  phone       String?
+  email       String?
+  dateOfBirth DateTime?
+  gender      String?
+  status      String    @default("ACTIVE")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  userAccount UserAccount?
+  customer    Customer?
+
+  @@index([phone])
+  @@index([email])
+}
+
+model UserAccount {
+  id          BigInt    @id @default(autoincrement())
+  personId    BigInt    @unique
+  accountType String    @default("CUSTOMER")
+  status      String    @default("ACTIVE")
+  lastLoginAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  person           Person            @relation(fields: [personId], references: [id])
+  authIdentities   AuthIdentity[]
+  customer         Customer?
+  staffProfile     StaffProfile?
+  staffCredentials StaffCredential?
+  userRoles        UserRole[]
+  assignedRoles    UserRole[]        @relation("RoleAssignedBy")
+  accessScopes     UserAccessScope[]
+
+  createdProducts        Product[]                    @relation("ProductCreatedBy")
+  updatedProducts        Product[]                    @relation("ProductUpdatedBy")
+  inventoryTransactions  InventoryTransaction[]       @relation("InventoryTransactionPerformedBy")
+  priceHistoryChanges    ProductVariantPriceHistory[]
+  orderStatusChanges     OrderStatusHistory[]
+  initiatedRefunds       Refund[]
+  recommendationSessions RecommendationSession[]
+  recommendationFeedback RecommendationFeedback[]
+  notifications          Notification[]
+  auditLogs              AuditLog[]
+  securityEvents         SecurityEvent[]
+
+  serviceRequestsCreated  ServiceRequest[]          @relation("ServiceRequestCreatedBy")
+  serviceRequestsAssigned ServiceRequest[]          @relation("ServiceRequestAssignedTo")
+  serviceQuotesApproved   ServiceQuote[]            @relation("ServiceQuoteApprovedBy")
+  serviceJobsAssigned     ServiceJob[]              @relation("ServiceJobAssignedBy")
+  serviceJobStatusChanges ServiceJobStatusHistory[]
+  servicePaymentsCreated  ServicePayment[]          @relation("ServicePaymentCreatedBy")
+
+  rentalAgreementsCreated RentalAgreement[]     @relation("RentalAgreementCreatedBy")
+  rentalStatusChanges     RentalStatusHistory[]
+  rentalReturnsProcessed  RentalReturn[]        @relation("RentalReturnProcessedBy")
+
+  subscriptionPlansCreated SubscriptionPlan[]       @relation("SubscriptionPlanCreatedBy")
+  deviceAssignmentsCreated DeviceAssignment[]       @relation("DeviceAssignmentCreatedBy")
+  replacementEventsCreated DeviceReplacementEvent[] @relation("ReplacementCreatedBy")
+
+  supportTicketsAssigned SupportTicket[]  @relation("SupportTicketAssignedTo")
+  supportMessagesSent    SupportMessage[] @relation("SupportMessageSender")
+
+  webhookEventsProcessed WebhookEvent[] @relation("WebhookProcessedBy")
+
+  @@index([status])
+}
+
+model AuthIdentity {
+  id              BigInt    @id @default(autoincrement())
+  userAccountId   BigInt
+  provider        String
+  externalAuthId  String
+  identifierType  String?
+  identifierValue String?
+  metadata        Json?
+  verifiedAt      DateTime?
+  status          String    @default("ACTIVE")
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  userAccount UserAccount @relation(fields: [userAccountId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, externalAuthId])
+  @@index([userAccountId])
+  @@index([identifierValue])
+}
+
+model Customer {
+  id                 BigInt    @id @default(autoincrement())
+  personId           BigInt    @unique
+  userAccountId      BigInt    @unique
+  customerCode       String    @unique
+  customerType       String    @default("INDIVIDUAL")
+  marketingConsent   Boolean   @default(false)
+  marketingConsentAt DateTime?
+  termsAcceptedAt    DateTime?
+  status             String    @default("ACTIVE")
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  person      Person      @relation(fields: [personId], references: [id])
+  userAccount UserAccount @relation(fields: [userAccountId], references: [id])
+
+  addresses              CustomerAddress[]
+  carts                  Cart[]
+  couponUsages           CouponUsage[]
+  orders                 Order[]
+  reviews                ProductReview[]
+  notifications          Notification[]
+  recommendationSessions RecommendationSession[]
+  recommendationFeedback RecommendationFeedback[]
+  deviceAssignments      DeviceAssignment[]
+  supportTickets         SupportTicket[]
+  serviceRequests        ServiceRequest[]
+  servicePayments        ServicePayment[]
+  rentalAgreements       RentalAgreement[]
+  subscriptions          Subscription[]
+  replacementEvents      DeviceReplacementEvent[]
+
+  @@index([customerType])
+  @@index([status])
+}
+
+model StaffProfile {
+  id            BigInt   @id @default(autoincrement())
+  userAccountId BigInt   @unique
+  employeeCode  String   @unique
+  department    String?
+  jobTitle      String?
+  status        String   @default("ACTIVE")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  userAccount       UserAccount        @relation(fields: [userAccountId], references: [id])
+  technicianProfile TechnicianProfile?
+}
+
+model StaffCredential {
+  id                  BigInt    @id @default(autoincrement())
+  userAccountId       BigInt    @unique
+  loginEmail          String    @unique
+  passwordHash        String
+  passwordAlgorithm   String    @default("ARGON2ID")
+  passwordUpdatedAt   DateTime?
+  mfaRequired         Boolean   @default(true)
+  lastPasswordLoginAt DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  userAccount UserAccount @relation(fields: [userAccountId], references: [id], onDelete: Cascade)
+}
+
+model CustomerAddress {
+  id            BigInt   @id @default(autoincrement())
+  customerId    BigInt
+  addressType   String
+  recipientName String?
+  phone         String?
+  addressLine1  String
+  addressLine2  String?
+  landmark      String?
+  city          String
+  state         String
+  postalCode    String
+  country       String   @default("India")
+  isDefault     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  customer            Customer             @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  billingOrders       Order[]              @relation("OrderBillingAddress")
+  shippingOrders      Order[]              @relation("OrderShippingAddress")
+  serviceRequests     ServiceRequest[]
+  serviceAppointments ServiceAppointment[]
+  rentalAgreements    RentalAgreement[]    @relation("RentalBillingAddress")
+
+  @@index([customerId])
+  @@index([postalCode])
+}
+
+// ============================================================
+// RBAC / ADMIN
+// ============================================================
+
+model Role {
+  id           Int      @id @default(autoincrement())
+  name         String   @unique
+  description  String?
+  isSystemRole Boolean  @default(false)
+  status       String   @default("ACTIVE")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  permissions RolePermission[]
+  users       UserRole[]
+}
+
+model Permission {
+  id          Int      @id @default(autoincrement())
+  code        String   @unique
+  module      String
+  action      String
+  description String?
+  createdAt   DateTime @default(now())
+
+  roles RolePermission[]
+}
+
+model RolePermission {
+  roleId       Int
+  permissionId Int
+  createdAt    DateTime @default(now())
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+}
+
+model UserRole {
+  userAccountId    BigInt
+  roleId           Int
+  assignedByUserId BigInt?
+  assignedAt       DateTime  @default(now())
+  expiresAt        DateTime?
+  status           String    @default("ACTIVE")
+
+  userAccount UserAccount  @relation(fields: [userAccountId], references: [id], onDelete: Cascade)
+  role        Role         @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  assignedBy  UserAccount? @relation("RoleAssignedBy", fields: [assignedByUserId], references: [id], onDelete: SetNull)
+
+  @@id([userAccountId, roleId])
+  @@index([status])
+}
+
+model UserAccessScope {
+  id            BigInt   @id @default(autoincrement())
+  userAccountId BigInt
+  scopeType     String
+  scopeId       BigInt?
+  createdAt     DateTime @default(now())
+
+  userAccount UserAccount @relation(fields: [userAccountId], references: [id], onDelete: Cascade)
+
+  @@index([userAccountId])
+  @@index([scopeType, scopeId])
+}
+
+// ============================================================
+// PRODUCT CATALOGUE
+// ============================================================
+
+model Brand {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  slug        String   @unique
+  description String?
+  logoUrl     String?
+  websiteUrl  String?
+  status      String   @default("ACTIVE")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  products Product[]
+}
+
+model Category {
+  id           Int      @id @default(autoincrement())
+  parentId     Int?
+  name         String
+  slug         String   @unique
+  description  String?
+  displayOrder Int      @default(0)
+  status       String   @default("ACTIVE")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  parent   Category?  @relation("CategoryTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children Category[] @relation("CategoryTree")
+  products Product[]
+
+  @@index([parentId])
+}
+
+model Product {
+  id                     BigInt   @id @default(autoincrement())
+  brandId                Int
+  categoryId             Int
+  name                   String
+  slug                   String   @unique
+  modelNumber            String?
+  manufacturerPartNumber String?
+  shortDescription       String?
+  description            String?
+  productType            String   @default("LAPTOP")
+  status                 String   @default("DRAFT")
+  createdByUserId        BigInt?
+  updatedByUserId        BigInt?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  brand     Brand        @relation(fields: [brandId], references: [id])
+  category  Category     @relation(fields: [categoryId], references: [id])
+  createdBy UserAccount? @relation("ProductCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  updatedBy UserAccount? @relation("ProductUpdatedBy", fields: [updatedByUserId], references: [id], onDelete: SetNull)
+
+  variants          ProductVariant[]
+  media             ProductMedia[]
+  outgoingRelations ProductRelation[] @relation("ProductRelationFrom")
+  incomingRelations ProductRelation[] @relation("ProductRelationTo")
+
+  @@index([brandId])
+  @@index([categoryId])
+  @@index([productType])
+  @@index([status])
+}
+
+model ProductVariant {
+  id              BigInt   @id @default(autoincrement())
+  productId       BigInt
+  sku             String   @unique
+  variantName     String?
+  color           String?
+  ramGb           Int?
+  storageGb       Int?
+  operatingSystem String?
+  basePrice       Decimal  @db.Decimal(12, 2)
+  sellingPrice    Decimal  @db.Decimal(12, 2)
+  compareAtPrice  Decimal? @db.Decimal(12, 2)
+  currency        String   @default("INR")
+  warrantyMonths  Int?
+  status          String   @default("ACTIVE")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  product               Product                      @relation(fields: [productId], references: [id])
+  specification         ProductSpecification?
+  ports                 ProductPort[]
+  features              ProductFeature[]
+  media                 ProductMedia[]
+  tags                  ProductTag[]
+  priceHistory          ProductVariantPriceHistory[]
+  inventories           Inventory[]
+  inventoryTransactions InventoryTransaction[]
+  cartItems             CartItem[]
+  orderItems            OrderItem[]
+  recommendationResults RecommendationResult[]
+  productReviews        ProductReview[]
+  deviceAssets          DeviceAsset[]
+  serviceQuoteItems     ServiceQuoteItem[]
+  serviceJobPartUsages  ServiceJobPartUsage[]
+  rentalItems           RentalItem[]
+
+  @@index([productId])
+  @@index([status])
+  @@index([sellingPrice])
+}
+
+model ProductSpecification {
+  id                    BigInt   @id @default(autoincrement())
+  productVariantId      BigInt   @unique
+  cpuBrand              String?
+  cpuModel              String?
+  cpuGeneration         String?
+  cpuCores              Int?
+  cpuThreads            Int?
+  gpuBrand              String?
+  gpuModel              String?
+  gpuVramGb             Int?
+  ramType               String?
+  ramSpeedMhz           Int?
+  maxRamGb              Int?
+  ramSlots              Int?
+  storageType           String?
+  storageInterface      String?
+  storageSlots          Int?
+  maxStorageGb          Int?
+  displaySizeInches     Decimal? @db.Decimal(5, 2)
+  displayResolution     String?
+  displayPanelType      String?
+  displayRefreshRateHz  Int?
+  displayBrightnessNits Int?
+  displayColorGamut     String?
+  batteryCapacityWh     Decimal? @db.Decimal(7, 2)
+  weightKg              Decimal? @db.Decimal(6, 3)
+  widthMm               Decimal? @db.Decimal(8, 2)
+  depthMm               Decimal? @db.Decimal(8, 2)
+  heightMm              Decimal? @db.Decimal(8, 2)
+  webcamResolution      String?
+  wifiVersion           String?
+  bluetoothVersion      String?
+  keyboardType          String?
+  keyboardBacklight     Boolean?
+  fingerprintSensor     Boolean?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  productVariant ProductVariant @relation(fields: [productVariantId], references: [id], onDelete: Cascade)
+
+  @@index([cpuModel])
+  @@index([gpuModel])
+  @@index([ramType])
+  @@index([storageType])
+  @@index([displaySizeInches])
+}
+
+model ProductPort {
+  id               BigInt   @id @default(autoincrement())
+  productVariantId BigInt
+  portType         String
+  quantity         Int      @default(1)
+  version          String?
+  supportsCharging Boolean  @default(false)
+  supportsDisplay  Boolean  @default(false)
+  createdAt        DateTime @default(now())
+
+  productVariant ProductVariant @relation(fields: [productVariantId], references: [id], onDelete: Cascade)
+
+  @@index([productVariantId])
+}
+
+model ProductFeature {
+  id               BigInt   @id @default(autoincrement())
+  productVariantId BigInt
+  featureType      String
+  featureName      String
+  description      String?
+  score            Decimal? @db.Decimal(6, 2)
+  createdAt        DateTime @default(now())
+
+  productVariant ProductVariant @relation(fields: [productVariantId], references: [id], onDelete: Cascade)
+
+  @@index([productVariantId])
+  @@index([featureType])
+}
+
+model ProductMedia {
+  id               BigInt   @id @default(autoincrement())
+  productId        BigInt?
+  productVariantId BigInt?
+  mediaType        String
+  storageKey       String
+  url              String?
+  altText          String?
+  width            Int?
+  height           Int?
+  displayOrder     Int      @default(0)
+  isPrimary        Boolean  @default(false)
+  createdAt        DateTime @default(now())
+
+  product        Product?        @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productVariant ProductVariant? @relation(fields: [productVariantId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@index([productVariantId])
+}
+
+model Tag {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  slug      String   @unique
+  status    String   @default("ACTIVE")
+  createdAt DateTime @default(now())
+
+  products ProductTag[]
+}
+
+model ProductTag {
+  productVariantId BigInt
+  tagId            Int
+
+  productVariant ProductVariant @relation(fields: [productVariantId], references: [id], onDelete: Cascade)
+  tag            Tag            @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([productVariantId, tagId])
+}
+
+model ProductRelation {
+  id            BigInt   @id @default(autoincrement())
+  fromProductId BigInt
+  toProductId   BigInt
+  relationType  String
+  displayOrder  Int      @default(0)
+  createdAt     DateTime @default(now())
+
+  fromProduct Product @relation("ProductRelationFrom", fields: [fromProductId], references: [id], onDelete: Cascade)
+  toProduct   Product @relation("ProductRelationTo", fields: [toProductId], references: [id], onDelete: Cascade)
+
+  @@unique([fromProductId, toProductId, relationType])
+  @@index([relationType])
+}
+
+model ProductVariantPriceHistory {
+  id               BigInt   @id @default(autoincrement())
+  productVariantId BigInt
+  oldBasePrice     Decimal? @db.Decimal(12, 2)
+  newBasePrice     Decimal? @db.Decimal(12, 2)
+  oldSellingPrice  Decimal? @db.Decimal(12, 2)
+  newSellingPrice  Decimal? @db.Decimal(12, 2)
+  currency         String   @default("INR")
+  reason           String?
+  changedByUserId  BigInt?
+  createdAt        DateTime @default(now())
+
+  productVariant ProductVariant @relation(fields: [productVariantId], references: [id], onDelete: Cascade)
+  changedBy      UserAccount?   @relation(fields: [changedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([productVariantId])
+  @@index([changedByUserId])
+}
+
+// ============================================================
+// INVENTORY
+// ============================================================
+
+model Warehouse {
+  id           Int      @id @default(autoincrement())
+  name         String
+  code         String   @unique
+  addressLine1 String?
+  addressLine2 String?
+  city         String?
+  state        String?
+  postalCode   String?
+  country      String   @default("India")
+  status       String   @default("ACTIVE")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  inventories           Inventory[]
+  inventoryTransactions InventoryTransaction[]
+  shipments             Shipment[]
+  deviceAssets          DeviceAsset[]
+}
+
+model Inventory {
+  id                BigInt   @id @default(autoincrement())
+  warehouseId       Int
+  productVariantId  BigInt
+  quantityAvailable Int      @default(0)
+  quantityReserved  Int      @default(0)
+  reorderLevel      Int?
+  updatedAt         DateTime @updatedAt
+
+  warehouse      Warehouse              @relation(fields: [warehouseId], references: [id])
+  productVariant ProductVariant         @relation(fields: [productVariantId], references: [id], onDelete: Cascade)
+  transactions   InventoryTransaction[]
+
+  @@unique([warehouseId, productVariantId])
+  @@index([productVariantId])
+}
+
+model InventoryTransaction {
+  id                BigInt   @id @default(autoincrement())
+  inventoryId       BigInt
+  productVariantId  BigInt
+  warehouseId       Int
+  transactionType   String
+  quantity          Int
+  referenceType     String?
+  referenceId       BigInt?
+  previousQuantity  Int?
+  newQuantity       Int?
+  performedByUserId BigInt?
+  notes             String?
+  createdAt         DateTime @default(now())
+
+  inventory      Inventory      @relation(fields: [inventoryId], references: [id])
+  productVariant ProductVariant @relation(fields: [productVariantId], references: [id])
+  warehouse      Warehouse      @relation(fields: [warehouseId], references: [id])
+  performedBy    UserAccount?   @relation("InventoryTransactionPerformedBy", fields: [performedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([inventoryId])
+  @@index([productVariantId])
+  @@index([warehouseId])
+  @@index([referenceType, referenceId])
+}
+
+// ============================================================
+// AI / RECOMMENDATIONS
+// ============================================================
+
+model RecommendationSession {
+  id            String    @id @default(uuid()) @db.Uuid
+  userAccountId BigInt?
+  customerId    BigInt?
+  sessionToken  String?   @unique
+  status        String    @default("ACTIVE")
+  startedAt     DateTime  @default(now())
+  completedAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  userAccount         UserAccount?         @relation(fields: [userAccountId], references: [id], onDelete: SetNull)
+  customer            Customer?            @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  aiConversations     AiConversation[]
+  requirementProfiles RequirementProfile[]
+  recommendationRuns  RecommendationRun[]
+  orders              Order[]
+
+  @@index([userAccountId])
+  @@index([customerId])
+  @@index([status])
+}
+
+model AiConversation {
+  id                      BigInt    @id @default(autoincrement())
+  recommendationSessionId String    @db.Uuid
+  provider                String?
+  model                   String?
+  systemPromptVersion     String?
+  tokenInput              Int?
+  tokenOutput             Int?
+  startedAt               DateTime  @default(now())
+  endedAt                 DateTime?
+  createdAt               DateTime  @default(now())
+
+  recommendationSession RecommendationSession @relation(fields: [recommendationSessionId], references: [id], onDelete: Cascade)
+  messages              AiMessage[]
+}
+
+model AiMessage {
+  id               BigInt   @id @default(autoincrement())
+  aiConversationId BigInt
+  role             String
+  content          String
+  sequenceNumber   Int
+  createdAt        DateTime @default(now())
+
+  aiConversation AiConversation @relation(fields: [aiConversationId], references: [id], onDelete: Cascade)
+
+  @@unique([aiConversationId, sequenceNumber])
+}
+
+model RequirementProfile {
+  id                      BigInt   @id @default(autoincrement())
+  recommendationSessionId String   @db.Uuid
+  budgetMin               Decimal? @db.Decimal(12, 2)
+  budgetMax               Decimal? @db.Decimal(12, 2)
+  primaryUseCase          String?
+  portabilityPreference   String?
+  gamingRequirement       String?
+  codingRequirement       String?
+  designRequirement       String?
+  officeRequirement       String?
+  batteryPriority         String?
+  displayPriority         String?
+  performancePriority     String?
+  preferredOs             String?
+  minimumRamGb            Int?
+  minimumStorageGb        Int?
+  preferredScreenSize     String?
+  weightPreference        String?
+  expectedOwnershipYears  Int?
+  purchaseIntent          String?
+  rawUserInput            String?
+  extractedByModel        String?
+  extractionVersion       String?
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  recommendationSession RecommendationSession @relation(fields: [recommendationSessionId], references: [id], onDelete: Cascade)
+  items                 RequirementItem[]
+  runs                  RecommendationRun[]
+}
+
+model RequirementItem {
+  id                   BigInt   @id @default(autoincrement())
+  requirementProfileId BigInt
+  requirementKey       String
+  valueType            String
+  valueText            String?
+  valueNumber          Decimal? @db.Decimal(12, 2)
+  valueBoolean         Boolean?
+  importance           Decimal? @db.Decimal(6, 2)
+  source               String
+  createdAt            DateTime @default(now())
+
+  requirementProfile RequirementProfile @relation(fields: [requirementProfileId], references: [id], onDelete: Cascade)
+
+  @@index([requirementProfileId])
+  @@index([requirementKey])
+}
+
+model RecommendationRun {
+  id                      BigInt   @id @default(autoincrement())
+  recommendationSessionId String   @db.Uuid
+  requirementProfileId    BigInt
+  algorithmVersion        String
+  candidateCount          Int?
+  executionTimeMs         Int?
+  createdAt               DateTime @default(now())
+
+  recommendationSession RecommendationSession  @relation(fields: [recommendationSessionId], references: [id], onDelete: Cascade)
+  requirementProfile    RequirementProfile     @relation(fields: [requirementProfileId], references: [id])
+  results               RecommendationResult[]
+}
+
+model RecommendationResult {
+  id                  BigInt   @id @default(autoincrement())
+  recommendationRunId BigInt
+  productVariantId    BigInt
+  rank                Int
+  overallScore        Decimal  @db.Decimal(8, 3)
+  budgetScore         Decimal? @db.Decimal(8, 3)
+  performanceScore    Decimal? @db.Decimal(8, 3)
+  useCaseScore        Decimal? @db.Decimal(8, 3)
+  portabilityScore    Decimal? @db.Decimal(8, 3)
+  batteryScore        Decimal? @db.Decimal(8, 3)
+  displayScore        Decimal? @db.Decimal(8, 3)
+  upgradeabilityScore Decimal? @db.Decimal(8, 3)
+  ownershipScore      Decimal? @db.Decimal(8, 3)
+  matchReason         String?
+  tradeoffs           String?
+  recommendationType  String?
+  createdAt           DateTime @default(now())
+
+  recommendationRun RecommendationRun        @relation(fields: [recommendationRunId], references: [id], onDelete: Cascade)
+  productVariant    ProductVariant           @relation(fields: [productVariantId], references: [id])
+  feedback          RecommendationFeedback[]
+
+  @@unique([recommendationRunId, rank])
+  @@index([productVariantId])
+}
+
+model RecommendationFeedback {
+  id                     BigInt   @id @default(autoincrement())
+  recommendationResultId BigInt
+  userAccountId          BigInt?
+  customerId             BigInt?
+  feedbackType           String
+  reason                 String?
+  comment                String?
+  createdAt              DateTime @default(now())
+
+  recommendationResult RecommendationResult @relation(fields: [recommendationResultId], references: [id], onDelete: Cascade)
+  userAccount          UserAccount?         @relation(fields: [userAccountId], references: [id], onDelete: SetNull)
+  customer             Customer?            @relation(fields: [customerId], references: [id], onDelete: SetNull)
+
+  @@index([userAccountId])
+  @@index([customerId])
+}
+
+// ============================================================
+// COMMERCE / ORDERS / PAYMENTS
+// ============================================================
+
+model Cart {
+  id           String   @id @default(uuid()) @db.Uuid
+  customerId   BigInt?
+  sessionToken String?  @unique
+  status       String   @default("ACTIVE")
+  currency     String   @default("INR")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  customer Customer?  @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  items    CartItem[]
+
+  @@index([customerId])
+  @@index([status])
+}
+
+model CartItem {
+  id               BigInt   @id @default(autoincrement())
+  cartId           String   @db.Uuid
+  productVariantId BigInt
+  quantity         Int
+  unitPrice        Decimal  @db.Decimal(12, 2)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  cart           Cart           @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productVariant ProductVariant @relation(fields: [productVariantId], references: [id])
+
+  @@unique([cartId, productVariantId])
+}
+
+model Coupon {
+  id                    Int       @id @default(autoincrement())
+  code                  String    @unique
+  description           String?
+  discountType          String
+  discountValue         Decimal   @db.Decimal(12, 2)
+  minimumOrderAmount    Decimal?  @db.Decimal(12, 2)
+  maximumDiscountAmount Decimal?  @db.Decimal(12, 2)
+  usageLimit            Int?
+  usageCount            Int       @default(0)
+  startsAt              DateTime?
+  expiresAt             DateTime?
+  status                String    @default("ACTIVE")
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  usages CouponUsage[]
+}
+
+model CouponUsage {
+  id             BigInt   @id @default(autoincrement())
+  couponId       Int
+  customerId     BigInt
+  orderId        BigInt
+  discountAmount Decimal  @db.Decimal(12, 2)
+  usedAt         DateTime @default(now())
+
+  coupon   Coupon   @relation(fields: [couponId], references: [id])
+  customer Customer @relation(fields: [customerId], references: [id])
+  order    Order    @relation(fields: [orderId], references: [id])
+
+  @@unique([couponId, customerId, orderId])
+}
+
+model Order {
+  id                      BigInt    @id @default(autoincrement())
+  customerId              BigInt
+  orderNumber             String    @unique
+  status                  String    @default("PENDING")
+  paymentStatus           String    @default("PENDING")
+  fulfillmentStatus       String    @default("UNFULFILLED")
+  subtotal                Decimal   @db.Decimal(12, 2)
+  discountAmount          Decimal   @default(0) @db.Decimal(12, 2)
+  shippingAmount          Decimal   @default(0) @db.Decimal(12, 2)
+  taxAmount               Decimal   @default(0) @db.Decimal(12, 2)
+  totalAmount             Decimal   @db.Decimal(12, 2)
+  currency                String    @default("INR")
+  billingAddressId        BigInt?
+  shippingAddressId       BigInt?
+  recommendationSessionId String?   @db.Uuid
+  placedAt                DateTime?
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+
+  customer              Customer               @relation(fields: [customerId], references: [id])
+  billingAddress        CustomerAddress?       @relation("OrderBillingAddress", fields: [billingAddressId], references: [id], onDelete: SetNull)
+  shippingAddress       CustomerAddress?       @relation("OrderShippingAddress", fields: [shippingAddressId], references: [id], onDelete: SetNull)
+  recommendationSession RecommendationSession? @relation(fields: [recommendationSessionId], references: [id], onDelete: SetNull)
+
+  items             OrderItem[]
+  statusHistory     OrderStatusHistory[]
+  payments          Payment[]
+  refunds           Refund[]
+  shipments         Shipment[]
+  couponUsages      CouponUsage[]
+  deviceAssets      DeviceAsset[]
+  replacementEvents DeviceReplacementEvent[]
+
+  @@index([customerId])
+  @@index([status])
+  @@index([paymentStatus])
+  @@index([fulfillmentStatus])
+}
+
+model OrderItem {
+  id               BigInt   @id @default(autoincrement())
+  orderId          BigInt
+  productVariantId BigInt?
+  productName      String
+  sku              String
+  quantity         Int
+  unitPrice        Decimal  @db.Decimal(12, 2)
+  discountAmount   Decimal  @default(0) @db.Decimal(12, 2)
+  taxAmount        Decimal  @default(0) @db.Decimal(12, 2)
+  totalAmount      Decimal  @db.Decimal(12, 2)
+  createdAt        DateTime @default(now())
+
+  order             Order              @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productVariant    ProductVariant?    @relation(fields: [productVariantId], references: [id], onDelete: SetNull)
+  shipmentItems     ShipmentItem[]
+  reviews           ProductReview[]
+  deviceAssets      DeviceAsset[]      @relation("OriginatingOrderItem")
+  deviceAssignments DeviceAssignment[]
+
+  @@index([orderId])
+  @@index([productVariantId])
+}
+
+model OrderStatusHistory {
+  id              BigInt   @id @default(autoincrement())
+  orderId         BigInt
+  oldStatus       String?
+  newStatus       String
+  changedByUserId BigInt?
+  notes           String?
+  createdAt       DateTime @default(now())
+
+  order     Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  changedBy UserAccount? @relation(fields: [changedByUserId], references: [id], onDelete: SetNull)
+}
+
+model Payment {
+  id                BigInt    @id @default(autoincrement())
+  orderId           BigInt
+  provider          String
+  providerOrderId   String?
+  providerPaymentId String?
+  amount            Decimal   @db.Decimal(12, 2)
+  currency          String    @default("INR")
+  paymentMethod     String?
+  status            String    @default("CREATED")
+  paidAt            DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  order        Order                @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  transactions PaymentTransaction[]
+  refunds      Refund[]
+
+  @@index([orderId])
+  @@index([providerPaymentId])
+}
+
+model PaymentTransaction {
+  id                    BigInt   @id @default(autoincrement())
+  paymentId             BigInt
+  transactionType       String
+  amount                Decimal  @db.Decimal(12, 2)
+  providerTransactionId String?
+  status                String
+  metadata              Json?
+  createdAt             DateTime @default(now())
+
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  @@index([paymentId])
+  @@index([providerTransactionId])
+}
+
+model Refund {
+  id                BigInt    @id @default(autoincrement())
+  paymentId         BigInt
+  orderId           BigInt
+  amount            Decimal   @db.Decimal(12, 2)
+  reason            String?
+  providerRefundId  String?
+  status            String    @default("PENDING")
+  initiatedByUserId BigInt?
+  createdAt         DateTime  @default(now())
+  completedAt       DateTime?
+
+  payment     Payment      @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  order       Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  initiatedBy UserAccount? @relation(fields: [initiatedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+  @@index([providerRefundId])
+}
+
+model Shipment {
+  id             BigInt    @id @default(autoincrement())
+  orderId        BigInt
+  warehouseId    Int?
+  carrier        String?
+  trackingNumber String?
+  status         String    @default("CREATED")
+  shippedAt      DateTime?
+  deliveredAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  order     Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  warehouse Warehouse?     @relation(fields: [warehouseId], references: [id], onDelete: SetNull)
+  items     ShipmentItem[]
+
+  @@index([orderId])
+  @@index([trackingNumber])
+}
+
+model ShipmentItem {
+  id          BigInt @id @default(autoincrement())
+  shipmentId  BigInt
+  orderItemId BigInt
+  quantity    Int
+
+  shipment  Shipment  @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  orderItem OrderItem @relation(fields: [orderItemId], references: [id])
+
+  @@unique([shipmentId, orderItemId])
+}
+
+model ProductReview {
+  id                 BigInt   @id @default(autoincrement())
+  productVariantId   BigInt
+  customerId         BigInt
+  orderItemId        BigInt?
+  rating             Int
+  title              String?
+  reviewText         String?
+  isVerifiedPurchase Boolean  @default(false)
+  status             String   @default("PENDING")
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  productVariant ProductVariant @relation(fields: [productVariantId], references: [id])
+  customer       Customer       @relation(fields: [customerId], references: [id])
+  orderItem      OrderItem?     @relation(fields: [orderItemId], references: [id], onDelete: SetNull)
+  media          ReviewMedia[]
+}
+
+model ReviewMedia {
+  id         BigInt   @id @default(autoincrement())
+  reviewId   BigInt
+  mediaType  String?
+  storageKey String
+  url        String?
+  createdAt  DateTime @default(now())
+
+  review ProductReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+}
+
+// ============================================================
+// PHYSICAL DEVICES / OWNERSHIP / WARRANTY
+// ============================================================
+
+model DeviceAsset {
+  id                     BigInt    @id @default(autoincrement())
+  productVariantId       BigInt
+  warehouseId            Int?
+  originatingOrderId     BigInt?
+  originatingOrderItemId BigInt?
+  serialNumber           String?   @unique
+  assetTag               String?   @unique
+  conditionStatus        String    @default("NEW")
+  deviceStatus           String    @default("IN_STOCK")
+  acquisitionType        String    @default("PURCHASE")
+  purchaseCost           Decimal?  @db.Decimal(12, 2)
+  acquiredAt             DateTime?
+  retiredAt              DateTime?
+  notes                  String?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  productVariant       ProductVariant @relation(fields: [productVariantId], references: [id])
+  warehouse            Warehouse?     @relation(fields: [warehouseId], references: [id], onDelete: SetNull)
+  originatingOrder     Order?         @relation(fields: [originatingOrderId], references: [id], onDelete: SetNull)
+  originatingOrderItem OrderItem?     @relation("OriginatingOrderItem", fields: [originatingOrderItemId], references: [id], onDelete: SetNull)
+
+  assignments         DeviceAssignment[]
+  warranties          DeviceWarranty[]
+  warrantyClaims      WarrantyClaim[]
+  components          DeviceComponent[]
+  supportTickets      SupportTicket[]
+  serviceRequests     ServiceRequest[]
+  serviceAppointments ServiceAppointment[]
+  repairs             DeviceRepair[]
+  upgrades            DeviceUpgrade[]
+  rentalItems         RentalItem[]
+  subscriptions       Subscription[]
+  replacementAsOld    DeviceReplacementEvent[] @relation("ReplacementOldDevice")
+  replacementAsNew    DeviceReplacementEvent[] @relation("ReplacementNewDevice")
+
+  @@index([productVariantId])
+  @@index([warehouseId])
+  @@index([deviceStatus])
+  @@index([acquisitionType])
+}
+
+model DeviceAssignment {
+  id               BigInt    @id @default(autoincrement())
+  deviceAssetId    BigInt
+  customerId       BigInt
+  orderItemId      BigInt?
+  rentalItemId     BigInt?
+  assignmentType   String
+  startAt          DateTime
+  endAt            DateTime?
+  notes            String?
+  assignedByUserId BigInt?
+  createdAt        DateTime  @default(now())
+
+  deviceAsset DeviceAsset  @relation(fields: [deviceAssetId], references: [id], onDelete: Cascade)
+  customer    Customer     @relation(fields: [customerId], references: [id])
+  orderItem   OrderItem?   @relation(fields: [orderItemId], references: [id], onDelete: SetNull)
+  rentalItem  RentalItem?  @relation(fields: [rentalItemId], references: [id], onDelete: SetNull)
+  assignedBy  UserAccount? @relation("DeviceAssignmentCreatedBy", fields: [assignedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([deviceAssetId])
+  @@index([customerId])
+  @@index([assignmentType])
+}
+
+model DeviceWarranty {
+  id                  BigInt   @id @default(autoincrement())
+  deviceAssetId       BigInt
+  providerName        String
+  warrantyType        String
+  policyNumber        String?
+  startDate           DateTime
+  endDate             DateTime
+  coverageDescription String?
+  termsUrl            String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  deviceAsset DeviceAsset     @relation(fields: [deviceAssetId], references: [id], onDelete: Cascade)
+  claims      WarrantyClaim[]
+
+  @@index([deviceAssetId])
+  @@index([endDate])
+}
+
+model WarrantyClaim {
+  id               BigInt    @id @default(autoincrement())
+  warrantyId       BigInt
+  deviceAssetId    BigInt
+  serviceRequestId BigInt?
+  claimNumber      String    @unique
+  status           String    @default("OPEN")
+  claimReason      String?
+  createdAt        DateTime  @default(now())
+  resolvedAt       DateTime?
+
+  warranty       DeviceWarranty  @relation(fields: [warrantyId], references: [id], onDelete: Cascade)
+  deviceAsset    DeviceAsset     @relation(fields: [deviceAssetId], references: [id])
+  serviceRequest ServiceRequest? @relation(fields: [serviceRequestId], references: [id], onDelete: SetNull)
+}
+
+model DeviceComponent {
+  id            BigInt    @id @default(autoincrement())
+  deviceAssetId BigInt
+  componentType String
+  manufacturer  String?
+  model         String?
+  serialNumber  String?
+  capacityValue Decimal?  @db.Decimal(12, 2)
+  capacityUnit  String?
+  installedAt   DateTime  @default(now())
+  removedAt     DateTime?
+  status        String    @default("ACTIVE")
+  notes         String?
+
+  deviceAsset DeviceAsset @relation(fields: [deviceAssetId], references: [id], onDelete: Cascade)
+
+  @@index([deviceAssetId])
+  @@index([componentType, status])
+}
+
+model DeviceReplacementEvent {
+  id               BigInt   @id @default(autoincrement())
+  customerId       BigInt
+  oldDeviceAssetId BigInt
+  newDeviceAssetId BigInt?
+  newOrderId       BigInt?
+  reason           String?
+  createdByUserId  BigInt?
+  createdAt        DateTime @default(now())
+
+  customer  Customer     @relation(fields: [customerId], references: [id])
+  oldDevice DeviceAsset  @relation("ReplacementOldDevice", fields: [oldDeviceAssetId], references: [id])
+  newDevice DeviceAsset? @relation("ReplacementNewDevice", fields: [newDeviceAssetId], references: [id], onDelete: SetNull)
+  newOrder  Order?       @relation(fields: [newOrderId], references: [id], onDelete: SetNull)
+  createdBy UserAccount? @relation("ReplacementCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@index([customerId])
+  @@index([oldDeviceAssetId])
+}
+
+// ============================================================
+// SUPPORT / SERVICES / TECHNICIANS
+// ============================================================
+
+model ServiceCategory {
+  id          Int      @id @default(autoincrement())
+  name        String
+  slug        String   @unique
+  description String?
+  status      String   @default("ACTIVE")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  serviceTypes ServiceType[]
+}
+
+model ServiceType {
+  id                       Int      @id @default(autoincrement())
+  categoryId               Int
+  name                     String
+  slug                     String   @unique
+  description              String?
+  serviceMode              String   @default("HYBRID")
+  estimatedDurationMinutes Int?
+  basePrice                Decimal? @db.Decimal(12, 2)
+  status                   String   @default("ACTIVE")
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  category          ServiceCategory           @relation(fields: [categoryId], references: [id])
+  requests          ServiceRequest[]
+  subscriptionPlans SubscriptionPlanService[]
+}
+
+model ServiceArea {
+  id         Int      @id @default(autoincrement())
+  name       String
+  city       String
+  state      String
+  postalCode String?
+  slaMinutes Int?
+  status     String   @default("ACTIVE")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  technicians TechnicianServiceArea[]
+  requests    ServiceRequest[]
+}
+
+model TechnicianProfile {
+  id             BigInt   @id @default(autoincrement())
+  staffProfileId BigInt   @unique
+  technicianCode String   @unique
+  serviceMode    String   @default("FIELD")
+  status         String   @default("ACTIVE")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  staffProfile StaffProfile            @relation(fields: [staffProfileId], references: [id])
+  skills       TechnicianSkill[]
+  serviceAreas TechnicianServiceArea[]
+  appointments ServiceAppointment[]
+  diagnoses    ServiceDiagnosis[]
+  jobs         ServiceJob[]
+}
+
+model TechnicianSkill {
+  id                  BigInt   @id @default(autoincrement())
+  technicianProfileId BigInt
+  skillCode           String
+  skillName           String
+  proficiencyLevel    String?
+  createdAt           DateTime @default(now())
+
+  technicianProfile TechnicianProfile @relation(fields: [technicianProfileId], references: [id], onDelete: Cascade)
+
+  @@index([technicianProfileId])
+  @@index([skillCode])
+}
+
+model TechnicianServiceArea {
+  technicianProfileId BigInt
+  serviceAreaId       Int
+
+  technicianProfile TechnicianProfile @relation(fields: [technicianProfileId], references: [id], onDelete: Cascade)
+  serviceArea       ServiceArea       @relation(fields: [serviceAreaId], references: [id], onDelete: Cascade)
+
+  @@id([technicianProfileId, serviceAreaId])
+}
+
+model SupportTicket {
+  id               BigInt    @id @default(autoincrement())
+  customerId       BigInt
+  deviceAssetId    BigInt?
+  serviceRequestId BigInt?
+  ticketNumber     String    @unique
+  subject          String
+  status           String    @default("OPEN")
+  priority         String    @default("NORMAL")
+  assignedToUserId BigInt?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  closedAt         DateTime?
+
+  customer       Customer            @relation(fields: [customerId], references: [id])
+  deviceAsset    DeviceAsset?        @relation(fields: [deviceAssetId], references: [id], onDelete: SetNull)
+  serviceRequest ServiceRequest?     @relation(fields: [serviceRequestId], references: [id], onDelete: SetNull)
+  assignedTo     UserAccount?        @relation("SupportTicketAssignedTo", fields: [assignedToUserId], references: [id], onDelete: SetNull)
+  messages       SupportMessage[]
+  attachments    SupportAttachment[]
+
+  @@index([customerId])
+  @@index([deviceAssetId])
+  @@index([status])
+}
+
+model SupportMessage {
+  id                  BigInt   @id @default(autoincrement())
+  supportTicketId     BigInt
+  senderUserAccountId BigInt
+  message             String
+  createdAt           DateTime @default(now())
+
+  supportTicket SupportTicket @relation(fields: [supportTicketId], references: [id], onDelete: Cascade)
+  sender        UserAccount   @relation("SupportMessageSender", fields: [senderUserAccountId], references: [id])
+
+  attachments SupportAttachment[]
+
+  @@index([supportTicketId])
+}
+
+model SupportAttachment {
+  id               BigInt   @id @default(autoincrement())
+  supportTicketId  BigInt
+  supportMessageId BigInt?
+  storageKey       String
+  url              String?
+  mediaType        String?
+  createdAt        DateTime @default(now())
+
+  supportTicket  SupportTicket   @relation(fields: [supportTicketId], references: [id], onDelete: Cascade)
+  supportMessage SupportMessage? @relation(fields: [supportMessageId], references: [id], onDelete: SetNull)
+}
+
+model ServiceRequest {
+  id               BigInt    @id @default(autoincrement())
+  customerId       BigInt
+  deviceAssetId    BigInt?
+  serviceTypeId    Int
+  serviceAreaId    Int?
+  addressId        BigInt?
+  createdByUserId  BigInt?
+  assignedToUserId BigInt?
+  requestNumber    String    @unique
+  issueDescription String
+  priority         String    @default("NORMAL")
+  status           String    @default("OPEN")
+  estimatedAmount  Decimal?  @db.Decimal(12, 2)
+  finalAmount      Decimal?  @db.Decimal(12, 2)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  completedAt      DateTime?
+
+  customer    Customer         @relation(fields: [customerId], references: [id])
+  deviceAsset DeviceAsset?     @relation(fields: [deviceAssetId], references: [id], onDelete: SetNull)
+  serviceType ServiceType      @relation(fields: [serviceTypeId], references: [id])
+  serviceArea ServiceArea?     @relation(fields: [serviceAreaId], references: [id], onDelete: SetNull)
+  address     CustomerAddress? @relation(fields: [addressId], references: [id], onDelete: SetNull)
+  createdBy   UserAccount?     @relation("ServiceRequestCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  assignedTo  UserAccount?     @relation("ServiceRequestAssignedTo", fields: [assignedToUserId], references: [id], onDelete: SetNull)
+
+  supportTickets SupportTicket[]
+  appointments   ServiceAppointment[]
+  diagnoses      ServiceDiagnosis[]
+  quotes         ServiceQuote[]
+  job            ServiceJob?
+  warrantyClaims WarrantyClaim[]
+  payments       ServicePayment[]
+  attachments    ServiceRequestAttachment[]
+  repairs        DeviceRepair[]
+  upgrades       DeviceUpgrade[]
+
+  @@index([customerId])
+  @@index([deviceAssetId])
+  @@index([status])
+}
+
+model ServiceRequestAttachment {
+  id               BigInt   @id @default(autoincrement())
+  serviceRequestId BigInt
+  storageKey       String
+  url              String?
+  mediaType        String?
+  createdAt        DateTime @default(now())
+
+  serviceRequest ServiceRequest @relation(fields: [serviceRequestId], references: [id], onDelete: Cascade)
+}
+
+model ServiceAppointment {
+  id                  BigInt    @id @default(autoincrement())
+  serviceRequestId    BigInt
+  technicianProfileId BigInt?
+  customerAddressId   BigInt?
+  deviceAssetId       BigInt?
+  scheduledStartAt    DateTime
+  scheduledEndAt      DateTime?
+  status              String    @default("SCHEDULED")
+  notes               String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  serviceRequest    ServiceRequest     @relation(fields: [serviceRequestId], references: [id], onDelete: Cascade)
+  technicianProfile TechnicianProfile? @relation(fields: [technicianProfileId], references: [id], onDelete: SetNull)
+  customerAddress   CustomerAddress?   @relation(fields: [customerAddressId], references: [id], onDelete: SetNull)
+  deviceAsset       DeviceAsset?       @relation(fields: [deviceAssetId], references: [id], onDelete: SetNull)
+}
+
+model ServiceDiagnosis {
+  id                  BigInt   @id @default(autoincrement())
+  serviceRequestId    BigInt
+  technicianProfileId BigInt?
+  diagnosis           String
+  findings            String?
+  recommendedAction   String?
+  estimatedCost       Decimal? @db.Decimal(12, 2)
+  createdAt           DateTime @default(now())
+
+  serviceRequest    ServiceRequest     @relation(fields: [serviceRequestId], references: [id], onDelete: Cascade)
+  technicianProfile TechnicianProfile? @relation(fields: [technicianProfileId], references: [id], onDelete: SetNull)
+}
+
+model ServiceQuote {
+  id               BigInt    @id @default(autoincrement())
+  serviceRequestId BigInt
+  approvedByUserId BigInt?
+  quoteNumber      String    @unique
+  subtotal         Decimal   @db.Decimal(12, 2)
+  taxAmount        Decimal   @default(0) @db.Decimal(12, 2)
+  totalAmount      Decimal   @db.Decimal(12, 2)
+  status           String    @default("DRAFT")
+  validUntil       DateTime?
+  approvedAt       DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  serviceRequest ServiceRequest     @relation(fields: [serviceRequestId], references: [id], onDelete: Cascade)
+  approvedBy     UserAccount?       @relation("ServiceQuoteApprovedBy", fields: [approvedByUserId], references: [id], onDelete: SetNull)
+  items          ServiceQuoteItem[]
+}
+
+model ServiceQuoteItem {
+  id               BigInt  @id @default(autoincrement())
+  serviceQuoteId   BigInt
+  itemType         String
+  description      String
+  productVariantId BigInt?
+  quantity         Int     @default(1)
+  unitPrice        Decimal @db.Decimal(12, 2)
+  totalAmount      Decimal @db.Decimal(12, 2)
+
+  serviceQuote   ServiceQuote    @relation(fields: [serviceQuoteId], references: [id], onDelete: Cascade)
+  productVariant ProductVariant? @relation(fields: [productVariantId], references: [id], onDelete: SetNull)
+}
+
+model ServiceJob {
+  id                  BigInt    @id @default(autoincrement())
+  serviceRequestId    BigInt    @unique
+  technicianProfileId BigInt?
+  assignedByUserId    BigInt?
+  status              String    @default("OPEN")
+  startedAt           DateTime?
+  completedAt         DateTime?
+  customerNotes       String?
+  internalNotes       String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  serviceRequest    ServiceRequest            @relation(fields: [serviceRequestId], references: [id], onDelete: Cascade)
+  technicianProfile TechnicianProfile?        @relation(fields: [technicianProfileId], references: [id], onDelete: SetNull)
+  assignedBy        UserAccount?              @relation("ServiceJobAssignedBy", fields: [assignedByUserId], references: [id], onDelete: SetNull)
+  statusHistory     ServiceJobStatusHistory[]
+  partUsages        ServiceJobPartUsage[]
+  repair            DeviceRepair?
+  upgrade           DeviceUpgrade?
+}
+
+model ServiceJobStatusHistory {
+  id              BigInt   @id @default(autoincrement())
+  serviceJobId    BigInt
+  oldStatus       String?
+  newStatus       String
+  changedByUserId BigInt?
+  notes           String?
+  createdAt       DateTime @default(now())
+
+  serviceJob ServiceJob   @relation(fields: [serviceJobId], references: [id], onDelete: Cascade)
+  changedBy  UserAccount? @relation(fields: [changedByUserId], references: [id], onDelete: SetNull)
+}
+
+model ServiceJobPartUsage {
+  id               BigInt   @id @default(autoincrement())
+  serviceJobId     BigInt
+  productVariantId BigInt
+  quantity         Int
+  unitCost         Decimal  @db.Decimal(12, 2)
+  notes            String?
+  createdAt        DateTime @default(now())
+
+  serviceJob     ServiceJob     @relation(fields: [serviceJobId], references: [id], onDelete: Cascade)
+  productVariant ProductVariant @relation(fields: [productVariantId], references: [id])
+}
+
+model DeviceRepair {
+  id               BigInt    @id @default(autoincrement())
+  serviceRequestId BigInt
+  serviceJobId     BigInt    @unique
+  deviceAssetId    BigInt
+  repairType       String
+  diagnosisSummary String?
+  partsReplaced    String?
+  resultSummary    String?
+  createdAt        DateTime  @default(now())
+  completedAt      DateTime?
+
+  serviceRequest ServiceRequest @relation(fields: [serviceRequestId], references: [id], onDelete: Cascade)
+  serviceJob     ServiceJob     @relation(fields: [serviceJobId], references: [id], onDelete: Cascade)
+  deviceAsset    DeviceAsset    @relation(fields: [deviceAssetId], references: [id])
+}
+
+model DeviceUpgrade {
+  id               BigInt    @id @default(autoincrement())
+  serviceRequestId BigInt
+  serviceJobId     BigInt    @unique
+  deviceAssetId    BigInt
+  upgradeType      String
+  oldComponent     String?
+  newComponent     String?
+  oldValue         String?
+  newValue         String?
+  cost             Decimal?  @db.Decimal(12, 2)
+  createdAt        DateTime  @default(now())
+  completedAt      DateTime?
+
+  serviceRequest ServiceRequest @relation(fields: [serviceRequestId], references: [id], onDelete: Cascade)
+  serviceJob     ServiceJob     @relation(fields: [serviceJobId], references: [id], onDelete: Cascade)
+  deviceAsset    DeviceAsset    @relation(fields: [deviceAssetId], references: [id])
+}
+
+model ServicePayment {
+  id                BigInt    @id @default(autoincrement())
+  serviceRequestId  BigInt
+  customerId        BigInt
+  provider          String
+  providerPaymentId String?
+  amount            Decimal   @db.Decimal(12, 2)
+  currency          String    @default("INR")
+  paymentMethod     String?
+  status            String    @default("PENDING")
+  createdByUserId   BigInt?
+  paidAt            DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  serviceRequest ServiceRequest @relation(fields: [serviceRequestId], references: [id], onDelete: Cascade)
+  customer       Customer       @relation(fields: [customerId], references: [id])
+  createdBy      UserAccount?   @relation("ServicePaymentCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+}
+
+// ============================================================
+// RENTALS
+// ============================================================
+
+model RentalPlan {
+  id                  Int      @id @default(autoincrement())
+  name                String
+  code                String   @unique
+  billingPeriod       String
+  minimumDurationDays Int?
+  securityDeposit     Decimal? @db.Decimal(12, 2)
+  description         String?
+  status              String   @default("ACTIVE")
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  agreements RentalAgreement[]
+}
+
+model RentalAgreement {
+  id               BigInt   @id @default(autoincrement())
+  customerId       BigInt
+  rentalPlanId     Int
+  agreementNumber  String   @unique
+  billingAddressId BigInt?
+  startAt          DateTime
+  endAt            DateTime
+  securityDeposit  Decimal? @db.Decimal(12, 2)
+  subtotal         Decimal  @db.Decimal(12, 2)
+  taxAmount        Decimal  @default(0) @db.Decimal(12, 2)
+  totalAmount      Decimal  @db.Decimal(12, 2)
+  currency         String   @default("INR")
+  status           String   @default("DRAFT")
+  createdByUserId  BigInt?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  customer       Customer         @relation(fields: [customerId], references: [id])
+  rentalPlan     RentalPlan       @relation(fields: [rentalPlanId], references: [id])
+  billingAddress CustomerAddress? @relation("RentalBillingAddress", fields: [billingAddressId], references: [id], onDelete: SetNull)
+  createdBy      UserAccount?     @relation("RentalAgreementCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  items         RentalItem[]
+  payments      RentalPayment[]
+  statusHistory RentalStatusHistory[]
+  extensions    RentalExtension[]
+  returns       RentalReturn[]
+}
+
+model RentalItem {
+  id                BigInt   @id @default(autoincrement())
+  rentalAgreementId BigInt
+  productVariantId  BigInt
+  deviceAssetId     BigInt?
+  quantity          Int      @default(1)
+  dailyRate         Decimal? @db.Decimal(12, 2)
+  monthlyRate       Decimal? @db.Decimal(12, 2)
+  totalAmount       Decimal  @db.Decimal(12, 2)
+  createdAt         DateTime @default(now())
+
+  rentalAgreement RentalAgreement    @relation(fields: [rentalAgreementId], references: [id], onDelete: Cascade)
+  productVariant  ProductVariant     @relation(fields: [productVariantId], references: [id])
+  deviceAsset     DeviceAsset?       @relation(fields: [deviceAssetId], references: [id], onDelete: SetNull)
+  assignments     DeviceAssignment[]
+  returnItems     RentalReturnItem[]
+}
+
+model RentalPayment {
+  id                BigInt    @id @default(autoincrement())
+  rentalAgreementId BigInt
+  provider          String
+  providerPaymentId String?
+  amount            Decimal   @db.Decimal(12, 2)
+  currency          String    @default("INR")
+  status            String    @default("PENDING")
+  paymentType       String
+  paidAt            DateTime?
+  createdAt         DateTime  @default(now())
+
+  rentalAgreement RentalAgreement @relation(fields: [rentalAgreementId], references: [id], onDelete: Cascade)
+}
+
+model RentalStatusHistory {
+  id                BigInt   @id @default(autoincrement())
+  rentalAgreementId BigInt
+  oldStatus         String?
+  newStatus         String
+  changedByUserId   BigInt?
+  notes             String?
+  createdAt         DateTime @default(now())
+
+  rentalAgreement RentalAgreement @relation(fields: [rentalAgreementId], references: [id], onDelete: Cascade)
+  changedBy       UserAccount?    @relation(fields: [changedByUserId], references: [id], onDelete: SetNull)
+}
+
+model RentalExtension {
+  id                BigInt   @id @default(autoincrement())
+  rentalAgreementId BigInt
+  previousEndAt     DateTime
+  newEndAt          DateTime
+  additionalAmount  Decimal  @db.Decimal(12, 2)
+  reason            String?
+  createdAt         DateTime @default(now())
+
+  rentalAgreement RentalAgreement @relation(fields: [rentalAgreementId], references: [id], onDelete: Cascade)
+}
+
+model RentalReturn {
+  id                BigInt   @id @default(autoincrement())
+  rentalAgreementId BigInt
+  processedByUserId BigInt?
+  returnedAt        DateTime @default(now())
+  conditionNotes    String?
+  status            String   @default("RECEIVED")
+
+  rentalAgreement RentalAgreement    @relation(fields: [rentalAgreementId], references: [id], onDelete: Cascade)
+  processedBy     UserAccount?       @relation("RentalReturnProcessedBy", fields: [processedByUserId], references: [id], onDelete: SetNull)
+  items           RentalReturnItem[]
+}
+
+model RentalReturnItem {
+  id              BigInt  @id @default(autoincrement())
+  rentalReturnId  BigInt
+  rentalItemId    BigInt
+  conditionStatus String
+  damageCharge    Decimal @default(0) @db.Decimal(12, 2)
+  notes           String?
+
+  rentalReturn RentalReturn @relation(fields: [rentalReturnId], references: [id], onDelete: Cascade)
+  rentalItem   RentalItem   @relation(fields: [rentalItemId], references: [id])
+
+  @@unique([rentalReturnId, rentalItemId])
+}
+
+// ============================================================
+// SUBSCRIPTIONS / KLARONE CARE
+// ============================================================
+
+model SubscriptionPlan {
+  id               Int      @id @default(autoincrement())
+  name             String
+  code             String   @unique
+  planType         String
+  description      String?
+  billingPeriod    String
+  price            Decimal  @db.Decimal(12, 2)
+  currency         String   @default("INR")
+  durationDays     Int?
+  autoRenewDefault Boolean  @default(true)
+  status           String   @default("ACTIVE")
+  createdByUserId  BigInt?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  createdBy     UserAccount?              @relation("SubscriptionPlanCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  services      SubscriptionPlanService[]
+  subscriptions Subscription[]
+}
+
+model SubscriptionPlanService {
+  subscriptionPlanId Int
+  serviceTypeId      Int
+  quantityLimit      Int?
+  createdAt          DateTime @default(now())
+
+  subscriptionPlan SubscriptionPlan @relation(fields: [subscriptionPlanId], references: [id], onDelete: Cascade)
+  serviceType      ServiceType      @relation(fields: [serviceTypeId], references: [id], onDelete: Cascade)
+
+  @@id([subscriptionPlanId, serviceTypeId])
+}
+
+model Subscription {
+  id                 BigInt    @id @default(autoincrement())
+  customerId         BigInt
+  subscriptionPlanId Int
+  deviceAssetId      BigInt?
+  subscriptionNumber String    @unique
+  status             String    @default("ACTIVE")
+  startsAt           DateTime
+  endsAt             DateTime?
+  autoRenew          Boolean   @default(true)
+  currency           String    @default("INR")
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  customer         Customer              @relation(fields: [customerId], references: [id])
+  subscriptionPlan SubscriptionPlan      @relation(fields: [subscriptionPlanId], references: [id])
+  deviceAsset      DeviceAsset?          @relation(fields: [deviceAssetId], references: [id], onDelete: SetNull)
+  cycles           SubscriptionCycle[]
+  payments         SubscriptionPayment[]
+}
+
+model SubscriptionCycle {
+  id             BigInt    @id @default(autoincrement())
+  subscriptionId BigInt
+  cycleNumber    Int
+  periodStart    DateTime
+  periodEnd      DateTime
+  amount         Decimal   @db.Decimal(12, 2)
+  status         String    @default("PENDING")
+  billedAt       DateTime?
+  createdAt      DateTime  @default(now())
+
+  subscription Subscription          @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  payments     SubscriptionPayment[]
+
+  @@unique([subscriptionId, cycleNumber])
+}
+
+model SubscriptionPayment {
+  id                BigInt    @id @default(autoincrement())
+  subscriptionId    BigInt
+  cycleId           BigInt?
+  provider          String
+  providerPaymentId String?
+  amount            Decimal   @db.Decimal(12, 2)
+  currency          String    @default("INR")
+  status            String    @default("PENDING")
+  paidAt            DateTime?
+  createdAt         DateTime  @default(now())
+
+  subscription Subscription       @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  cycle        SubscriptionCycle? @relation(fields: [cycleId], references: [id], onDelete: SetNull)
+}
+
+// ============================================================
+// NOTIFICATIONS / AUDIT / SECURITY / INTEGRATIONS
+// ============================================================
+
+model NotificationTemplate {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  eventType String
+  channel   String
+  template  String
+  status    String   @default("ACTIVE")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  notifications Notification[]
+}
+
+model Notification {
+  id            BigInt    @id @default(autoincrement())
+  userAccountId BigInt?
+  customerId    BigInt?
+  templateId    Int?
+  channel       String
+  subject       String?
+  content       String
+  referenceType String?
+  referenceId   BigInt?
+  status        String    @default("QUEUED")
+  sentAt        DateTime?
+  deliveredAt   DateTime?
+  failedAt      DateTime?
+  createdAt     DateTime  @default(now())
+
+  userAccount UserAccount?          @relation(fields: [userAccountId], references: [id], onDelete: SetNull)
+  customer    Customer?             @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  template    NotificationTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+}
+
+model AuditLog {
+  id            BigInt   @id @default(autoincrement())
+  userAccountId BigInt?
+  action        String
+  module        String
+  entityType    String?
+  entityId      String?
+  description   String?
+  oldData       Json?
+  newData       Json?
+  ipAddress     String?
+  userAgent     String?
+  requestId     String?
+  createdAt     DateTime @default(now())
+
+  userAccount UserAccount? @relation(fields: [userAccountId], references: [id], onDelete: SetNull)
+
+  @@index([userAccountId])
+  @@index([entityType, entityId])
+  @@index([action])
+  @@index([module])
+  @@index([requestId])
+  @@index([createdAt])
+}
+
+model SystemEvent {
+  id            BigInt   @id @default(autoincrement())
+  eventType     String
+  source        String?
+  entityType    String?
+  entityId      String?
+  payload       Json?
+  correlationId String?
+  createdAt     DateTime @default(now())
+
+  @@index([eventType])
+  @@index([entityType, entityId])
+  @@index([correlationId])
+  @@index([createdAt])
+}
+
+model BackgroundJob {
+  id           BigInt    @id @default(autoincrement())
+  jobType      String
+  queueName    String?
+  status       String    @default("QUEUED")
+  payload      Json?
+  attempts     Int       @default(0)
+  maxAttempts  Int       @default(3)
+  errorMessage String?
+  scheduledAt  DateTime?
+  startedAt    DateTime?
+  completedAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([status])
+  @@index([jobType])
+  @@index([scheduledAt])
+}
+
+model SecurityEvent {
+  id            BigInt   @id @default(autoincrement())
+  userAccountId BigInt?
+  eventType     String
+  ipAddress     String?
+  userAgent     String?
+  metadata      Json?
+  createdAt     DateTime @default(now())
+
+  userAccount UserAccount? @relation(fields: [userAccountId], references: [id], onDelete: SetNull)
+
+  @@index([userAccountId])
+  @@index([eventType])
+  @@index([ipAddress])
+  @@index([createdAt])
+}
+
+model WebhookEvent {
+  id                BigInt    @id @default(autoincrement())
+  provider          String
+  externalEventId   String
+  eventType         String
+  payload           Json
+  status            String    @default("RECEIVED")
+  processedAt       DateTime?
+  errorMessage      String?
+  processedByUserId BigInt?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  processedBy UserAccount? @relation("WebhookProcessedBy", fields: [processedByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([provider, externalEventId])
+  @@index([provider, eventType])
+  @@index([status])
+}

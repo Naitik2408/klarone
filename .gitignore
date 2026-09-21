@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+**/node_modules/
+.pnpm-store/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Next.js
+.next/
+out/
+.vercel/
+
+# NestJS / build output
+dist/
+
+# Test / coverage
+coverage/
+
+# Tooling
+.turbo/
+*.log
+
+# Prisma generated client
+packages/db/generated/
+
+# OS files
+.DS_Store
+Thumbs.db
