@@ -1,13 +1,12 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
-import { AppController } from "./app.controller";
-import { AppService } from "./app.service";
 import { PrismaModule } from "./database/prisma.module";
 import { StaffAuthModule } from "./modules/staff-auth/staff-auth.module";
 import { PlatformSettingsModule } from "./modules/platform-settings/platform-settings.module";
 import { AuditModule } from "./modules/audit/audit.module";
 import { CustomersModule } from "./modules/customers/customers.module";
 import { CatalogueModule } from "./modules/catalogue/catalogue.module";
+import { CheckoutModule } from "./modules/checkout/checkout.module";
 
 @Module({
   imports: [
@@ -16,13 +15,12 @@ import { CatalogueModule } from "./modules/catalogue/catalogue.module";
       envFilePath: ["../../.env", ".env"],
     }),
     PrismaModule,
+    AuditModule,
     StaffAuthModule,
     PlatformSettingsModule,
-    AuditModule,
     CustomersModule,
     CatalogueModule,
+    CheckoutModule,
   ],
-  controllers: [AppController],
-  providers: [AppService],
 })
 export class AppModule {}

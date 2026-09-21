@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CartLink } from "../cart/cart-link";
 
 export function Header() {
   return (
@@ -49,13 +50,7 @@ export function Header() {
             Browse laptops
           </Link>
 
-          <Link
-            href="/cart"
-            className="flex h-10 items-center gap-2 rounded-full border border-slate-200 px-3.5 text-sm font-medium text-slate-800 transition-colors hover:bg-slate-50"
-          >
-            <span aria-hidden="true">🛒</span>
-            <span className="hidden sm:inline">Cart</span>
-          </Link>
+          <CartLink />
         </div>
       </div>
     </header>

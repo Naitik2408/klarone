@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Header } from "../../../components/site/header";
+import { AddToCartButton } from "../../../components/cart/add-to-cart-button";
 import { getProduct } from "../../../lib/api";
 
 interface ProductPageProps {
@@ -78,7 +79,7 @@ export default async function ProductPage({
         <main className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
           <Link
             href="/laptops"
-            className="text-sm font-medium text-slate-500 hover:text-slate-950"
+            className="text-sm font-medium text-slate-500 transition-colors hover:text-slate-950"
           >
             ← Back to laptops
           </Link>
@@ -322,6 +323,11 @@ export default async function ProductPage({
                   {variant.warrantyMonths} months warranty
                 </p>
               ) : null}
+
+              <AddToCartButton
+                product={product}
+                variantId={variant.id}
+              />
             </div>
 
             <div className="mt-7 rounded-2xl bg-slate-950 p-5 text-white">
@@ -437,8 +443,7 @@ export default async function ProductPage({
 
                   {port.quantity ? (
                     <p className="mt-1 text-sm text-slate-500">
-                      Quantity:{" "}
-                      {String(port.quantity)}
+                      Quantity: {String(port.quantity)}
                     </p>
                   ) : null}
                 </div>
