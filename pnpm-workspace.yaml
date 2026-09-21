@@ -7,3 +7,5 @@ allowBuilds:
   "unrs-resolver": true
   "prisma": true
   "@prisma/engines": true
+  "esbuild": true
+  "argon2": true
