@@ -7,6 +7,7 @@ import { AuditModule } from "./modules/audit/audit.module";
 import { CustomersModule } from "./modules/customers/customers.module";
 import { CatalogueModule } from "./modules/catalogue/catalogue.module";
 import { CheckoutModule } from "./modules/checkout/checkout.module";
+import { CustomerAuthModule } from "./modules/customer-auth/customer-auth.module";
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { CheckoutModule } from "./modules/checkout/checkout.module";
     CustomersModule,
     CatalogueModule,
     CheckoutModule,
+    CustomerAuthModule,
   ],
 })
 export class AppModule {}
