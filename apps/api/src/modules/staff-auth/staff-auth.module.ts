@@ -19,7 +19,10 @@ import { StaffPermissionGuard } from "./guards/permission.guard";
           "STAFF_AUTH_JWT_SECRET",
         ),
         signOptions: {
-          expiresIn: "15m",
+          expiresIn: (configService.get<string>(
+            "STAFF_AUTH_JWT_EXPIRES_IN",
+            "12h",
+          ) ?? "12h") as `${number}h` | `${number}d` | `${number}m` | `${number}s`,
           issuer: configService.get<string>(
             "STAFF_AUTH_JWT_ISSUER",
             "klarone-api",

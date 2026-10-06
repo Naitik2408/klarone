@@ -157,23 +157,41 @@ const permissions = [
     description: "View customer records",
   },
   {
+    code: "customers.create",
+    module: "customers",
+    action: "create",
+    description: "Create customer records",
+  },
+  {
     code: "customers.update",
     module: "customers",
     action: "update",
     description: "Update customer records",
   },
 
-  {
+    {
     code: "orders.read",
     module: "orders",
     action: "read",
     description: "View orders",
   },
   {
+    code: "orders.create",
+    module: "orders",
+    action: "create",
+    description: "Create orders and draft orders",
+  },
+  {
     code: "orders.update",
     module: "orders",
     action: "update",
     description: "Update order status and operational data",
+  },
+  {
+    code: "orders.drafts.manage",
+    module: "orders",
+    action: "drafts.manage",
+    description: "Manage draft orders — add/remove items, complete, cancel",
   },
   {
     code: "orders.cancel",

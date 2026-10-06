@@ -1,10 +1,17 @@
 import {
   Body,
   Controller,
+  Get,
+  Param,
   Post,
+  UseGuards,
 } from "@nestjs/common";
-import { CheckoutService } from "./checkout.service";
+
+import { CustomerAuthGuard } from "../customer-auth/guards/customer-auth.guard";
+import { CurrentCustomer } from "../customer-auth/current-customer.decorator";
+import type { AuthenticatedCustomer } from "../customer-auth/types/customer-session.types";
 import type { CheckoutQuoteDto } from "./dto/checkout-quote.dto";
+import { CheckoutService } from "./checkout.service";
 
 @Controller("checkout")
 export class CheckoutController {
@@ -13,9 +20,34 @@ export class CheckoutController {
   ) {}
 
   @Post("quote")
-  async createQuote(
+  async quote(
     @Body() body: CheckoutQuoteDto,
   ) {
-    return this.checkoutService.createQuote(body);
+    return this.checkoutService.quote(body);
+  }
+
+  @Post("order")
+  @UseGuards(CustomerAuthGuard)
+  async createOrder(
+    @CurrentCustomer()
+    customer: AuthenticatedCustomer,
+  ) {
+    return this.checkoutService.createOrder(
+      customer,
+    );
+  }
+
+  @Post("order/:orderNumber/cancel")
+  @UseGuards(CustomerAuthGuard)
+  async cancelPendingOrder(
+    @CurrentCustomer()
+    customer: AuthenticatedCustomer,
+    @Param("orderNumber")
+    orderNumber: string,
+  ) {
+    return this.checkoutService.cancelPendingOrder(
+      customer,
+      orderNumber,
+    );
   }
 }

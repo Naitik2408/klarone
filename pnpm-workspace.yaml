@@ -9,3 +9,5 @@ allowBuilds:
   "@prisma/engines": true
   "esbuild": true
   "argon2": true
+  "protobufjs": true
+  "@google/genai": true

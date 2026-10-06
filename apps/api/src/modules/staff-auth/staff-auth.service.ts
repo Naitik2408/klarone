@@ -98,11 +98,16 @@ export class StaffAuthService {
       tokenType: "staff-access",
     };
 
+    const expiresIn = this.configService.get<string>(
+      "STAFF_AUTH_JWT_EXPIRES_IN",
+      "12h",
+    );
+
     const accessToken = await this.jwtService.signAsync(payload, {
       secret: this.configService.getOrThrow<string>(
         "STAFF_AUTH_JWT_SECRET",
       ),
-      expiresIn: "15m",
+      expiresIn: (expiresIn ?? "12h") as `${number}h` | `${number}d` | `${number}m` | `${number}s`,
       issuer: this.configService.get<string>(
         "STAFF_AUTH_JWT_ISSUER",
         "klarone-api",
@@ -125,7 +130,7 @@ export class StaffAuthService {
     return {
       accessToken,
       tokenType: "Bearer",
-      expiresIn: 900,
+      expiresIn: 43200,
       staff: {
         userAccountId: userAccount.id.toString(),
         staffProfileId: userAccount.staffProfile.id.toString(),

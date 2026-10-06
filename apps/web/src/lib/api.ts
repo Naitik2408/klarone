@@ -4,6 +4,9 @@ import type {
   CatalogueProductDetail,
   CatalogueProductsResponse,
 } from "../types/catalogue";
+import type {
+  RecommendationStartResponse,
+} from "../types/recommendations";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:3000";
@@ -79,5 +82,21 @@ export async function getProduct(
 ): Promise<CatalogueProductDetail> {
   return apiFetch<CatalogueProductDetail>(
     `/catalogue/products/${encodeURIComponent(slug)}`,
+  );
+}
+
+export async function startRecommendation(params: {
+  message: string;
+  sessionToken?: string;
+}): Promise<RecommendationStartResponse> {
+  return apiFetch<RecommendationStartResponse>(
+    "/recommendations/start",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(params),
+    },
   );
 }

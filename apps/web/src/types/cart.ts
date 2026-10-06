@@ -1,11 +1,12 @@
 import type { CatalogueProductDetail } from "./catalogue";
 
 export interface CartItem {
+  id?: string;
   productId: string;
   variantId: string;
   productSlug: string;
   productName: string;
-  variantName: string | null;
+  variantName: string;
   sku: string;
   sellingPrice: string;
   compareAtPrice: string | null;

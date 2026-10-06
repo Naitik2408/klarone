@@ -4,34 +4,94 @@ import {
   Injectable,
   InternalServerErrorException,
 } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import { JwtService } from "@nestjs/jwt";
 import { randomUUID } from "node:crypto";
 import { PrismaService } from "../../database/prisma.service";
 import type {
   CustomerIdentityResult,
   VerifiedCustomerIdentity,
 } from "./types/customer-identity.types";
+import type { CustomerJwtPayload } from "./types/customer-session.types";
 import {
   CUSTOMER_AUTH_PROVIDER,
   type CustomerAuthProvider,
+  type CustomerOtpRequestResult,
+  type CustomerOtpVerificationInput,
 } from "./providers/customer-auth-provider";
+
+export interface CustomerAuthSessionResponse {
+  accessToken: string;
+  tokenType: "Bearer";
+  expiresIn: number;
+  customer: {
+    userAccountId: string;
+    customerId: string;
+    personId: string;
+  };
+}
 
 @Injectable()
 export class CustomerAuthService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly jwtService: JwtService,
+    private readonly configService: ConfigService,
     @Inject(CUSTOMER_AUTH_PROVIDER)
     private readonly authProvider: CustomerAuthProvider,
   ) {}
 
-  async resolveCredential(
-    credential: string,
-  ): Promise<CustomerIdentityResult> {
-    const identity =
-      await this.authProvider.verifyIdentity(
-        credential,
-      );
+  async requestOtp(
+    phone: string,
+  ): Promise<CustomerOtpRequestResult> {
+    return this.authProvider.requestOtp(phone);
+  }
 
-    return this.resolveVerifiedIdentity(identity);
+  async verifyOtp(
+    input: CustomerOtpVerificationInput,
+  ): Promise<CustomerAuthSessionResponse> {
+    const identity =
+      await this.authProvider.verifyOtp(input);
+
+    const customerIdentity =
+      await this.resolveVerifiedIdentity(identity);
+
+    const payload: CustomerJwtPayload = {
+      sub: customerIdentity.userAccountId,
+      userAccountId:
+        customerIdentity.userAccountId,
+      customerId: customerIdentity.customerId,
+      personId: customerIdentity.personId,
+      tokenType: "customer-access",
+    };
+
+    const accessToken =
+      await this.jwtService.signAsync(payload, {
+        issuer:
+          this.configService.get<string>(
+            "CUSTOMER_AUTH_JWT_ISSUER",
+            "klarone-api",
+          ),
+        audience:
+          this.configService.get<string>(
+            "CUSTOMER_AUTH_JWT_AUDIENCE",
+            "klarone-customer",
+          ),
+      });
+
+    return {
+      accessToken,
+      tokenType: "Bearer",
+      expiresIn: 1800,
+      customer: {
+        userAccountId:
+          customerIdentity.userAccountId,
+        customerId:
+          customerIdentity.customerId,
+        personId:
+          customerIdentity.personId,
+      },
+    };
   }
 
   async resolveVerifiedIdentity(
@@ -244,6 +304,10 @@ export class CustomerAuthService {
           provider,
           externalAuthId,
         };
+      },
+      {
+        maxWait: 15000,
+        timeout: 30000,
       },
     );
   }

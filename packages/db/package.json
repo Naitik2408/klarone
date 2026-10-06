@@ -2,13 +2,13 @@
   "name": "@klarone/db",
   "version": "0.1.0",
   "private": true,
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "require": "./dist/index.js",
-      "default": "./dist/index.js"
+      "types": "./dist/src/index.d.ts",
+      "require": "./dist/src/index.js",
+      "default": "./dist/src/index.js"
     }
   },
   "scripts": {
@@ -19,7 +19,8 @@
     "migrate:dev": "prisma migrate dev",
     "migrate:status": "prisma migrate status",
     "seed": "prisma db seed",
-    "catalogue:seed": "tsx prisma/catalogue-dev-seed.ts"
+    "catalogue:seed": "tsx prisma/catalogue-dev-seed.ts",
+    "backfill:options": "tsx prisma/backfill-options.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "7.10.0",

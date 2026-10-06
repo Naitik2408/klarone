@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import { Header } from "../components/site/header";
 import { HomeHero } from "../components/home/hero";
 import { FeaturedLaptops } from "../components/home/featured-laptops";
@@ -8,14 +8,16 @@ import { KolkataSupport } from "../components/home/support";
 
 export const metadata: Metadata = {
   title: "Klarone — Buy the right laptop, not just a laptop.",
+  description:
+    "Find the right laptop with Klarone Select, shop curated laptops, and get local support for setup, repairs and upgrades.",
 };
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white text-slate-950">
       <Header />
 
-      <main>
+      <main className="overflow-hidden">
         <HomeHero />
 
         <FeaturedLaptops />
@@ -28,13 +30,15 @@ export default function Home() {
       </main>
 
       <footer className="border-t border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-8 sm:px-6 md:flex-row md:items-center md:justify-between lg:px-8">
+        <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-10 sm:px-6 md:flex-row md:items-end md:justify-between lg:px-8">
           <div>
-            <p className="font-semibold tracking-tight text-slate-950">
+            <p className="text-lg font-semibold tracking-tight text-slate-950">
               Klarone
             </p>
-            <p className="mt-1 text-sm text-slate-500">
-              Laptops, recommendations and ownership support.
+
+            <p className="mt-2 max-w-md text-sm leading-6 text-slate-500">
+              Laptops, recommendations and ownership support — built around
+              helping you make a better laptop decision.
             </p>
           </div>
 
