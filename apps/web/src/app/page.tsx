@@ -1,52 +1,60 @@
-﻿import type { Metadata } from "next";
-import { Header } from "../components/site/header";
-import { HomeHero } from "../components/home/hero";
-import { FeaturedLaptops } from "../components/home/featured-laptops";
-import { WhyKlarone } from "../components/home/why-klarone";
-import { KlaroneSelect } from "../components/home/klarone-select";
-import { KolkataSupport } from "../components/home/support";
+import type { Metadata } from "next";
+import { StorefrontHeader } from "../components/storefront/header";
+import { StorefrontHero } from "../components/storefront/hero";
+import { StorefrontProductSection } from "../components/storefront/product-section";
+import { StorefrontFormulationsSection } from "../components/storefront/formulations-section";
+import { StorefrontGutHealthSection } from "../components/storefront/gut-health-section";
+import { StorefrontTestimonialSection } from "../components/storefront/testimonial-section";
+import { StorefrontSkinHealthSection } from "../components/storefront/skin-health-section";
+import { StorefrontCollectionsShowcase } from "../components/storefront/collections-showcase";
+import {
+  StorefrontNewsletterSection,
+  StorefrontFooter,
+} from "../components/storefront/newsletter-and-footer";
+import { SmoothScrollProvider } from "../components/storefront/smooth-scroll-provider";
 
 export const metadata: Metadata = {
-  title: "Klarone — Buy the right laptop, not just a laptop.",
+  title: "Wellina — Whole Body Health Starts in the Gut",
   description:
-    "Find the right laptop with Klarone Select, shop curated laptops, and get local support for setup, repairs and upgrades.",
+    "Clinically formulated wellness supplements engineered for vital balance and pure nourishment.",
 };
 
-export default function Home() {
+export default function StorefrontHomePage() {
   return (
-    <div className="min-h-screen bg-white text-slate-950">
-      <Header />
+    <SmoothScrollProvider>
+      <div className="min-h-screen bg-[#8b9e76] font-sans antialiased selection:bg-[#d6f088] selection:text-slate-950">
+        {/* 1. Floating Capsule Header */}
+        <StorefrontHeader />
 
-      <main className="overflow-hidden">
-        <HomeHero />
+        <main className="relative">
+          {/* 2. Hero Section: Split Dual-Tone Background & Typography */}
+          <StorefrontHero />
 
-        <FeaturedLaptops />
+          {/* 3. Product Catalog Section: 'Find your supplement' with carousel controls */}
+          <StorefrontProductSection />
 
-        <WhyKlarone />
+          {/* 4. Formulations Section: 'Science-backed formulations' with 3 feature cards */}
+          <StorefrontFormulationsSection />
 
-        <KlaroneSelect />
+          {/* 5. Gut Health Section: 'The future of gut health' with 4 icon columns */}
+          <StorefrontGutHealthSection />
 
-        <KolkataSupport />
-      </main>
+          {/* 6. Testimonial Section: Split lifestyle photo & editorial quote slider */}
+          <StorefrontTestimonialSection />
 
-      <footer className="border-t border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-10 sm:px-6 md:flex-row md:items-end md:justify-between lg:px-8">
-          <div>
-            <p className="text-lg font-semibold tracking-tight text-slate-950">
-              Klarone
-            </p>
+          {/* 7. Skin Health Section: Left timeline with right sticky stacked photography */}
+          <StorefrontSkinHealthSection />
 
-            <p className="mt-2 max-w-md text-sm leading-6 text-slate-500">
-              Laptops, recommendations and ownership support — built around
-              helping you make a better laptop decision.
-            </p>
-          </div>
+          {/* 8. Collections Showcase: Top ticker + Stats cards + Interactive collections tabs */}
+          <StorefrontCollectionsShowcase />
 
-          <p className="text-sm text-slate-400">
-            © {new Date().getFullYear()} Klarone
-          </p>
-        </div>
-      </footer>
-    </div>
+          {/* 9. Newsletter Section: 'Subscribe for updates, tips & exclusive offers' */}
+          <StorefrontNewsletterSection />
+        </main>
+
+        {/* 10. Storefront Luxury Editorial Footer */}
+        <StorefrontFooter />
+      </div>
+    </SmoothScrollProvider>
   );
 }

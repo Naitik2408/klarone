@@ -1,17 +1,20 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Plus_Jakarta_Sans, Instrument_Serif } from "next/font/google";
 import "./globals.css";
 import { CartProvider } from "../components/cart/cart-provider";
 import { CustomerAuthProvider } from "@/components/auth/customer-auth-provider";
 
-const geistSans = Geist({
-    variable: "--font-geist-sans",
+const sansFont = Plus_Jakarta_Sans({
+    variable: "--font-sans",
     subsets: ["latin"],
+    weight: ["400", "500", "600", "700"],
 });
 
-const geistMono = Geist_Mono({
-    variable: "--font-geist-mono",
+const serifFont = Instrument_Serif({
+    variable: "--font-serif",
     subsets: ["latin"],
+    weight: ["400"],
+    style: ["normal", "italic"],
 });
 
 export const metadata: Metadata = {
@@ -31,8 +34,7 @@ export default function RootLayout({
     return (
         <html
             lang="en"
-            data-scroll-behavior="smooth"
-            className={`${geistSans.variable} ${geistMono.variable}`}
+            className={`${sansFont.variable} ${serifFont.variable}`}
         >
             <body className="min-h-screen bg-white font-sans text-slate-950 antialiased">
                 <CustomerAuthProvider>
