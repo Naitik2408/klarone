@@ -1,8 +1,15 @@
 import { NestFactory } from "@nestjs/core";
+import type { NestExpressApplication } from "@nestjs/platform-express";
 import { AppModule } from "./app.module";
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    bodyParser: true,
+    rawBody: true,
+  });
+
+  app.useBodyParser("json", { limit: "25mb" });
+  app.useBodyParser("urlencoded", { limit: "25mb", extended: true });
 
   const allowedOrigins = (
     process.env.WEB_ORIGINS ??

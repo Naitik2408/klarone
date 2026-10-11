@@ -113,6 +113,26 @@ export class InventoryService {
               storageGb: true,
               sellingPrice: true,
               status: true,
+              media: {
+                orderBy: [{ isPrimary: "desc" }, { displayOrder: "asc" }],
+                take: 1,
+                select: {
+                  url: true,
+                  altText: true,
+                },
+              },
+              optionValues: {
+                select: {
+                  productOption: {
+                    select: { name: true },
+                  },
+                  productOptionValue: {
+                    select: {
+                      value: true,
+                    },
+                  },
+                },
+              },
 
               product: {
                 select: {
@@ -120,6 +140,15 @@ export class InventoryService {
                   name: true,
                   slug: true,
                   status: true,
+
+                  media: {
+                    where: { isPrimary: true },
+                    take: 1,
+                    select: {
+                      url: true,
+                      altText: true,
+                    },
+                  },
 
                   brand: {
                     select: {
@@ -248,17 +277,68 @@ export class InventoryService {
       );
     }
 
-    if (!inventory) {
-      throw new NotFoundException(
-        "Inventory record not found for this warehouse and product variant.",
-      );
-    }
-
     const notes = input.notes?.trim() || null;
 
     const result =
       await this.prisma.$transaction(
         async (tx) => {
+          let currentRecord: {
+            id: bigint;
+            quantityAvailable: number;
+            quantityReserved: number;
+          };
+
+          if (!inventory) {
+            // Auto-initialize inventory record if it does not exist yet
+            if (input.quantityDelta < 0) {
+              throw new ConflictException(
+                "Cannot reduce inventory below 0 for an uninitialized variant.",
+              );
+            }
+
+            const created = await tx.inventory.create({
+              data: {
+                warehouseId: input.warehouseId,
+                productVariantId,
+                quantityAvailable: input.quantityDelta,
+                quantityReserved: 0,
+              },
+              select: {
+                id: true,
+                quantityAvailable: true,
+                quantityReserved: true,
+              },
+            });
+
+            currentRecord = {
+              id: created.id,
+              quantityAvailable: 0,
+              quantityReserved: 0,
+            };
+
+            const transaction =
+              await tx.inventoryTransaction.create({
+                data: {
+                  inventoryId: created.id,
+                  productVariantId,
+                  warehouseId: input.warehouseId,
+                  transactionType: "MANUAL_IN",
+                  quantity: input.quantityDelta,
+                  referenceType: "STAFF_ADJUSTMENT",
+                  previousQuantity: 0,
+                  newQuantity: created.quantityAvailable,
+                  performedByUserId,
+                  notes,
+                },
+              });
+
+            return {
+              inventory: created,
+              transaction,
+              previousQuantity: 0,
+            };
+          }
+
           const locked =
             await tx.$queryRaw<
               Array<{

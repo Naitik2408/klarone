@@ -55,11 +55,11 @@ function sellable(item: StaffInventoryItem) {
   return Math.max(item.quantityAvailable - item.quantityReserved, 0);
 }
 
-/* Variant pill — matches Shopify's gray variant chip */
+/* Variant pill — matches exact Shopify variant pill */
 function VariantPill({ label }: { label: string }) {
   if (!label) return null;
   return (
-    <span className="inline-flex max-w-full items-center truncate rounded-md bg-neutral-100 px-1.5 py-0.5 text-[11.5px] font-normal text-neutral-600">
+    <span className="inline-flex items-center rounded-[6px] bg-[#e3e3e3] px-2 py-0.5 text-[12px] font-normal text-[#303030]">
       {label}
     </span>
   );
@@ -624,7 +624,7 @@ export default function StaffInventoryPage() {
           <div className="overflow-x-auto overflow-y-visible">
             <div className="min-w-[1020px]">
               {/* Header */}
-              <div className="grid grid-cols-[40px_minmax(280px,2.4fr)_minmax(110px,0.9fr)_minmax(90px,0.8fr)_minmax(90px,0.8fr)_minmax(100px,0.9fr)_minmax(90px,0.8fr)_minmax(90px,0.8fr)] items-center gap-2 border-b border-neutral-200 bg-white px-4 py-2.5 text-[12px] font-medium text-neutral-600">
+              <div className="grid grid-cols-[40px_minmax(280px,2.8fr)_minmax(130px,1.2fr)_minmax(110px,1fr)_minmax(110px,1fr)_minmax(110px,1fr)] items-center gap-2 border-b border-neutral-200 bg-white px-4 py-2.5 text-[12px] font-medium text-neutral-600">
                 <div className="flex justify-center">
                   <input
                     type="checkbox"
@@ -644,11 +644,6 @@ export default function StaffInventoryPage() {
                 <div>Product</div>
                 <div>SKU</div>
                 <div className="text-right">
-                  <span className="cursor-help border-b border-dotted border-neutral-400" title="Damaged, quality control, or safety stock">
-                    Unavailable
-                  </span>
-                </div>
-                <div className="text-right">
                   <span className="cursor-help border-b border-dotted border-neutral-400" title="Reserved for existing draft or confirmed orders">
                     Committed
                   </span>
@@ -661,11 +656,6 @@ export default function StaffInventoryPage() {
                 <div className="text-right">
                   <span className="cursor-help border-b border-dotted border-neutral-400" title="Physical inventory count in the warehouse">
                     On hand
-                  </span>
-                </div>
-                <div className="text-right">
-                  <span className="cursor-help border-b border-dotted border-neutral-400" title="Purchase orders in transit">
-                    Incoming
                   </span>
                 </div>
               </div>
@@ -697,30 +687,54 @@ export default function StaffInventoryPage() {
                   const sellableUnits = sellable(item);
                   const onHand = item.quantityAvailable;
                   const committed = item.quantityReserved;
-                  const unavailable = 0;
-                  const incoming = 0;
                   const isEditing = inlineEditingItemId === item.id;
 
-                  const variantLabel = [
-                    item.productVariant.variantName &&
-                    item.productVariant.variantName !== "Default"
-                      ? item.productVariant.variantName
-                      : null,
-                    item.productVariant.ramGb
-                      ? `${item.productVariant.ramGb}GB`
-                      : null,
-                    item.productVariant.storageGb
-                      ? storageLabel(item.productVariant.storageGb)
-                      : null,
-                  ]
-                    .filter(Boolean)
-                    .join(" / ");
+                  // Build variant label (options like Blue / Intel core i7, or fallback to ram/storage/variantName)
+                  const optionVals = item.productVariant.optionValues
+                    ?.map(
+                      (ov) =>
+                        ov.productOptionValue?.value ||
+                        ov.productOption?.name ||
+                        "",
+                    )
+                    .filter(Boolean) || [];
+
+                  const variantLabel =
+                    optionVals.length > 0
+                      ? optionVals.join(" / ")
+                      : [
+                          item.productVariant.variantName &&
+                          item.productVariant.variantName !== "Default"
+                            ? item.productVariant.variantName
+                            : null,
+                          item.productVariant.ramGb
+                            ? `${item.productVariant.ramGb}GB`
+                            : null,
+                          item.productVariant.storageGb
+                            ? storageLabel(item.productVariant.storageGb)
+                            : null,
+                        ]
+                          .filter(Boolean)
+                          .join(" / ");
+
+                  const imageUrl =
+                    item.productVariant.media?.[0]?.url ||
+                    item.productVariant.product.media?.[0]?.url ||
+                    null;
+
+                  const productId = item.productVariant.product.id;
+                  const variantId = item.productVariant.id;
 
                   return (
                     <div
                       key={item.id}
-                      className={`relative grid grid-cols-[40px_minmax(280px,2.4fr)_minmax(110px,0.9fr)_minmax(90px,0.8fr)_minmax(90px,0.8fr)_minmax(100px,0.9fr)_minmax(90px,0.8fr)_minmax(90px,0.8fr)] items-center gap-2 border-b border-neutral-100 px-4 py-2.5 transition-colors last:border-b-0 ${
-                        isEditing ? "bg-neutral-50/70" : "hover:bg-neutral-50"
+                      onClick={() =>
+                        router.push(
+                          `/staff/catalogue/products/${productId}/variants/${variantId}`,
+                        )
+                      }
+                      className={`group relative grid grid-cols-[40px_minmax(280px,2.8fr)_minmax(130px,1.2fr)_minmax(110px,1fr)_minmax(110px,1fr)_minmax(110px,1fr)] items-center gap-2 border-b border-neutral-100 px-4 py-2.5 transition-colors cursor-pointer last:border-b-0 ${
+                        isEditing ? "bg-neutral-50/70" : "hover:bg-neutral-50/80"
                       }`}
                     >
                       {/* Checkbox */}
@@ -745,15 +759,24 @@ export default function StaffInventoryPage() {
 
                       {/* Product */}
                       <div className="flex min-w-0 items-center gap-3">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-md border border-neutral-200 bg-neutral-100 text-[10px] font-semibold text-neutral-500">
-                          {item.productVariant.product.name.slice(0, 2).toUpperCase()}
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-neutral-200 bg-neutral-100 text-[10px] font-semibold text-neutral-500">
+                          {imageUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={imageUrl}
+                              alt={item.productVariant.product.name}
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            item.productVariant.product.name.slice(0, 2).toUpperCase()
+                          )}
                         </div>
                         <div className="min-w-0">
-                          <span className="block truncate text-[13px] font-medium text-neutral-900">
+                          <span className="block truncate text-[13px] font-medium text-neutral-900 group-hover:text-blue-600 transition-colors">
                             {item.productVariant.product.name}
                           </span>
                           {variantLabel && (
-                            <div className="mt-0.5">
+                            <div className="mt-1">
                               <VariantPill label={variantLabel} />
                             </div>
                           )}
@@ -765,11 +788,6 @@ export default function StaffInventoryPage() {
                         {item.productVariant.sku || (
                           <span className="text-neutral-400">No SKU</span>
                         )}
-                      </div>
-
-                      {/* Unavailable */}
-                      <div className="text-right text-[13px] tabular-nums text-neutral-500">
-                        {unavailable}
                       </div>
 
                       {/* Committed */}
@@ -973,11 +991,6 @@ export default function StaffInventoryPage() {
                       {/* On hand */}
                       <div className="text-right text-[13px] tabular-nums text-neutral-900">
                         {onHand}
-                      </div>
-
-                      {/* Incoming */}
-                      <div className="text-right text-[13px] tabular-nums text-neutral-500">
-                        {incoming}
                       </div>
                     </div>
                   );

@@ -5,6 +5,7 @@ import {
 } from "@nestjs/common";
 import { PrismaService } from "../../database/prisma.service";
 import type {
+  CreateMetafieldDefinitionInput,
   CreateMetaobjectEntryInput,
   ListMetaobjectEntriesQuery,
   ListMetafieldDefinitionsQuery,
@@ -104,6 +105,81 @@ export class MetaobjectsService {
     });
 
     return { items: definitions };
+  }
+
+  async createMetafieldDefinition(input: CreateMetafieldDefinitionInput) {
+    const name = input.name?.trim();
+    if (!name) {
+      throw new BadRequestException("Metafield definition name is required.");
+    }
+
+    const key =
+      input.key?.trim() ||
+      name
+        .toLowerCase()
+        .replace(/[^a-z0-9_]+/g, "_")
+        .replace(/^_+|_+$/g, "");
+
+    const namespace = input.namespace?.trim() || "kis";
+    const ownerType = input.ownerType || "PRODUCT";
+    const categoryId = input.categoryId ? Number(input.categoryId) : null;
+
+    if (categoryId) {
+      const cat = await this.prisma.category.findUnique({
+        where: { id: categoryId },
+        select: { id: true },
+      });
+      if (!cat) throw new NotFoundException(`Category ${categoryId} not found.`);
+    }
+
+    const existing = await this.prisma.metafieldDefinition.findFirst({
+      where: {
+        namespace,
+        key,
+        categoryId: categoryId ?? null,
+        ownerType,
+      },
+      select: { id: true },
+    });
+
+    if (existing) {
+      throw new BadRequestException(
+        `Metafield with key '${key}' already exists in namespace '${namespace}' for this category.`,
+      );
+    }
+
+    const created = await this.prisma.metafieldDefinition.create({
+      data: {
+        namespace,
+        key,
+        name,
+        ownerType,
+        type: input.type,
+        metaobjectType: input.metaobjectType ?? null,
+        multiple: Boolean(input.multiple),
+        options: input.options ? input.options : undefined,
+        displayOrder: input.displayOrder ?? 0,
+        categoryId,
+        status: "ACTIVE",
+      },
+    });
+
+    return created;
+  }
+
+  async deleteMetafieldDefinition(id: number) {
+    const existing = await this.prisma.metafieldDefinition.findUnique({
+      where: { id },
+    });
+    if (!existing) {
+      throw new NotFoundException(`Metafield definition ${id} not found.`);
+    }
+
+    await this.prisma.metafieldDefinition.delete({
+      where: { id },
+    });
+
+    return { success: true, id };
   }
 
   /* -------------------------------------------------------------- */

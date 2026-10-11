@@ -121,7 +121,6 @@ const navigation: NavItem[] = [
     href: "/staff/orders",
     icon: <OrdersIcon />,
     children: [
-      { label: "Orders", href: "/staff/orders" },
       { label: "Drafts", href: "/staff/orders/drafts" },
     ],
   },
@@ -130,7 +129,7 @@ const navigation: NavItem[] = [
     href: "/staff/catalogue/products",
     icon: <ProductsIcon />,
     children: [
-      { label: "All products", href: "/staff/catalogue/products" },
+      { label: "Collections", href: "/staff/catalogue/collections" },
       { label: "Inventory", href: "/staff/inventory" },
       { label: "Brands", href: "/staff/catalogue/brands" },
       { label: "Categories", href: "/staff/catalogue/categories" },
@@ -147,25 +146,34 @@ function SidebarNavItem({
   item: NavItem;
   pathname: string;
 }) {
-  const isActive =
-    item.href === "/staff"
-      ? pathname === "/staff"
-      : pathname === item.href || pathname.startsWith(`${item.href}/`);
-
   const childActive =
     item.children?.some(
       (c) => pathname === c.href || pathname.startsWith(`${c.href}/`),
     ) ?? false;
 
-  const [expanded, setExpanded] = useState(isActive || childActive);
+  // The parent item itself is only active if the URL matches the parent and does NOT match a known child
+  const isParentActive =
+    !childActive &&
+    (item.href === "/staff"
+      ? pathname === "/staff"
+      : pathname === item.href || pathname.startsWith(`${item.href}/`));
+
+  const [expanded, setExpanded] = useState(isParentActive || childActive);
   const hasChildren = !!item.children?.length;
+
+  // Automatically keep section expanded if visiting a child route
+  useEffect(() => {
+    if (childActive || isParentActive) {
+      setExpanded(true);
+    }
+  }, [childActive, isParentActive]);
 
   const rowClass = [
     "flex h-9 w-full items-center gap-3 rounded-lg px-2.5",
     "text-[13px] leading-none font-medium tracking-normal",
     "transition-colors",
-    isActive || childActive
-      ? "bg-white/[0.08] text-white"
+    isParentActive
+      ? "bg-white/[0.12] text-white font-semibold"
       : "text-[#b5b5b5] hover:bg-white/[0.06] hover:text-white",
   ].join(" ");
 
@@ -217,8 +225,8 @@ function SidebarNavItem({
                   "text-[13px] leading-none",
                   "transition-colors",
                   childIsActive
-                    ? "text-white"
-                    : "text-[#9a9a9a] hover:text-white",
+                    ? "bg-white/[0.08] font-medium text-white"
+                    : "text-[#9a9a9a] hover:bg-white/[0.04] hover:text-white",
                 ].join(" ")}
               >
                 {child.label}

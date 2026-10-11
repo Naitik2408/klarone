@@ -64,6 +64,38 @@ export async function listMetafieldDefinitions(
   );
 }
 
+export async function createMetafieldDefinition(
+  token: string,
+  input: {
+    name: string;
+    key?: string;
+    type: "text" | "number" | "boolean" | "select" | "metaobject";
+    categoryId?: number | null;
+    displayOrder?: number;
+    options?: string[];
+  },
+) {
+  return request<any>(
+    "/staff/metaobjects/definitions",
+    token,
+    {
+      method: "POST",
+      body: JSON.stringify(input),
+    },
+  );
+}
+
+export async function deleteMetafieldDefinition(
+  token: string,
+  id: number,
+) {
+  return request<{ success: boolean; id: number }>(
+    `/staff/metaobjects/definitions/${id}`,
+    token,
+    { method: "PATCH" },
+  );
+}
+
 /* ------------------------------------------------------------------ */
 /* Entries                                                             */
 /* ------------------------------------------------------------------ */

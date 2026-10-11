@@ -16,6 +16,12 @@ import type {
   UpdateStaffProductInput,
 } from "../types/staff-catalogue";
 
+export type {
+  StaffCatalogueProduct,
+  StaffCatalogueBrand,
+  StaffCatalogueCategory,
+};
+
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ??
   "http://localhost:3000";
@@ -92,6 +98,8 @@ export function getStaffProducts(
   params?: {
     search?: string;
     status?: string;
+    page?: number;
+    pageSize?: number;
   },
 ) {
   const query = new URLSearchParams();
@@ -102,6 +110,14 @@ export function getStaffProducts(
 
   if (params?.status && params.status !== "ALL") {
     query.set("status", params.status);
+  }
+
+  if (params?.page) {
+    query.set("page", String(params.page));
+  }
+
+  if (params?.pageSize) {
+    query.set("pageSize", String(params.pageSize));
   }
 
   const suffix = query.toString() ? `?${query.toString()}` : "";
@@ -175,6 +191,19 @@ export function publishStaffProduct(
     token,
     {
       method: "POST",
+    },
+  );
+}
+
+export function deleteStaffProduct(
+  token: string,
+  productId: string,
+) {
+  return staffRequest<{ id: string; deleted: boolean }>(
+    `/staff/catalogue/products/${productId}`,
+    token,
+    {
+      method: "DELETE",
     },
   );
 }
@@ -442,6 +471,19 @@ export function deactivateStaffBrand(
   );
 }
 
+export function deleteStaffBrand(
+  token: string,
+  brandId: number,
+) {
+  return staffRequest<{ id: number; deleted: boolean }>(
+    `/staff/catalogue/brands/${brandId}`,
+    token,
+    {
+      method: "DELETE",
+    },
+  );
+}
+
 /* ---------- Staff: taxonomy (categories) ---------- */
 
 export function getStaffCategories(token: string) {
@@ -489,6 +531,19 @@ export function deactivateStaffCategory(
     token,
     {
       method: "POST",
+    },
+  );
+}
+
+export function deleteStaffCategory(
+  token: string,
+  categoryId: number,
+) {
+  return staffRequest<{ id: number; deleted: boolean }>(
+    `/staff/catalogue/categories/${categoryId}`,
+    token,
+    {
+      method: "DELETE",
     },
   );
 }
@@ -601,6 +656,158 @@ export function adjustInventory(
     method: "POST",
     body: JSON.stringify(input),
   });
+}
+
+/* ---------- Staff: Collections (Database Persisted) ---------- */
+
+export interface StaffCollectionListItem {
+  id: number;
+  title: string;
+  slug: string;
+  description: string | null;
+  bannerImage: string | null;
+  rules: any;
+  status: string;
+  productCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface StaffCollectionDetail extends StaffCollectionListItem {
+  variants: Array<{
+    id: string;
+    productId: string;
+    productName: string;
+    variantName: string;
+    sku: string;
+    ramGb: number | null;
+    storageGb: number | null;
+    sellingPrice: string | number | null;
+    brandName: string;
+    categoryName: string;
+    imageUrl: string | null;
+    displayOrder: number;
+  }>;
+}
+
+export interface StaffCollectionsResponse {
+  items: StaffCollectionListItem[];
+  pagination: {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+export function getStaffCollections(
+  token: string,
+  params?: string | {
+    search?: string;
+    page?: number;
+    pageSize?: number;
+  },
+) {
+  const query = new URLSearchParams();
+
+  if (typeof params === "string") {
+    if (params.trim()) query.set("search", params.trim());
+  } else if (params) {
+    if (params.search?.trim()) query.set("search", params.search.trim());
+    if (params.page) query.set("page", String(params.page));
+    if (params.pageSize) query.set("pageSize", String(params.pageSize));
+  }
+
+  const suffix = query.toString() ? `?${query.toString()}` : "";
+  return staffRequest<StaffCollectionsResponse>(
+    `/staff/catalogue/collections${suffix}`,
+    token,
+  );
+}
+
+export function getStaffCollection(token: string, id: string | number) {
+  return staffRequest<StaffCollectionDetail>(
+    `/staff/catalogue/collections/${id}`,
+    token,
+  );
+}
+
+export function createStaffCollection(
+  token: string,
+  input: {
+    title: string;
+    slug?: string;
+    description?: string;
+    bannerImage?: string;
+    rules?: any;
+    variantIds?: string[];
+  },
+) {
+  return staffRequest<StaffCollectionDetail>(
+    "/staff/catalogue/collections",
+    token,
+    {
+      method: "POST",
+      body: JSON.stringify(input),
+    },
+  );
+}
+
+export function updateStaffCollection(
+  token: string,
+  id: string | number,
+  input: {
+    title?: string;
+    slug?: string;
+    description?: string;
+    bannerImage?: string;
+    rules?: any;
+    status?: string;
+  },
+) {
+  return staffRequest<StaffCollectionDetail>(
+    `/staff/catalogue/collections/${id}`,
+    token,
+    {
+      method: "PATCH",
+      body: JSON.stringify(input),
+    },
+  );
+}
+
+export function deleteStaffCollection(token: string, id: string | number) {
+  return staffRequest<{ success: boolean; id: number }>(
+    `/staff/catalogue/collections/${id}`,
+    token,
+    { method: "DELETE" },
+  );
+}
+
+export function addVariantsToStaffCollection(
+  token: string,
+  id: string | number,
+  variantIds: string[],
+) {
+  return staffRequest<StaffCollectionDetail>(
+    `/staff/catalogue/collections/${id}/variants`,
+    token,
+    {
+      method: "POST",
+      body: JSON.stringify({ variantIds }),
+    },
+  );
+}
+
+export function removeVariantFromStaffCollection(
+  token: string,
+  id: string | number,
+  variantId: string,
+) {
+  return staffRequest<StaffCollectionDetail>(
+    `/staff/catalogue/collections/${id}/variants/${variantId}`,
+    token,
+    { method: "DELETE" },
+  );
 }
 
 

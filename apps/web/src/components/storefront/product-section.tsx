@@ -194,12 +194,32 @@ export function StorefrontProductSection() {
   async function handleAddToCart(product: ProductItem) {
     try {
       setAddingId(product.id);
+      const mockProduct: any = {
+        id: product.id,
+        name: product.name,
+        slug: product.id,
+        shortDescription: null,
+        productType: "PHYSICAL",
+        brand: { id: 1, name: "Klarone", slug: "klarone" },
+        category: { id: 1, name: product.category, slug: product.category.toLowerCase() },
+        media: [],
+        variants: [
+          {
+            id: `${product.id}-default`,
+            sku: `${product.id}-SKU`,
+            variantName: product.name,
+            ramGb: null,
+            storageGb: null,
+            operatingSystem: null,
+            sellingPrice: String(product.price),
+            compareAtPrice: product.originalPrice ? String(product.originalPrice) : null,
+            currency: "INR",
+          },
+        ],
+      };
       await addItem({
-        productId: product.id,
+        product: mockProduct,
         variantId: `${product.id}-default`,
-        quantity: 1,
-        title: product.name,
-        price: product.price,
       });
     } catch {
       // Cart fallback

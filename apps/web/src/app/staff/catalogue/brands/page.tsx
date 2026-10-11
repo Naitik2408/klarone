@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   clearStaffAccessToken,
@@ -9,6 +9,7 @@ import {
 import {
   createStaffBrand,
   deactivateStaffBrand,
+  deleteStaffBrand,
   getStaffBrands,
   StaffCatalogueApiError,
   updateStaffBrand,
@@ -17,6 +18,15 @@ import type { StaffBrandListItem } from "@/types/staff-catalogue";
 
 const inputClass =
   "w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-[13px] text-neutral-900 outline-none transition placeholder:text-neutral-400 hover:border-neutral-300 focus:border-neutral-400 focus:ring-2 focus:ring-neutral-200";
+
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, "")
+    .replace(/[\s_-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
 
 type EditorState =
   | { mode: "closed" }
@@ -44,15 +54,48 @@ export default function StaffCatalogueBrandsPage() {
   const [status, setStatus] = useState<StatusKey>("ALL");
   const [statusMenuOpen, setStatusMenuOpen] = useState(false);
 
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [editor, setEditor] = useState<EditorState>({ mode: "closed" });
 
   const [formName, setFormName] = useState("");
   const [formSlug, setFormSlug] = useState("");
+  const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
   const [formDescription, setFormDescription] = useState("");
   const [formLogoUrl, setFormLogoUrl] = useState("");
   const [formWebsiteUrl, setFormWebsiteUrl] = useState("");
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState("");
+
+  function handleLogoFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const src = event.target?.result as string;
+      if (!src) return;
+
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const MAX_WIDTH = 400;
+        const scale = Math.min(1, MAX_WIDTH / img.width);
+        canvas.width = img.width * scale;
+        canvas.height = img.height * scale;
+        const ctx = canvas.getContext("2d");
+        ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const compressed = canvas.toDataURL("image/png");
+        setFormLogoUrl(compressed);
+      };
+      img.src = src;
+    };
+    reader.readAsDataURL(file);
+  }
 
   useEffect(() => {
     const activeToken = getStaffAccessToken();
@@ -78,6 +121,7 @@ export default function StaffCatalogueBrandsPage() {
 
   async function load(
     activeToken: string,
+    targetPage = page,
     searchOverride?: string,
     statusOverride?: StatusKey,
   ) {
@@ -90,9 +134,13 @@ export default function StaffCatalogueBrandsPage() {
       const result = await getStaffBrands(activeToken, {
         search: effectiveSearch.trim() || undefined,
         status: effectiveStatus === "ALL" ? undefined : effectiveStatus,
-        pageSize: 100,
+        page: targetPage,
+        pageSize: 20,
       });
       setBrands(result.items);
+      setTotal(result.pagination.total);
+      setTotalPages(Math.max(result.pagination.totalPages, 1));
+      setPage(result.pagination.page);
     } catch (caught) {
       if (
         caught instanceof StaffCatalogueApiError &&
@@ -112,45 +160,57 @@ export default function StaffCatalogueBrandsPage() {
 
   useEffect(() => {
     if (!token) return;
-    void load(token);
+    void load(token, 1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
+
+  function changePage(nextPage: number) {
+    if (!token || nextPage < 1 || nextPage > totalPages || nextPage === page) return;
+    void load(token, nextPage);
+  }
 
   function selectStatus(nextStatus: StatusKey) {
     setStatusMenuOpen(false);
     if (nextStatus === status) return;
     setStatus(nextStatus);
-    if (token) void load(token, search, nextStatus);
+    if (token) void load(token, 1, search, nextStatus);
   }
 
   function clearAllFilters() {
     setSearch("");
     setStatus("ALL");
-    if (token) void load(token, "", "ALL");
+    if (token) void load(token, 1, "", "ALL");
   }
+
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   function openCreate() {
     setFormName("");
     setFormSlug("");
+    setSlugManuallyEdited(false);
     setFormDescription("");
     setFormLogoUrl("");
     setFormWebsiteUrl("");
     setFormError("");
+    setFieldErrors({});
     setEditor({ mode: "create" });
   }
 
   function openEdit(brand: StaffBrandListItem) {
     setFormName(brand.name);
     setFormSlug(brand.slug);
+    setSlugManuallyEdited(true);
     setFormDescription(brand.description ?? "");
     setFormLogoUrl(brand.logoUrl ?? "");
     setFormWebsiteUrl(brand.websiteUrl ?? "");
     setFormError("");
+    setFieldErrors({});
     setEditor({ mode: "edit", brand });
   }
 
   function closeEditor() {
     if (saving) return;
+    setFieldErrors({});
     setEditor({ mode: "closed" });
   }
 
@@ -159,12 +219,20 @@ export default function StaffCatalogueBrandsPage() {
 
     const trimmedName = formName.trim();
     if (!trimmedName) {
-      setFormError("Brand name is required.");
+      setFieldErrors({ name: "Brand name is required." });
+      return;
+    }
+
+    if (formDescription.trim().length > 500) {
+      setFieldErrors({
+        description: `Description is too long (${formDescription.trim().length}/500 characters).`,
+      });
       return;
     }
 
     setSaving(true);
     setFormError("");
+    setFieldErrors({});
     setError("");
     setNotice("");
 
@@ -192,11 +260,48 @@ export default function StaffCatalogueBrandsPage() {
       setEditor({ mode: "closed" });
       await load(token);
     } catch (caught) {
-      setFormError(
-        caught instanceof Error ? caught.message : "Unable to save brand.",
-      );
+      const msg = caught instanceof Error ? caught.message : "Unable to save brand.";
+      const lower = msg.toLowerCase();
+      if (lower.includes("name")) {
+        setFieldErrors({ name: msg });
+      } else if (lower.includes("slug")) {
+        setFieldErrors({ slug: msg });
+      } else {
+        setFormError(msg);
+      }
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function deleteBrandAction(brand: StaffBrandListItem) {
+    if (!token) return;
+
+    if (brand.productCount > 0) {
+      window.alert(
+        `Cannot delete brand "${brand.name}" because it is currently assigned to ${brand.productCount} product${
+          brand.productCount === 1 ? "" : "s"
+        }.\n\nStandard E-commerce Rule: To prevent broken customer orders and orphaned products, you must reassign or delete those products first, or click "Deactivate brand" instead.`
+      );
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Are you sure you want to permanently delete brand "${brand.name}"? This action cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    setError("");
+    setNotice("");
+    try {
+      await deleteStaffBrand(token, brand.id);
+      setNotice(`Brand "${brand.name}" permanently deleted.`);
+      closeEditor();
+      await load(token);
+    } catch (caught) {
+      setError(
+        caught instanceof Error ? caught.message : "Unable to delete brand."
+      );
     }
   }
 
@@ -428,7 +533,7 @@ export default function StaffCatalogueBrandsPage() {
               className="h-full"
               onSubmit={(e) => {
                 e.preventDefault();
-                if (token) void load(token, search, status);
+                if (token) void load(token, 1, search, status);
               }}
             >
               <input
@@ -455,7 +560,7 @@ export default function StaffCatalogueBrandsPage() {
 
             <button
               type="button"
-              onClick={() => token && void load(token)}
+              onClick={() => token && void load(token, page)}
               disabled={loading}
               aria-label="Refresh"
               className="inline-flex h-7 w-7 items-center justify-center rounded-md text-neutral-600 hover:bg-neutral-100 disabled:opacity-50"
@@ -481,20 +586,19 @@ export default function StaffCatalogueBrandsPage() {
         {/* ----------------- Table Card (with matching gap) ----------------- */}
         <div className="mt-3 overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-xs">
           <div className="overflow-x-auto">
-            <div className="min-w-[880px]">
+            <div className="min-w-[700px]">
               {/* Header Row */}
-              <div className="grid grid-cols-[minmax(240px,2fr)_minmax(160px,1.2fr)_minmax(110px,0.8fr)_minmax(120px,0.9fr)_minmax(160px,1.1fr)] items-center gap-3 border-b border-neutral-200 bg-[#fafafa] px-4 py-2.5 text-[12px] font-medium text-[#616161]">
+              <div className="grid grid-cols-[minmax(280px,3fr)_minmax(160px,1.5fr)_minmax(120px,1fr)_minmax(100px,1fr)] items-center gap-3 border-b border-neutral-200 bg-[#f7f7f7] px-4 py-2.5 text-[12px] font-medium text-neutral-600">
                 <div>Brand</div>
                 <div>Slug</div>
-                <div>Status</div>
                 <div>Products</div>
-                <div className="text-right pr-2">Actions</div>
+                <div className="text-right pr-2">Status</div>
               </div>
 
               {/* Rows */}
               {loading ? (
-                <div className="flex items-center justify-center gap-2 py-20 text-[13px] text-[#616161]">
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-[#d4d4d4] border-t-[#1a1a1a]" />
+                <div className="flex items-center justify-center gap-2 py-20 text-[13px] text-neutral-500">
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-neutral-300 border-t-neutral-800" />
                   Loading brands…
                 </div>
               ) : filteredEmpty ? (
@@ -539,94 +643,133 @@ export default function StaffCatalogueBrandsPage() {
                   )}
                 </div>
               ) : (
-                brands.map((brand) => (
-                  <div
-                    key={brand.id}
-                    className="grid grid-cols-[minmax(240px,2fr)_minmax(160px,1.2fr)_minmax(110px,0.8fr)_minmax(120px,0.9fr)_minmax(160px,1.1fr)] items-center gap-3 border-b border-[#f1f1f1] px-4 py-3 transition-colors last:border-b-0 hover:bg-[#f7f7f7]"
-                  >
-                    <div className="flex min-w-0 items-center gap-3">
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-md border border-neutral-200 bg-neutral-100 text-[11px] font-semibold text-neutral-500">
-                        {brand.logoUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={brand.logoUrl}
-                            alt=""
-                            className="h-full w-full object-contain p-1"
-                          />
+                <div className="divide-y divide-neutral-100">
+                  {brands.map((brand) => (
+                    <div
+                      key={brand.id}
+                      role="link"
+                      tabIndex={0}
+                      onClick={() => openEdit(brand)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          openEdit(brand);
+                        }
+                      }}
+                      className="grid grid-cols-[minmax(280px,3fr)_minmax(160px,1.5fr)_minmax(120px,1fr)_minmax(100px,1fr)] items-center gap-3 px-4 py-3 hover:bg-[#fbfbfb] cursor-pointer transition-colors group"
+                    >
+                      {/* Brand Title & Logo */}
+                      <div className="flex min-w-0 items-center gap-3">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-neutral-200 bg-neutral-50 text-[11px] font-semibold text-neutral-500">
+                          {brand.logoUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={brand.logoUrl}
+                              alt=""
+                              className="h-full w-full object-contain p-1"
+                            />
+                          ) : (
+                            brand.name.slice(0, 2).toUpperCase()
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <span className="font-medium text-neutral-900 group-hover:underline block truncate">
+                            {brand.name}
+                          </span>
+                          {brand.description ? (
+                            <span className="text-[11.5px] text-neutral-500 truncate block">
+                              {brand.description}
+                            </span>
+                          ) : null}
+                        </div>
+                      </div>
+
+                      {/* Slug */}
+                      <div className="truncate text-[12.5px] text-neutral-600">
+                        {brand.slug}
+                      </div>
+
+                      {/* Product Count */}
+                      <div>
+                        <span className="inline-flex items-center rounded-md bg-neutral-100 px-2 py-0.5 text-[11.5px] font-medium text-neutral-700">
+                          {brand.productCount} {brand.productCount === 1 ? "product" : "products"}
+                        </span>
+                      </div>
+
+                      {/* Status */}
+                      <div className="text-right pr-2">
+                        {brand.status === "ACTIVE" ? (
+                          <span className="inline-flex items-center gap-1.5 rounded-full bg-[#cbf4c9] px-2.5 py-0.5 text-[11px] font-normal text-[#0e6245]">
+                            <svg
+                              width="10"
+                              height="10"
+                              viewBox="0 0 20 20"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                            >
+                              <circle cx="10" cy="10" r="7" />
+                            </svg>
+                            Active
+                          </span>
                         ) : (
-                          brand.name.slice(0, 2).toUpperCase()
+                          <span className="inline-flex items-center gap-1.5 rounded-full bg-[#f1f1f1] px-2.5 py-0.5 text-[11px] font-normal text-[#616161]">
+                            <svg
+                              width="10"
+                              height="10"
+                              viewBox="0 0 20 20"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                            >
+                              <circle cx="10" cy="10" r="7" />
+                            </svg>
+                            Inactive
+                          </span>
                         )}
                       </div>
-                      <div className="min-w-0">
-                        <div className="truncate text-[13px] font-medium text-neutral-900">
-                          {brand.name}
-                        </div>
-                        {brand.description ? (
-                          <p className="mt-0.5 truncate text-[12px] text-neutral-500">
-                            {brand.description}
-                          </p>
-                        ) : null}
-                      </div>
                     </div>
-
-                    <div className="truncate text-[12.5px] text-neutral-600">
-                      {brand.slug}
-                    </div>
-
-                    <div>
-                      <span
-                        className={`inline-flex items-center rounded-md px-2 py-0.5 text-[11.5px] font-medium ${
-                          brand.status === "ACTIVE"
-                            ? "bg-[#a6e8b1] text-[#0b5c2a]"
-                            : "bg-neutral-200 text-neutral-700"
-                        }`}
-                      >
-                        {brand.status === "ACTIVE" ? "Active" : "Inactive"}
-                      </span>
-                    </div>
-
-                    <div className="text-[12.5px] text-neutral-700">
-                      {brand.productCount}
-                    </div>
-
-                    <div className="flex justify-end gap-1.5 pr-2">
-                      <button
-                        type="button"
-                        onClick={() => openEdit(brand)}
-                        className="rounded-lg border border-neutral-200 bg-white px-2.5 py-1 text-[11.5px] font-medium text-neutral-700 hover:bg-neutral-50"
-                      >
-                        Edit
-                      </button>
-                      {brand.status === "ACTIVE" ? (
-                        <button
-                          type="button"
-                          onClick={() => void deactivate(brand)}
-                          className="rounded-lg border border-red-200 bg-red-50 px-2.5 py-1 text-[11.5px] font-medium text-red-700 hover:bg-red-100"
-                        >
-                          Deactivate
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => void reactivate(brand)}
-                          className="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11.5px] font-medium text-emerald-700 hover:bg-emerald-100"
-                        >
-                          Reactivate
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))
+                  ))}
+                </div>
               )}
             </div>
+          </div>
+
+          {/* Pagination Footer */}
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#e3e3e3] px-4 py-3 bg-white text-[12px] text-[#616161]">
+            <div>
+              Showing {brands.length} of {total} brand{total === 1 ? "" : "s"}
+              {totalPages > 1 && ` · Page ${page} of ${totalPages}`}
+            </div>
+
+            {totalPages > 1 && (
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  disabled={page <= 1 || loading}
+                  onClick={() => changePage(page - 1)}
+                  className="inline-flex h-7 items-center justify-center rounded-lg border border-[#d4d4d4] bg-white px-2.5 font-medium text-[#303030] shadow-xs hover:bg-[#f7f7f7] disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  disabled={page >= totalPages || loading}
+                  onClick={() => changePage(page + 1)}
+                  className="inline-flex h-7 items-center justify-center rounded-lg border border-[#d4d4d4] bg-white px-2.5 font-medium text-[#303030] shadow-xs hover:bg-[#f7f7f7] disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Footer count */}
-        {brands.length > 0 ? (
+        {total > 0 ? (
           <div className="mt-3 flex items-center justify-between text-[12px] text-neutral-500">
             <span>
-              {brands.length} {brands.length === 1 ? "brand" : "brands"}
+              {total} {total === 1 ? "brand" : "brands"} total
             </span>
             <span>Deactivated brands stay attached to existing products</span>
           </div>
@@ -676,10 +819,32 @@ export default function StaffCatalogueBrandsPage() {
                 </span>
                 <input
                   value={formName}
-                  onChange={(e) => setFormName(e.target.value)}
+                  onChange={(e) => {
+                    const nextName = e.target.value;
+                    setFormName(nextName);
+                    if (!slugManuallyEdited) {
+                      setFormSlug(slugify(nextName));
+                    }
+                    if (fieldErrors.name) {
+                      setFieldErrors((prev) => {
+                        const copy = { ...prev };
+                        delete copy.name;
+                        return copy;
+                      });
+                    }
+                  }}
                   placeholder="e.g. Lenovo"
-                  className={inputClass}
+                  className={`${inputClass} ${
+                    fieldErrors.name
+                      ? "!border-red-500 !ring-1 !ring-red-500/30 bg-red-50/20"
+                      : ""
+                  }`}
                 />
+                {fieldErrors.name ? (
+                  <p className="mt-1 text-[12px] text-red-600 font-medium">
+                    {fieldErrors.name}
+                  </p>
+                ) : null}
               </label>
 
               <label className="block">
@@ -688,35 +853,126 @@ export default function StaffCatalogueBrandsPage() {
                 </span>
                 <input
                   value={formSlug}
-                  onChange={(e) => setFormSlug(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFormSlug(val);
+                    setSlugManuallyEdited(val.length > 0);
+                    if (fieldErrors.slug) {
+                      setFieldErrors((prev) => {
+                        const copy = { ...prev };
+                        delete copy.slug;
+                        return copy;
+                      });
+                    }
+                  }}
                   placeholder="auto-generated from name if left blank"
-                  className={inputClass}
+                  className={`${inputClass} ${
+                    fieldErrors.slug
+                      ? "!border-red-500 !ring-1 !ring-red-500/30 bg-red-50/20"
+                      : ""
+                  }`}
                 />
+                {fieldErrors.slug ? (
+                  <p className="mt-1 text-[12px] text-red-600 font-medium">
+                    {fieldErrors.slug}
+                  </p>
+                ) : null}
               </label>
 
               <label className="block">
-                <span className="mb-1.5 block text-[12px] font-medium text-neutral-700">
-                  Description
-                </span>
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="block text-[12px] font-medium text-neutral-700">
+                    Description
+                  </span>
+                  <span
+                    className={`text-[11px] ${
+                      formDescription.length > 500
+                        ? "text-red-600 font-semibold"
+                        : "text-neutral-400"
+                    }`}
+                  >
+                    {formDescription.length}/500 chars
+                  </span>
+                </div>
                 <textarea
                   value={formDescription}
-                  onChange={(e) => setFormDescription(e.target.value)}
+                  onChange={(e) => {
+                    setFormDescription(e.target.value);
+                    if (fieldErrors.description) {
+                      setFieldErrors((prev) => {
+                        const copy = { ...prev };
+                        delete copy.description;
+                        return copy;
+                      });
+                    }
+                  }}
+                  maxLength={600}
                   rows={3}
-                  className={inputClass}
+                  className={`${inputClass} ${
+                    fieldErrors.description
+                      ? "!border-red-500 !ring-1 !ring-red-500/30 bg-red-50/20"
+                      : ""
+                  }`}
                 />
+                {fieldErrors.description ? (
+                  <p className="mt-1 text-[12px] text-red-600 font-medium">
+                    {fieldErrors.description}
+                  </p>
+                ) : null}
               </label>
 
-              <label className="block">
+              <div>
                 <span className="mb-1.5 block text-[12px] font-medium text-neutral-700">
-                  Logo URL
+                  Logo
                 </span>
-                <input
-                  value={formLogoUrl}
-                  onChange={(e) => setFormLogoUrl(e.target.value)}
-                  placeholder="https://…"
-                  className={inputClass}
-                />
-              </label>
+                <div className="flex items-center gap-3">
+                  <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-neutral-200 bg-neutral-50 text-[12px] font-medium text-neutral-400">
+                    {formLogoUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={formLogoUrl}
+                        alt="Logo preview"
+                        className="h-full w-full object-contain p-1"
+                      />
+                    ) : (
+                      "No logo"
+                    )}
+                  </div>
+                  <div className="flex flex-col gap-1.5 flex-1">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleLogoFileSelect}
+                      className="hidden"
+                    />
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="inline-flex h-8 items-center justify-center rounded-lg border border-neutral-200 bg-white px-3 text-[12px] font-medium text-neutral-700 shadow-xs hover:bg-neutral-50"
+                      >
+                        Upload logo
+                      </button>
+                      {formLogoUrl && (
+                        <button
+                          type="button"
+                          onClick={() => setFormLogoUrl("")}
+                          className="text-[12px] text-red-600 hover:underline"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                    <input
+                      value={formLogoUrl}
+                      onChange={(e) => setFormLogoUrl(e.target.value)}
+                      placeholder="Or enter image URL https://…"
+                      className="w-full rounded-lg border border-neutral-200 bg-white px-2.5 py-1.5 text-[12px] text-neutral-900 outline-none placeholder:text-neutral-400 focus:border-neutral-400"
+                    />
+                  </div>
+                </div>
+              </div>
 
               <label className="block">
                 <span className="mb-1.5 block text-[12px] font-medium text-neutral-700">
@@ -731,27 +987,78 @@ export default function StaffCatalogueBrandsPage() {
               </label>
             </div>
 
-            <div className="mt-auto flex justify-end gap-2 border-t border-neutral-200 bg-white px-5 py-3">
-              <button
-                type="button"
-                onClick={closeEditor}
-                disabled={saving}
-                className="rounded-lg border border-neutral-200 bg-white px-4 py-2 text-[13px] font-medium text-neutral-700 hover:bg-neutral-50 disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => void submit()}
-                disabled={saving}
-                className="rounded-lg bg-neutral-900 px-4 py-2 text-[13px] font-medium text-white hover:bg-neutral-800 disabled:opacity-50"
-              >
-                {saving
-                  ? "Saving…"
-                  : editor.mode === "create"
-                    ? "Create brand"
-                    : "Save changes"}
-              </button>
+            <div className="mt-auto flex items-center justify-between border-t border-neutral-200 bg-white px-5 py-3">
+              {editor.mode === "edit" ? (
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (editor.mode === "edit") {
+                        void deleteBrandAction(editor.brand);
+                      }
+                    }}
+                    disabled={saving}
+                    className="text-[12.5px] font-medium text-red-600 hover:underline disabled:opacity-50"
+                  >
+                    Delete brand
+                  </button>
+                  <span className="text-neutral-300">|</span>
+                  {editor.brand.status === "ACTIVE" ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (editor.mode === "edit") {
+                          void deactivate(editor.brand);
+                          closeEditor();
+                        }
+                      }}
+                      disabled={saving}
+                      className="text-[12.5px] font-medium text-neutral-600 hover:underline disabled:opacity-50"
+                    >
+                      Deactivate
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (editor.mode === "edit") {
+                          void reactivate(editor.brand);
+                          closeEditor();
+                        }
+                      }}
+                      disabled={saving}
+                      className="text-[12.5px] font-medium text-emerald-600 hover:underline disabled:opacity-50"
+                    >
+                      Reactivate
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div />
+              )}
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={closeEditor}
+                  disabled={saving}
+                  className="rounded-lg border border-neutral-200 bg-white px-4 py-2 text-[13px] font-medium text-neutral-700 hover:bg-neutral-50 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void submit()}
+                  disabled={saving}
+                  className="rounded-lg bg-neutral-900 px-4 py-2 text-[13px] font-medium text-white hover:bg-neutral-800 disabled:opacity-50"
+                >
+                  {saving
+                    ? "Saving…"
+                    : editor.mode === "create"
+                      ? "Create brand"
+                      : "Save changes"}
+                </button>
+              </div>
             </div>
           </div>
         </div>

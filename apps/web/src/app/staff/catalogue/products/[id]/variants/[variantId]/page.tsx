@@ -360,7 +360,7 @@ export default function VariantDetailPage() {
               </Link>
               <span className="text-neutral-300">/</span>
               <span className="truncate font-medium text-neutral-800">
-                {variant.sku}
+                {getVariantDisplayName(variant) || variant.sku}
               </span>
             </nav>
           </div>
@@ -560,63 +560,29 @@ export default function VariantDetailPage() {
                   )}
                 </button>
 
-                <div className="space-y-2">
-                  <div className="text-[14px] font-semibold text-neutral-900">
+                <div className="space-y-1.5 min-w-0">
+                  <div className="text-[15px] font-semibold text-neutral-900">
                     {getVariantDisplayName(variant)}
                   </div>
-                  <div className="flex flex-wrap items-center gap-3 text-[12.5px] text-neutral-700">
-                    <span className="inline-flex items-center gap-1.5">
-                      <svg
-                        viewBox="0 0 16 16"
-                        fill="none"
-                        className="h-3.5 w-3.5 text-neutral-500"
-                      >
-                        <circle
-                          cx="4"
-                          cy="8"
-                          r="1.6"
-                          stroke="currentColor"
-                          strokeWidth="1.3"
-                        />
-                        <circle
-                          cx="12"
-                          cy="4"
-                          r="1.6"
-                          stroke="currentColor"
-                          strokeWidth="1.3"
-                        />
-                        <circle
-                          cx="12"
-                          cy="12"
-                          r="1.6"
-                          stroke="currentColor"
-                          strokeWidth="1.3"
-                        />
-                        <path
-                          d="M5.5 8 10.5 4.6M5.5 8l5 3.4"
-                          stroke="currentColor"
-                          strokeWidth="1.3"
-                        />
-                      </svg>
-                      All channels
+                  <div className="flex flex-wrap items-center gap-2.5 text-[12px] text-neutral-600">
+                    <span
+                      className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                        variant.status === "ACTIVE"
+                          ? "bg-[#cbf4c9] text-[#0e6245]"
+                          : "bg-[#ffea8a] text-[#5c4200]"
+                      }`}
+                    >
+                      <span className="h-1.5 w-1.5 rounded-full bg-current opacity-80" />
+                      {variant.status === "ACTIVE" ? "Active" : variant.status}
                     </span>
-                    <span className="inline-flex items-center gap-1.5">
-                      <svg
-                        viewBox="0 0 16 16"
-                        fill="none"
-                        className="h-3.5 w-3.5 text-neutral-500"
-                      >
-                        <rect
-                          x="3"
-                          y="3"
-                          width="10"
-                          height="10"
-                          rx="1"
-                          stroke="currentColor"
-                          strokeWidth="1.3"
-                        />
-                      </svg>
-                      None
+                    {variant.sku ? (
+                      <span className="inline-flex items-center gap-1 font-mono text-[11.5px] text-neutral-600">
+                        <span className="text-neutral-400">SKU:</span> {variant.sku}
+                      </span>
+                    ) : null}
+                    <span className="text-neutral-300">•</span>
+                    <span className="text-neutral-500">
+                      Product: {product.name}
                     </span>
                   </div>
                 </div>

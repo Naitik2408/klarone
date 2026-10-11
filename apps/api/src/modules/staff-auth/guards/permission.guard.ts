@@ -17,6 +17,11 @@ type AuthenticatedRequest = Request & {
 
 @Injectable()
 export class StaffPermissionGuard implements CanActivate {
+  private static permissionCache = new Map<
+    string,
+    { permissions: Set<string>; expiresAt: number }
+  >();
+
   constructor(
     private readonly reflector: Reflector,
     private readonly prisma: PrismaService,
@@ -43,6 +48,19 @@ export class StaffPermissionGuard implements CanActivate {
       );
     }
 
+    const cacheKey = staff.userAccountId.toString();
+    const now = Date.now();
+    const cached = StaffPermissionGuard.permissionCache.get(cacheKey);
+
+    if (cached && cached.expiresAt > now) {
+      if (!cached.permissions.has(requiredPermission)) {
+        throw new ForbiddenException(
+          `Missing permission: ${requiredPermission}`,
+        );
+      }
+      return true;
+    }
+
     const userRoles = await this.prisma.userRole.findMany({
       where: {
         userAccountId: staff.userAccountId,
@@ -65,6 +83,15 @@ export class StaffPermissionGuard implements CanActivate {
         role: {
           select: {
             id: true,
+            permissions: {
+              select: {
+                permission: {
+                  select: {
+                    code: true,
+                  },
+                },
+              },
+            },
           },
         },
       },
@@ -76,29 +103,22 @@ export class StaffPermissionGuard implements CanActivate {
       );
     }
 
-    const roleIds = userRoles.map(
-      (userRole) => userRole.role.id,
-    );
+    const permissionSet = new Set<string>();
+    for (const ur of userRoles) {
+      for (const rp of ur.role.permissions) {
+        if (rp.permission?.code) {
+          permissionSet.add(rp.permission.code);
+        }
+      }
+    }
 
-    const permission = await this.prisma.rolePermission.findFirst({
-      where: {
-        roleId: {
-          in: roleIds,
-        },
-        permission: {
-          code: requiredPermission,
-        },
-      },
-      select: {
-        permission: {
-          select: {
-            code: true,
-          },
-        },
-      },
+    // Cache permissions for 60 seconds
+    StaffPermissionGuard.permissionCache.set(cacheKey, {
+      permissions: permissionSet,
+      expiresAt: now + 60_000,
     });
 
-    if (!permission) {
+    if (!permissionSet.has(requiredPermission)) {
       throw new ForbiddenException(
         `Missing permission: ${requiredPermission}`,
       );

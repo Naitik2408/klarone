@@ -1,12 +1,14 @@
 
 import {
   BadRequestException,
+  Inject,
   Injectable,
   NotFoundException,
   ServiceUnavailableException,
 } from "@nestjs/common";
-import { v2 as cloudinary } from "cloudinary";
 import { PrismaService } from "../../database/prisma.service";
+import { STORAGE_PROVIDER } from "../../common/storage/storage.factory";
+import type { IStorageProvider } from "../../common/storage/storage-provider.interface";
 
 const MAX_FILE_SIZE = 8 * 1024 * 1024;
 const ALLOWED_MIME_TYPES = new Set([
@@ -18,14 +20,11 @@ const ALLOWED_MIME_TYPES = new Set([
 
 @Injectable()
 export class StaffProductMediaService {
-  constructor(private readonly prisma: PrismaService) {
-    cloudinary.config({
-      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-      api_key: process.env.CLOUDINARY_API_KEY,
-      api_secret: process.env.CLOUDINARY_API_SECRET,
-      secure: true,
-    });
-  }
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(STORAGE_PROVIDER)
+    private readonly storageProvider: IStorageProvider,
+  ) {}
 
   // Convert BigInt identifiers to strings for JSON-safe API responses.
   // Keep BigInt values unchanged in Prisma queries and mutations.
@@ -113,47 +112,11 @@ export class StaffProductMediaService {
       }
     }
 
-    if (
-      !process.env.CLOUDINARY_CLOUD_NAME ||
-      !process.env.CLOUDINARY_API_KEY ||
-      !process.env.CLOUDINARY_API_SECRET
-    ) {
-      throw new ServiceUnavailableException(
-        "Cloudinary is not configured on the API.",
-      );
-    }
-
-    const uploadResult = await new Promise<{
-      public_id: string;
-      secure_url: string;
-      width: number;
-      height: number;
-    }>((resolve, reject) => {
-      const stream = cloudinary.uploader.upload_stream(
-        {
-          folder: `klarone/products/${productId.toString()}`,
-          resource_type: "image",
-        },
-        (error, result) => {
-          if (error || !result) {
-            reject(error ?? new Error("Cloudinary upload failed."));
-            return;
-          }
-
-          resolve({
-            public_id: result.public_id,
-            secure_url: result.secure_url,
-            width: result.width,
-            height: result.height,
-          });
-        },
-      );
-
-      stream.end(file.buffer);
-    }).catch(() => {
-      throw new ServiceUnavailableException(
-        "Image upload failed. Please try again.",
-      );
+    const uploadResult = await this.storageProvider.upload({
+      folder: `klarone/products/${productId.toString()}`,
+      filename: file.originalname,
+      buffer: file.buffer,
+      mimetype: file.mimetype,
     });
 
     try {
@@ -166,11 +129,11 @@ export class StaffProductMediaService {
           productId,
           productVariantId,
           mediaType: "IMAGE",
-          storageKey: uploadResult.public_id,
-          url: uploadResult.secure_url,
+          storageKey: uploadResult.key,
+          url: uploadResult.url,
           altText: altText?.trim() || null,
-          width: uploadResult.width,
-          height: uploadResult.height,
+          width: uploadResult.width ?? null,
+          height: uploadResult.height ?? null,
           displayOrder: mediaCount,
           isPrimary: mediaCount === 0,
         },
@@ -178,9 +141,7 @@ export class StaffProductMediaService {
 
       return this.serializeMedia(media);
     } catch (error) {
-      await cloudinary.uploader.destroy(uploadResult.public_id, {
-        resource_type: "image",
-      });
+      await this.storageProvider.delete(uploadResult.key);
       throw error;
     }
   }
@@ -292,9 +253,7 @@ export class StaffProductMediaService {
     }
 
     try {
-      await cloudinary.uploader.destroy(media.storageKey, {
-        resource_type: "image",
-      });
+      await this.storageProvider.delete(media.storageKey);
     } catch {
       throw new ServiceUnavailableException(
         "Could not remove the image from storage. The record was kept.",

@@ -11,6 +11,7 @@ import {
 } from "../../../../lib/staff-auth-api";
 
 import {
+  deleteStaffProduct,
   getCatalogueBrands,
   getCatalogueCategories,
   getStaffProducts,
@@ -54,12 +55,42 @@ export default function StaffCatalogueProductsPage() {
   const [statusMenuOpen, setStatusMenuOpen] = useState(false);
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
 
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [productToDelete, setProductToDelete] = useState<StaffCatalogueProduct | null>(null);
+
+  async function handleDeleteProduct(targetProduct: StaffCatalogueProduct) {
+    if (!token) return;
+    setDeletingId(targetProduct.id);
+    setError("");
+    try {
+      await deleteStaffProduct(token, targetProduct.id);
+      setProductToDelete(null);
+      await loadProducts(token, page, search, status);
+    } catch (err) {
+      if (err instanceof StaffCatalogueApiError && err.status === 401) {
+        clearStaffAccessToken();
+        router.replace("/staff/login");
+        return;
+      }
+      setError(
+        err instanceof Error ? err.message : "Unable to delete product.",
+      );
+      setProductToDelete(null);
+    } finally {
+      setDeletingId(null);
+    }
+  }
 
   async function loadProducts(
     activeToken: string,
+    targetPage = page,
     nextSearch = search,
     nextStatus = status,
   ) {
@@ -70,8 +101,13 @@ export default function StaffCatalogueProductsPage() {
       const result = await getStaffProducts(activeToken, {
         search: nextSearch,
         status: nextStatus,
+        page: targetPage,
+        pageSize: 20,
       });
       setProducts(result.items);
+      setTotal(result.pagination.total);
+      setTotalPages(Math.max(result.pagination.totalPages, 1));
+      setPage(result.pagination.page);
     } catch (error) {
       if (error instanceof StaffCatalogueApiError && error.status === 401) {
         clearStaffAccessToken();
@@ -101,10 +137,10 @@ export default function StaffCatalogueProductsPage() {
         const [brandResult, categoryResult] = await Promise.all([
           getCatalogueBrands(),
           getCatalogueCategories(),
+          loadProducts(staffToken, 1, "", "ALL"),
         ]);
         setBrands(brandResult);
         setCategories(categoryResult);
-        await loadProducts(staffToken, "", "ALL");
       } catch (error) {
         if (error instanceof StaffCatalogueApiError && error.status === 401) {
           clearStaffAccessToken();
@@ -140,11 +176,16 @@ export default function StaffCatalogueProductsPage() {
     router.push("/staff/catalogue/products/new");
   }
 
+  function changePage(nextPage: number) {
+    if (!token || nextPage < 1 || nextPage > totalPages || nextPage === page) return;
+    void loadProducts(token, nextPage, search, status);
+  }
+
   function selectStatus(nextStatus: string) {
     setStatusMenuOpen(false);
     if (nextStatus === status) return;
     setStatus(nextStatus);
-    if (token) void loadProducts(token, search, nextStatus);
+    if (token) void loadProducts(token, 1, search, nextStatus);
   }
 
   async function publishProduct(productId: string) {
@@ -153,7 +194,7 @@ export default function StaffCatalogueProductsPage() {
     setError("");
     try {
       await publishStaffProduct(token, productId);
-      await loadProducts(token, search, status);
+      await loadProducts(token, page, search, status);
     } catch (error) {
       if (error instanceof StaffCatalogueApiError && error.status === 401) {
         clearStaffAccessToken();
@@ -353,7 +394,7 @@ export default function StaffCatalogueProductsPage() {
               onChange={(event) => setSearch(event.target.value)}
               onKeyDown={(event) => {
                 if (event.key === "Enter" && token) {
-                  void loadProducts(token, search, status);
+                  void loadProducts(token, 1, search, status);
                 }
               }}
               placeholder="Search and filter"
@@ -364,7 +405,7 @@ export default function StaffCatalogueProductsPage() {
           <div className="flex items-center gap-2 border-l border-neutral-200 px-3 py-2">
             <button
               type="button"
-              onClick={() => token && void loadProducts(token, search, status)}
+              onClick={() => token && void loadProducts(token, 1, search, status)}
               disabled={loading}
               aria-label="Refresh"
               className="inline-flex h-7 w-7 items-center justify-center rounded-md text-neutral-600 hover:bg-neutral-100 disabled:opacity-50"
@@ -391,7 +432,7 @@ export default function StaffCatalogueProductsPage() {
         <div className="mt-3 overflow-hidden rounded-xl border border-neutral-200 bg-white">
           <div className="overflow-x-auto">
             <div className="min-w-[960px]">
-              <div className="grid grid-cols-[36px_minmax(260px,2.5fr)_minmax(110px,0.9fr)_minmax(140px,1fr)_minmax(120px,0.9fr)_minmax(100px,0.8fr)_minmax(120px,0.9fr)] items-center gap-3 border-b border-neutral-200 bg-[#f7f7f7] px-4 py-2.5 text-[12px] font-medium text-neutral-600">
+              <div className="grid grid-cols-[36px_minmax(260px,2.5fr)_minmax(110px,0.9fr)_minmax(140px,1fr)_minmax(120px,0.9fr)_minmax(80px,0.7fr)_minmax(110px,0.9fr)_44px] items-center gap-3 border-b border-neutral-200 bg-[#f7f7f7] px-4 py-2.5 text-[12px] font-medium text-neutral-600">
                 <div className="flex justify-center">
                   <input
                     type="checkbox"
@@ -416,6 +457,7 @@ export default function StaffCatalogueProductsPage() {
                 <div>Category</div>
                 <div>Variants</div>
                 <div>Price from</div>
+                <div className="text-right sr-only">Actions</div>
               </div>
 
               {loading ? (
@@ -460,7 +502,7 @@ export default function StaffCatalogueProductsPage() {
                           );
                         }
                       }}
-                      className="grid cursor-pointer grid-cols-[36px_minmax(260px,2.5fr)_minmax(110px,0.9fr)_minmax(140px,1fr)_minmax(120px,0.9fr)_minmax(100px,0.8fr)_minmax(120px,0.9fr)] items-center gap-3 border-b border-neutral-100 px-4 py-3 last:border-b-0 hover:bg-[#f7f7f7] focus-visible:bg-[#f7f7f7] focus-visible:outline-none"
+                      className="grid cursor-pointer grid-cols-[36px_minmax(260px,2.5fr)_minmax(110px,0.9fr)_minmax(140px,1fr)_minmax(120px,0.9fr)_minmax(80px,0.7fr)_minmax(110px,0.9fr)_44px] items-center gap-3 border-b border-neutral-100 px-4 py-3 last:border-b-0 hover:bg-[#f7f7f7] focus-visible:bg-[#f7f7f7] focus-visible:outline-none"
                     >
                       <div
                         className="flex justify-center"
@@ -504,19 +546,35 @@ export default function StaffCatalogueProductsPage() {
                       </div>
 
                       <div>
-                        <span
-                          className={`inline-flex items-center rounded-md px-2 py-0.5 text-[12px] font-medium ${
-                            isPublished
-                              ? "bg-[#a6e8b1] text-[#0b5c2a]"
-                              : "bg-[#ffe9a8] text-[#6b4d00]"
-                          }`}
-                        >
-                          {isPublished
-                            ? "Active"
-                            : product.status === "DRAFT"
-                              ? "Draft"
-                              : product.status}
-                        </span>
+                        {isPublished ? (
+                          <span className="inline-flex items-center gap-1.5 rounded-full bg-[#cbf4c9] px-2.5 py-0.5 text-[11px] font-normal text-[#0e6245]">
+                            <svg
+                              width="10"
+                              height="10"
+                              viewBox="0 0 20 20"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                            >
+                              <circle cx="10" cy="10" r="7" />
+                            </svg>
+                            Active
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 rounded-full bg-[#ffea8a] px-2.5 py-0.5 text-[11px] font-normal text-[#5c4b00]">
+                            <svg
+                              width="10"
+                              height="10"
+                              viewBox="0 0 20 20"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                            >
+                              <circle cx="10" cy="10" r="7" />
+                            </svg>
+                            {product.status === "DRAFT" ? "Draft" : product.status}
+                          </span>
+                        )}
                       </div>
 
                       <div className="text-[13px] text-neutral-800">
@@ -538,23 +596,141 @@ export default function StaffCatalogueProductsPage() {
                       <div className="text-[13px] text-neutral-800">
                         {money(product.lowestSellingPrice)}
                       </div>
+
+                      <div
+                        className="flex justify-end"
+                        onClick={(event) => event.stopPropagation()}
+                      >
+                        <button
+                          type="button"
+                          title={`Delete ${product.name}`}
+                          disabled={deletingId === product.id}
+                          onClick={() => setProductToDelete(product)}
+                          className="flex h-7 w-7 items-center justify-center rounded-md text-neutral-400 hover:bg-red-50 hover:text-red-600 transition-colors disabled:opacity-50"
+                        >
+                          <svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="1.8"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <path d="M3 6h18" />
+                            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                            <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                          </svg>
+                        </button>
+                      </div>
                     </div>
                   );
                 })
               )}
             </div>
           </div>
+
+          {/* Pagination Footer */}
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#e3e3e3] px-4 py-3 bg-white text-[12px] text-[#616161]">
+            <div>
+              Showing {products.length} of {total} product{total === 1 ? "" : "s"}
+              {totalPages > 1 && ` · Page ${page} of ${totalPages}`}
+            </div>
+
+            {totalPages > 1 && (
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  disabled={page <= 1 || loading}
+                  onClick={() => changePage(page - 1)}
+                  className="inline-flex h-7 items-center justify-center rounded-lg border border-[#d4d4d4] bg-white px-2.5 font-medium text-[#303030] shadow-xs hover:bg-[#f7f7f7] disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  disabled={page >= totalPages || loading}
+                  onClick={() => changePage(page + 1)}
+                  className="inline-flex h-7 items-center justify-center rounded-lg border border-[#d4d4d4] bg-white px-2.5 font-medium text-[#303030] shadow-xs hover:bg-[#f7f7f7] disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
+        {/* Delete Confirmation Modal */}
+        {productToDelete ? (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
+            <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-neutral-100 animate-in fade-in zoom-in-95 duration-150">
+              <div className="flex items-center gap-3">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-600">
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M3 6h18" />
+                    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                    <line x1="10" y1="11" x2="10" y2="17" />
+                    <line x1="14" y1="11" x2="14" y2="17" />
+                  </svg>
+                </span>
+                <div>
+                  <h3 className="text-[15px] font-semibold text-neutral-900">
+                    Delete &ldquo;{productToDelete.name}&rdquo;?
+                  </h3>
+                  <p className="mt-0.5 text-[12.5px] text-neutral-500">
+                    Are you sure you want to delete this product? All variants, option combinations, and associated media will be deleted permanently.
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-6 flex justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setProductToDelete(null)}
+                  disabled={Boolean(deletingId)}
+                  className="rounded-lg border border-neutral-200 bg-white px-3.5 py-2 text-[13px] font-medium text-neutral-700 hover:bg-neutral-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleDeleteProduct(productToDelete)}
+                  disabled={Boolean(deletingId)}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-4 py-2 text-[13px] font-medium text-white shadow-xs hover:bg-red-700 disabled:opacity-50"
+                >
+                  {deletingId === productToDelete.id ? (
+                    <>
+                      <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                      Deleting…
+                    </>
+                  ) : (
+                    "Delete product"
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
         {/* Footer count */}
-        {products.length > 0 ? (
+        {total > 0 ? (
           <div className="mt-3 flex items-center justify-between text-[12px] text-neutral-500">
             <span>
-              {products.length}{" "}
-              {products.length === 1 ? "product" : "products"}
+              {total} {total === 1 ? "product" : "products"} total
             </span>
             {selectedProductIds.length > 0 ? (
-              <span>{selectedProductIds.length} selected</span>
+              <span>{selectedProductIds.length} selected on this page</span>
             ) : (
               <span>Click a product to view or edit its details</span>
             )}

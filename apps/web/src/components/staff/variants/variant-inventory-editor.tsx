@@ -171,38 +171,55 @@ export default function VariantInventoryEditor({
         </div>
       ) : null}
 
-      <div className="overflow-hidden rounded-lg border border-neutral-200">
-        <div className="grid grid-cols-[minmax(0,1fr)_100px_80px_auto] items-center gap-3 border-b border-neutral-100 bg-[#fafafa] px-3 py-2 text-[11px] font-medium uppercase tracking-wide text-neutral-500">
-          <span>Warehouse</span>
-          <span className="text-right">Available</span>
-          <span className="text-right">Reserved</span>
+      <div className="overflow-hidden rounded-xl border border-neutral-200">
+        <div className="grid grid-cols-[minmax(0,2fr)_80px_85px_110px_80px_auto] items-center gap-2 border-b border-neutral-200 bg-[#fafafa] px-3.5 py-2.5 text-[11.5px] font-medium text-neutral-600">
+          <span>Location</span>
+          <span className="text-right">Unavailable</span>
+          <span className="text-right">Committed</span>
+          <span className="text-right font-semibold text-neutral-800">Available</span>
+          <span className="text-right">On hand</span>
           <span />
         </div>
 
         {merged.length === 0 ? (
-          <div className="px-3 py-3 text-[12px] text-neutral-500">
-            No warehouses configured.
+          <div className="px-3.5 py-4 text-[12.5px] text-neutral-500">
+            No active warehouse locations configured.
           </div>
         ) : (
           merged.map((row) => {
             const isBusy = busyWarehouse === row.warehouseId;
             const draftValue = draft[row.warehouseId] ?? String(row.quantityAvailable);
             const dirty = Number(draftValue) !== row.quantityAvailable;
+            const draftNum = Number(draftValue);
+            const validNum = Number.isFinite(draftNum) && draftNum >= 0 ? draftNum : row.quantityAvailable;
+            const onHand = validNum + row.quantityReserved;
 
             return (
               <div
                 key={row.warehouseId}
-                className="grid grid-cols-[minmax(0,1fr)_100px_80px_auto] items-center gap-3 border-t border-neutral-100 px-3 py-2 text-[12.5px]"
+                className="grid grid-cols-[minmax(0,2fr)_80px_85px_110px_80px_auto] items-center gap-2 border-t border-neutral-100 px-3.5 py-2.5 text-[12.5px] hover:bg-neutral-50/50 transition-colors first:border-t-0"
               >
-                <span className="flex flex-col">
-                  <span className="text-neutral-800">
+                <div className="flex flex-col min-w-0 pr-2">
+                  <span className="truncate font-medium text-neutral-900">
                     {row.warehouseName}
                   </span>
                   <span className="text-[11px] text-neutral-500">
                     {row.warehouseCode}
                   </span>
-                </span>
-                <span className="text-right">
+                </div>
+
+                {/* Unavailable */}
+                <div className="text-right tabular-nums text-neutral-400">
+                  0
+                </div>
+
+                {/* Committed */}
+                <div className="text-right tabular-nums text-neutral-500">
+                  {row.quantityReserved}
+                </div>
+
+                {/* Available (Input) */}
+                <div className="flex items-center justify-end">
                   <input
                     type="number"
                     min={0}
@@ -214,24 +231,29 @@ export default function VariantInventoryEditor({
                       }))
                     }
                     disabled={isBusy}
-                    className="w-full rounded-md border border-neutral-200 bg-white px-2 py-1 text-right text-[12.5px] outline-none focus:border-neutral-400 focus:ring-2 focus:ring-neutral-200 disabled:opacity-50"
+                    aria-label={`Available stock for ${row.warehouseName}`}
+                    className="w-20 rounded-lg border border-neutral-200 bg-white px-2 py-1 text-right text-[12.5px] font-medium text-neutral-900 tabular-nums outline-none transition focus:border-neutral-400 focus:ring-2 focus:ring-neutral-200 disabled:opacity-50"
                   />
-                </span>
-                <span className="text-right text-neutral-500">
-                  {row.quantityReserved}
-                </span>
-                <span className="flex justify-end">
+                </div>
+
+                {/* On Hand */}
+                <div className="text-right tabular-nums font-medium text-neutral-800">
+                  {onHand}
+                </div>
+
+                {/* Action button */}
+                <div className="flex justify-end">
                   <button
                     type="button"
                     onClick={() =>
                       void saveRow(row.warehouseId, row.quantityAvailable)
                     }
                     disabled={isBusy || !dirty}
-                    className="rounded-md border border-neutral-200 bg-white px-2.5 py-1 text-[12px] font-medium text-neutral-700 hover:bg-neutral-50 disabled:opacity-40"
+                    className="rounded-lg border border-neutral-200 bg-white px-2.5 py-1 text-[11.5px] font-medium text-neutral-700 shadow-2xs hover:bg-neutral-50 disabled:opacity-30 disabled:hover:bg-white"
                   >
                     {isBusy ? "Saving…" : "Save"}
                   </button>
-                </span>
+                </div>
               </div>
             );
           })

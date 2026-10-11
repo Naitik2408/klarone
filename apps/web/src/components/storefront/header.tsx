@@ -9,8 +9,7 @@ import { useCart } from "../cart/cart-provider";
 export function StorefrontHeader() {
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const { customer, isAuthenticated } = useCustomerAuth();
-  const { cart } = useCart();
-  const itemCount = cart?.items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
+  const { itemCount } = useCart();
 
   // Track raw scroll distance
   const { scrollY } = useScroll();

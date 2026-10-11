@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import {
     getProductMetafields,
     StaffMetaobjectsApiError,
@@ -356,9 +357,24 @@ export default function CategoryMetafieldsPanel({
                     <h2 className="text-[13px] font-medium text-neutral-800">
                         Category metafields
                     </h2>
+                    <Link
+                        href="/staff/catalogue/categories"
+                        className="text-[12px] font-medium text-neutral-600 hover:text-neutral-900 flex items-center gap-1"
+                    >
+                        <span>Manage attributes</span>
+                        <svg viewBox="0 0 16 16" fill="none" className="h-3 w-3">
+                            <path d="M6 3.5l4.5 4.5-4.5 4.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                    </Link>
                 </div>
-                <div className="px-4 py-4 text-[12.5px] text-neutral-500">
-                    No metafields pinned to this category.
+                <div className="px-4 py-4 text-[12.5px] text-neutral-500 flex items-center justify-between">
+                    <span>No specifications pinned to this category yet.</span>
+                    <Link
+                        href="/staff/catalogue/categories"
+                        className="rounded-lg border border-neutral-200 bg-white px-3 py-1 text-[12px] font-medium text-neutral-700 hover:bg-neutral-50 shadow-xs"
+                    >
+                        + Define Category Attributes
+                    </Link>
                 </div>
             </section>
         );

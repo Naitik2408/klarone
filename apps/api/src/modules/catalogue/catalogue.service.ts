@@ -28,6 +28,9 @@ import type {
   DuplicateProductInput,
 } from "./dto-duplicate-product";
 import { AuditService } from "../audit/audit.service";
+import { Inject } from "@nestjs/common";
+import { STORAGE_PROVIDER } from "../../common/storage/storage.factory";
+import type { IStorageProvider } from "../../common/storage/storage-provider.interface";
 
 type Tx = Parameters<
   Parameters<PrismaService["$transaction"]>[0]
@@ -38,6 +41,8 @@ export class CatalogueService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditService: AuditService,
+    @Inject(STORAGE_PROVIDER)
+    private readonly storageProvider: IStorageProvider,
   ) { }
 
   /* ---------------------------------------------------------------
@@ -938,6 +943,24 @@ export class CatalogueService {
           input.variant.features,
         );
         await this.syncTagsForVariant(tx, variantId, input.variant.tags);
+
+        // Seed initial inventory row for all active warehouses
+        const activeWarehouses = await tx.warehouse.findMany({
+          where: { status: "ACTIVE" },
+          select: { id: true },
+        });
+
+        if (activeWarehouses.length > 0) {
+          await tx.inventory.createMany({
+            data: activeWarehouses.map((w) => ({
+              warehouseId: w.id,
+              productVariantId: variantId,
+              quantityAvailable: 0,
+              quantityReserved: 0,
+            })),
+            skipDuplicates: true,
+          });
+        }
       }
 
       return product;
@@ -1910,6 +1933,24 @@ export class CatalogueService {
       await this.syncFeaturesForVariant(tx, variant.id, input.features);
       await this.syncTagsForVariant(tx, variant.id, input.tags);
 
+      // Seed initial inventory row for all active warehouses
+      const activeWarehouses = await tx.warehouse.findMany({
+        where: { status: "ACTIVE" },
+        select: { id: true },
+      });
+
+      if (activeWarehouses.length > 0) {
+        await tx.inventory.createMany({
+          data: activeWarehouses.map((w) => ({
+            warehouseId: w.id,
+            productVariantId: variant.id,
+            quantityAvailable: 0,
+            quantityReserved: 0,
+          })),
+          skipDuplicates: true,
+        });
+      }
+
       return tx.product.findUnique({
         where: { id: productId },
         select: {
@@ -2389,14 +2430,37 @@ export class CatalogueService {
       throw new BadRequestException("A valid brand slug is required.");
     }
 
-    const existing = await this.prisma.brand.findUnique({
+    const existingSlug = await this.prisma.brand.findUnique({
       where: { slug },
       select: { id: true },
     });
 
-    if (existing) {
+    if (existingSlug) {
       throw new ConflictException(
         "A brand with this slug already exists.",
+      );
+    }
+
+    const existingName = await this.prisma.brand.findFirst({
+      where: {
+        name: {
+          equals: name,
+          mode: "insensitive",
+        },
+      },
+      select: { id: true },
+    });
+
+    if (existingName) {
+      throw new ConflictException(
+        "A brand with this name already exists.",
+      );
+    }
+
+    const description = input.description?.trim() || null;
+    if (description && description.length > 500) {
+      throw new BadRequestException(
+        "Brand description must not exceed 500 characters.",
       );
     }
 
@@ -2404,7 +2468,7 @@ export class CatalogueService {
       data: {
         name,
         slug,
-        description: input.description?.trim() || null,
+        description,
         logoUrl: input.logoUrl?.trim() || null,
         websiteUrl: input.websiteUrl?.trim() || null,
         status: "ACTIVE",
@@ -2470,6 +2534,32 @@ export class CatalogueService {
 
     let nextSlug: string | undefined;
 
+    let nextName: string | undefined;
+    if (input.name !== undefined) {
+      const candidateName = input.name.trim();
+      if (!candidateName) {
+        throw new BadRequestException("Brand name cannot be empty.");
+      }
+      if (candidateName.toLowerCase() !== brand.name.toLowerCase()) {
+        const conflictName = await this.prisma.brand.findFirst({
+          where: {
+            id: { not: brandId },
+            name: {
+              equals: candidateName,
+              mode: "insensitive",
+            },
+          },
+          select: { id: true },
+        });
+        if (conflictName) {
+          throw new ConflictException(
+            "A brand with this name already exists.",
+          );
+        }
+      }
+      nextName = candidateName;
+    }
+
     if (input.slug !== undefined) {
       const candidate = input.slug.trim();
       if (!candidate) {
@@ -2489,15 +2579,24 @@ export class CatalogueService {
       nextSlug = candidate;
     }
 
+    let nextDescription: string | null | undefined;
+    if (input.description !== undefined) {
+      const trimmedDesc = input.description?.trim() || null;
+      if (trimmedDesc && trimmedDesc.length > 500) {
+        throw new BadRequestException(
+          "Brand description must not exceed 500 characters.",
+        );
+      }
+      nextDescription = trimmedDesc;
+    }
+
     const updated = await this.prisma.brand.update({
       where: { id: brandId },
       data: {
-        ...(input.name !== undefined
-          ? { name: input.name.trim() || brand.name }
-          : {}),
+        ...(nextName !== undefined ? { name: nextName } : {}),
         ...(nextSlug !== undefined ? { slug: nextSlug } : {}),
         ...(input.description !== undefined
-          ? { description: input.description?.trim() || null }
+          ? { description: nextDescription }
           : {}),
         ...(input.logoUrl !== undefined
           ? { logoUrl: input.logoUrl?.trim() || null }
@@ -2590,6 +2689,55 @@ export class CatalogueService {
     return toJsonSafe(updated);
   }
 
+  async deleteStaffBrand(
+    brandId: number,
+    deletedByUserId: bigint,
+  ) {
+    if (!Number.isInteger(brandId) || brandId <= 0) {
+      throw new BadRequestException("brandId must be a positive integer.");
+    }
+
+    const brand = await this.prisma.brand.findUnique({
+      where: { id: brandId },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        _count: {
+          select: { products: true },
+        },
+      },
+    });
+
+    if (!brand) {
+      throw new NotFoundException("Brand not found.");
+    }
+
+    if (brand._count.products > 0) {
+      throw new ConflictException(
+        `Cannot delete brand "${brand.name}" because it is currently assigned to ${brand._count.products} product${
+          brand._count.products === 1 ? "" : "s"
+        }. Please reassign or delete those products first, or deactivate the brand instead.`,
+      );
+    }
+
+    await this.prisma.brand.delete({
+      where: { id: brandId },
+    });
+
+    await this.auditService.log({
+      userAccountId: deletedByUserId,
+      action: "DELETE",
+      module: "catalogue",
+      entityType: "Brand",
+      entityId: brandId.toString(),
+      description: `Deleted brand ${brand.name}.`,
+      oldData: toJsonSafe(brand),
+    });
+
+    return { id: brandId, deleted: true };
+  }
+
   /* ---------------------------------------------------------------
    * Taxonomy — categories
    * --------------------------------------------------------------- */
@@ -2603,6 +2751,7 @@ export class CatalogueService {
         name: true,
         slug: true,
         description: true,
+        imageUrl: true,
         displayOrder: true,
         status: true,
         createdAt: true,
@@ -2620,6 +2769,7 @@ export class CatalogueService {
       name: row.name,
       slug: row.slug,
       description: row.description,
+      imageUrl: row.imageUrl,
       displayOrder: row.displayOrder,
       status: row.status,
       createdAt: row.createdAt,
@@ -2650,6 +2800,7 @@ export class CatalogueService {
       name: string;
       slug?: string;
       description?: string | null;
+      imageUrl?: string | null;
       parentId?: number | null;
       displayOrder?: number;
     },
@@ -2695,11 +2846,19 @@ export class CatalogueService {
       }
     }
 
+    const description = input.description?.trim() || null;
+    if (description && description.length > 500) {
+      throw new BadRequestException(
+        "Category description must not exceed 500 characters.",
+      );
+    }
+
     const created = await this.prisma.category.create({
       data: {
         name,
         slug,
-        description: input.description?.trim() || null,
+        description,
+        imageUrl: input.imageUrl?.trim() || null,
         parentId: input.parentId ?? null,
         displayOrder: input.displayOrder ?? 0,
         status: "ACTIVE",
@@ -2710,6 +2869,7 @@ export class CatalogueService {
         name: true,
         slug: true,
         description: true,
+        imageUrl: true,
         displayOrder: true,
         status: true,
         createdAt: true,
@@ -2764,6 +2924,7 @@ export class CatalogueService {
       name?: string;
       slug?: string;
       description?: string | null;
+      imageUrl?: string | null;
       parentId?: number | null;
       displayOrder?: number;
       status?: string;
@@ -2784,6 +2945,7 @@ export class CatalogueService {
         name: true,
         slug: true,
         description: true,
+        imageUrl: true,
         displayOrder: true,
         status: true,
       },
@@ -2839,6 +3001,17 @@ export class CatalogueService {
       }
     }
 
+    let nextDescription: string | null | undefined;
+    if (input.description !== undefined) {
+      const trimmedDesc = input.description?.trim() || null;
+      if (trimmedDesc && trimmedDesc.length > 500) {
+        throw new BadRequestException(
+          "Category description must not exceed 500 characters.",
+        );
+      }
+      nextDescription = trimmedDesc;
+    }
+
     const updated = await this.prisma.category.update({
       where: { id: categoryId },
       data: {
@@ -2847,7 +3020,10 @@ export class CatalogueService {
           : {}),
         ...(nextSlug !== undefined ? { slug: nextSlug } : {}),
         ...(input.description !== undefined
-          ? { description: input.description?.trim() || null }
+          ? { description: nextDescription }
+          : {}),
+        ...(input.imageUrl !== undefined
+          ? { imageUrl: input.imageUrl?.trim() || null }
           : {}),
         ...(input.parentId !== undefined
           ? { parentId: input.parentId }
@@ -2865,6 +3041,7 @@ export class CatalogueService {
         name: true,
         slug: true,
         description: true,
+        imageUrl: true,
         displayOrder: true,
         status: true,
         createdAt: true,
@@ -2943,6 +3120,65 @@ export class CatalogueService {
     });
 
     return toJsonSafe(updated);
+  }
+
+  async deleteStaffCategory(
+    categoryId: number,
+    deletedByUserId: bigint,
+  ) {
+    if (!Number.isInteger(categoryId) || categoryId <= 0) {
+      throw new BadRequestException(
+        "categoryId must be a positive integer.",
+      );
+    }
+
+    const category = await this.prisma.category.findUnique({
+      where: { id: categoryId },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        _count: {
+          select: { products: true, children: true },
+        },
+      },
+    });
+
+    if (!category) {
+      throw new NotFoundException("Category not found.");
+    }
+
+    if (category._count.children > 0) {
+      throw new ConflictException(
+        `Cannot delete category "${category.name}" because it contains ${category._count.children} child categor${
+          category._count.children === 1 ? "y" : "ies"
+        }. Please reassign or delete the subcategories first.`,
+      );
+    }
+
+    if (category._count.products > 0) {
+      throw new ConflictException(
+        `Cannot delete category "${category.name}" because it is currently assigned to ${category._count.products} product${
+          category._count.products === 1 ? "" : "s"
+        }. Please reassign or delete those products first, or deactivate the category instead.`,
+      );
+    }
+
+    await this.prisma.category.delete({
+      where: { id: categoryId },
+    });
+
+    await this.auditService.log({
+      userAccountId: deletedByUserId,
+      action: "DELETE",
+      module: "catalogue",
+      entityType: "Category",
+      entityId: categoryId.toString(),
+      description: `Deleted category ${category.name}.`,
+      oldData: toJsonSafe(category),
+    });
+
+    return { id: categoryId, deleted: true };
   }
 
   /* ===============================================================
@@ -3653,6 +3889,11 @@ export class CatalogueService {
       skuCounter += 1;
     }
 
+    const activeWarehouses = await this.prisma.warehouse.findMany({
+      where: { status: "ACTIVE" },
+      select: { id: true },
+    });
+
     // ---- Run the sync in one transaction ----
     let removedCount = 0;
     let deactivatedCount = 0;
@@ -3716,6 +3957,26 @@ export class CatalogueService {
               }),
             ),
           });
+
+          // Ensure inventory records exist for active warehouses
+          for (const w of activeWarehouses) {
+            await tx.inventory.upsert({
+              where: {
+                warehouseId_productVariantId: {
+                  warehouseId: w.id,
+                  productVariantId: legacy.id,
+                },
+              },
+              create: {
+                warehouseId: w.id,
+                productVariantId: legacy.id,
+                quantityAvailable: 0,
+                quantityReserved: 0,
+              },
+              update: {},
+            });
+          }
+
           absorbedAny = true;
         } else {
           // No more combinations to create, safe to delete this orphaned unlinked variant
@@ -3810,6 +4071,19 @@ export class CatalogueService {
             }),
           ),
         });
+
+        // Seed initial inventory row for all active warehouses
+        if (activeWarehouses.length > 0) {
+          await tx.inventory.createMany({
+            data: activeWarehouses.map((w) => ({
+              warehouseId: w.id,
+              productVariantId: newVariant.id,
+              quantityAvailable: 0,
+              quantityReserved: 0,
+            })),
+            skipDuplicates: true,
+          });
+        }
       }
     });
 
@@ -4552,13 +4826,40 @@ export class CatalogueService {
       );
     }
 
+    // Fetch media to clean up storage (Cloudinary / S3 / R2)
+    const mediaToDelete = await this.prisma.productMedia.findMany({
+      where: { productId },
+      select: { storageKey: true },
+    });
+
     await this.prisma.$transaction(async (tx) => {
-      // 1. Delete option links on variants
+      // 1. Delete collection relations
+      await tx.collectionProduct.deleteMany({
+        where: { productId },
+      });
+      await tx.collectionVariant.deleteMany({
+        where: { productVariant: { productId } },
+      });
+
+      // 2. Delete inventory records and transactions
+      await tx.inventoryTransaction.deleteMany({
+        where: { productVariant: { productId } },
+      });
+      await tx.inventory.deleteMany({
+        where: { productVariant: { productId } },
+      });
+
+      // 3. Delete cart items
+      await tx.cartItem.deleteMany({
+        where: { productVariant: { productId } },
+      });
+
+      // 4. Delete option links on variants
       await tx.productVariantOptionValue.deleteMany({
         where: { productVariant: { productId } },
       });
 
-      // 2. Delete variant children
+      // 5. Delete variant children
       await tx.productSpecification.deleteMany({
         where: { productVariant: { productId } },
       });
@@ -4575,7 +4876,7 @@ export class CatalogueService {
         where: { productId },
       });
 
-      // 3. Delete options & values
+      // 6. Delete options & values
       await tx.productOptionValue.deleteMany({
         where: { productOption: { productId } },
       });
@@ -4583,14 +4884,25 @@ export class CatalogueService {
         where: { productId },
       });
 
-      // 4. Delete variants
+      // 7. Delete variants
       await tx.productVariant.deleteMany({
         where: { productId },
       });
 
-      // 5. Delete product
+      // 8. Delete product
       await tx.product.delete({ where: { id: productId } });
     });
+
+    // Clean up physical images from Cloudinary / storage provider
+    for (const m of mediaToDelete) {
+      if (m.storageKey) {
+        try {
+          await this.storageProvider.delete(m.storageKey);
+        } catch {
+          // Log or ignore non-blocking storage cleanup failure
+        }
+      }
+    }
 
     await this.auditService.log({
       userAccountId: deletedByUserId,

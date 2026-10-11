@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -95,6 +96,24 @@ export class StaffCatalogueTaxonomyController {
     );
   }
 
+  @Delete("brands/:brandId")
+  @RequirePermission("catalogue.delete")
+  async deleteBrand(
+    @Param("brandId") brandId: string,
+    @CurrentStaff() staff: AuthenticatedStaff,
+  ) {
+    if (!/^\d+$/.test(brandId)) {
+      throw new BadRequestException(
+        "Brand id must be a positive integer.",
+      );
+    }
+
+    return this.catalogueService.deleteStaffBrand(
+      Number(brandId),
+      staff.userAccountId,
+    );
+  }
+
   /* ----------------------- Categories ----------------------- */
 
   @Get("categories")
@@ -148,6 +167,24 @@ export class StaffCatalogueTaxonomyController {
     }
 
     return this.catalogueService.deactivateStaffCategory(
+      Number(categoryId),
+      staff.userAccountId,
+    );
+  }
+
+  @Delete("categories/:categoryId")
+  @RequirePermission("catalogue.delete")
+  async deleteCategory(
+    @Param("categoryId") categoryId: string,
+    @CurrentStaff() staff: AuthenticatedStaff,
+  ) {
+    if (!/^\d+$/.test(categoryId)) {
+      throw new BadRequestException(
+        "Category id must be a positive integer.",
+      );
+    }
+
+    return this.catalogueService.deleteStaffCategory(
       Number(categoryId),
       staff.userAccountId,
     );

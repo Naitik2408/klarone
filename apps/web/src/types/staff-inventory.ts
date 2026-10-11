@@ -24,11 +24,17 @@ export interface StaffInventoryItem {
     storageGb: number | null;
     sellingPrice: string;
     status: string;
+    media?: Array<{ url: string; altText: string | null }>;
+    optionValues?: Array<{
+      productOption?: { name: string } | null;
+      productOptionValue?: { value: string } | null;
+    }>;
     product: {
       id: string;
       name: string;
       slug: string;
       status: string;
+      media?: Array<{ url: string; altText: string | null }>;
       brand: {
         id: number;
         name: string;

@@ -35,8 +35,12 @@ export default function RootLayout({
         <html
             lang="en"
             className={`${sansFont.variable} ${serifFont.variable}`}
+            suppressHydrationWarning
         >
-            <body className="min-h-screen bg-white font-sans text-slate-950 antialiased">
+            <body
+                className="min-h-screen bg-white font-sans text-slate-950 antialiased"
+                suppressHydrationWarning
+            >
                 <CustomerAuthProvider>
                     <CartProvider>
                         {children}

@@ -343,6 +343,7 @@ export interface StaffCategoryNode {
   name: string;
   slug: string;
   description: string | null;
+  imageUrl: string | null;
   displayOrder: number;
   status: string;
   createdAt: string;
@@ -356,6 +357,7 @@ export interface CreateStaffCategoryInput {
   name: string;
   slug?: string;
   description?: string | null;
+  imageUrl?: string | null;
   parentId?: number | null;
   displayOrder?: number;
 }
@@ -364,6 +366,7 @@ export interface UpdateStaffCategoryInput {
   name?: string;
   slug?: string;
   description?: string | null;
+  imageUrl?: string | null;
   parentId?: number | null;
   displayOrder?: number;
   status?: string;

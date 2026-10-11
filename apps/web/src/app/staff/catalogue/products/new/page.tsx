@@ -35,6 +35,7 @@ const inputErrorClass = `${inputBase} border-red-300 bg-red-50/40 focus:border-r
 
 type FormState = {
   name: string;
+  slug: string;
   description: string;
   categoryId: string;
   brandId: string;
@@ -46,6 +47,7 @@ type FieldErrors = Partial<Record<keyof FormState, string>>;
 function emptyForm(): FormState {
   return {
     name: "",
+    slug: "",
     description: "",
     categoryId: "",
     brandId: "",
@@ -74,12 +76,18 @@ function generatePlaceholderSku(title: string): string {
 function SectionCard({
   title,
   children,
+  overflowVisible = false,
 }: {
   title?: string;
   children: React.ReactNode;
+  overflowVisible?: boolean;
 }) {
   return (
-    <section className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
+    <section
+      className={`rounded-xl border border-neutral-200 bg-white ${
+        overflowVisible ? "overflow-visible" : "overflow-hidden"
+      }`}
+    >
       {title ? (
         <div className="border-b border-neutral-100 px-4 py-3">
           <h2 className="text-[13px] font-medium text-neutral-800">
@@ -140,10 +148,31 @@ export default function NewProductPage() {
   const [categories, setCategories] = useState<StaffCatalogueCategory[]>([]);
 
   const [form, setForm] = useState<FormState>(emptyForm());
+  const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [categoryMenuOpen, setCategoryMenuOpen] = useState(false);
+  const [brandMenuOpen, setBrandMenuOpen] = useState(false);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      const target = event.target as HTMLElement | null;
+      if (!target) return;
+      if (!target.closest("[data-category-picker]")) {
+        setCategoryMenuOpen(false);
+      }
+      if (!target.closest("[data-brand-picker]")) {
+        setBrandMenuOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   const fieldRefs = useRef<
     Partial<Record<keyof FormState, HTMLElement | null>>
@@ -157,6 +186,26 @@ export default function NewProductPage() {
       delete next[key];
       return next;
     });
+  }
+
+  function handleNameChange(name: string) {
+    setForm((current) => ({
+      ...current,
+      name,
+      slug: slugManuallyEdited ? current.slug : slugify(name),
+    }));
+    setFieldErrors((current) => {
+      if (!current.name && !current.slug) return current;
+      const next = { ...current };
+      delete next.name;
+      delete next.slug;
+      return next;
+    });
+  }
+
+  function handleSlugChange(slug: string) {
+    setSlugManuallyEdited(slug.length > 0);
+    update("slug", slug);
   }
 
   /* ---------------- validation ---------------- */
@@ -272,6 +321,7 @@ export default function NewProductPage() {
       brandId: Number(form.brandId),
       categoryId: Number(form.categoryId),
       name: form.name.trim(),
+      slug: form.slug.trim() || undefined,
       shortDescription: null,
       description: form.description.trim() || null,
       productType: form.productType || "LAPTOP",
@@ -401,18 +451,40 @@ export default function NewProductPage() {
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
           {/* LEFT */}
           <div className="space-y-5">
-            <SectionCard title="Title">
-              <input
-                ref={(el) => {
-                  fieldRefs.current.name = el;
-                }}
-                value={form.name}
-                onChange={(e) => update("name", e.target.value)}
-                onBlur={() => handleBlur("name")}
-                placeholder="e.g. Dell XPS 13 9315"
-                className={fieldErrors.name ? inputErrorClass : inputClass}
-              />
-              <FieldError message={fieldErrors.name} />
+            <SectionCard title="Title & Handle">
+              <div className="space-y-4">
+                <div>
+                  <FieldLabel hint="required">Title</FieldLabel>
+                  <input
+                    ref={(el) => {
+                      fieldRefs.current.name = el;
+                    }}
+                    value={form.name}
+                    onChange={(e) => handleNameChange(e.target.value)}
+                    onBlur={() => handleBlur("name")}
+                    placeholder="e.g. Dell XPS 13 9315"
+                    className={fieldErrors.name ? inputErrorClass : inputClass}
+                  />
+                  <FieldError message={fieldErrors.name} />
+                </div>
+
+                <div>
+                  <FieldLabel hint="auto-generated / editable">URL Slug</FieldLabel>
+                  <input
+                    ref={(el) => {
+                      fieldRefs.current.slug = el;
+                    }}
+                    value={form.slug}
+                    onChange={(e) => handleSlugChange(e.target.value)}
+                    placeholder="e.g. dell-xps-13-9315"
+                    className={fieldErrors.slug ? inputErrorClass : inputClass}
+                  />
+                  <FieldError message={fieldErrors.slug} />
+                  <p className="mt-1 text-[11.5px] text-neutral-400">
+                    Auto-generated from title for search engines and direct links. You can edit it manually.
+                  </p>
+                </div>
+              </div>
             </SectionCard>
 
             <SectionCard title="Description">
@@ -440,113 +512,254 @@ export default function NewProductPage() {
 
           {/* RIGHT RAIL */}
           <aside className="space-y-5 lg:sticky lg:top-4 lg:self-start">
-            <SectionCard title="Status">
-              <div className="flex h-9 items-center rounded-lg border border-neutral-200 bg-neutral-50 px-3 text-[13px] text-neutral-500">
-                Draft
-              </div>
-              <p className="mt-2 text-[11.5px] text-neutral-500">
-                New products start as drafts. Publish from the product page
-                once ready.
-              </p>
-            </SectionCard>
-
-            <SectionCard title="Product organization">
+            <SectionCard title="Product organization" overflowVisible>
               <div className="space-y-4">
+                {/* Category Dropdown */}
                 <div>
                   <FieldLabel hint="required">Category</FieldLabel>
-                  <select
-                    ref={(el) => {
-                      fieldRefs.current.categoryId = el;
-                    }}
-                    value={form.categoryId}
-                    onChange={(e) => update("categoryId", e.target.value)}
-                    onBlur={() => handleBlur("categoryId")}
-                    className={
-                      fieldErrors.categoryId ? inputErrorClass : inputClass
-                    }
-                  >
-                    <option value="">Choose a category</option>
-                    {categories.map((category) => (
-                      <option key={category.id} value={category.id}>
-                        {category.name}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="relative" data-category-picker>
+                    <button
+                      ref={(el) => {
+                        fieldRefs.current.categoryId = el;
+                      }}
+                      type="button"
+                      onClick={() => {
+                        setCategoryMenuOpen((open) => !open);
+                        setBrandMenuOpen(false);
+                      }}
+                      aria-haspopup="listbox"
+                      aria-expanded={categoryMenuOpen}
+                      className={`flex h-9 w-full items-center justify-between rounded-lg border bg-white px-3 text-left text-[13px] transition hover:bg-neutral-50 ${
+                        fieldErrors.categoryId
+                          ? "border-red-300 bg-red-50/40 text-red-900 focus:border-red-400 focus:ring-2 focus:ring-red-200"
+                          : "border-neutral-200 text-neutral-800 hover:border-neutral-300 focus:border-neutral-400 focus:ring-2 focus:ring-neutral-200"
+                      }`}
+                    >
+                      <span className={form.categoryId ? "font-normal text-neutral-900" : "text-neutral-400"}>
+                        {categories.find((c) => String(c.id) === form.categoryId)?.name ?? "Choose a category"}
+                      </span>
+                      <svg
+                        viewBox="0 0 16 16"
+                        fill="none"
+                        className="h-3.5 w-3.5 text-neutral-500 shrink-0"
+                        aria-hidden="true"
+                      >
+                        <path
+                          d="m5 7 3-3 3 3M5 9l3 3 3-3"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </button>
+
+                    {categoryMenuOpen ? (
+                      <div
+                        role="listbox"
+                        className="absolute top-full left-0 z-50 mt-1 max-h-60 w-full overflow-y-auto rounded-lg border border-neutral-200 bg-white py-1 shadow-lg"
+                      >
+                        <button
+                          type="button"
+                          role="option"
+                          aria-selected={!form.categoryId}
+                          onClick={() => {
+                            update("categoryId", "");
+                            setCategoryMenuOpen(false);
+                          }}
+                          className={`flex w-full items-center justify-between px-3 py-1.5 text-left text-[13px] hover:bg-neutral-50 ${
+                            !form.categoryId
+                              ? "font-medium text-neutral-900"
+                              : "text-neutral-600"
+                          }`}
+                        >
+                          <span>Choose a category</span>
+                          {!form.categoryId ? (
+                            <svg
+                              viewBox="0 0 16 16"
+                              fill="none"
+                              className="h-3.5 w-3.5 text-neutral-800 shrink-0"
+                              aria-hidden="true"
+                            >
+                              <path
+                                d="m3.5 8.5 3 3 6-6.5"
+                                stroke="currentColor"
+                                strokeWidth="1.6"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                            </svg>
+                          ) : null}
+                        </button>
+                        {categories.map((c) => {
+                          const isSelected = form.categoryId === String(c.id);
+                          return (
+                            <button
+                              key={c.id}
+                              type="button"
+                              role="option"
+                              aria-selected={isSelected}
+                              onClick={() => {
+                                update("categoryId", String(c.id));
+                                setCategoryMenuOpen(false);
+                              }}
+                              className={`flex w-full items-center justify-between px-3 py-1.5 text-left text-[13px] hover:bg-neutral-50 ${
+                                isSelected
+                                  ? "font-medium text-neutral-900"
+                                  : "text-neutral-700"
+                              }`}
+                            >
+                              <span>{c.name}</span>
+                              {isSelected ? (
+                                <svg
+                                  viewBox="0 0 16 16"
+                                  fill="none"
+                                  className="h-3.5 w-3.5 text-neutral-800 shrink-0"
+                                  aria-hidden="true"
+                                >
+                                  <path
+                                    d="m3.5 8.5 3 3 6-6.5"
+                                    stroke="currentColor"
+                                    strokeWidth="1.6"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                  />
+                                </svg>
+                              ) : null}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ) : null}
+                  </div>
                   <FieldError message={fieldErrors.categoryId} />
                   <p className="mt-1 text-[11.5px] text-neutral-500">
-                    Determines which extra attributes (metafields) appear.
+                    Determines technical specifications, GST rate and HSN classification.
                   </p>
                 </div>
 
+                {/* Brand Dropdown */}
                 <div>
                   <FieldLabel hint="required">Brand</FieldLabel>
-                  <select
-                    ref={(el) => {
-                      fieldRefs.current.brandId = el;
-                    }}
-                    value={form.brandId}
-                    onChange={(e) => update("brandId", e.target.value)}
-                    onBlur={() => handleBlur("brandId")}
-                    className={
-                      fieldErrors.brandId ? inputErrorClass : inputClass
-                    }
-                  >
-                    <option value="">Choose a brand</option>
-                    {brands.map((brand) => (
-                      <option key={brand.id} value={brand.id}>
-                        {brand.name}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="relative" data-brand-picker>
+                    <button
+                      ref={(el) => {
+                        fieldRefs.current.brandId = el;
+                      }}
+                      type="button"
+                      onClick={() => {
+                        setBrandMenuOpen((open) => !open);
+                        setCategoryMenuOpen(false);
+                      }}
+                      aria-haspopup="listbox"
+                      aria-expanded={brandMenuOpen}
+                      className={`flex h-9 w-full items-center justify-between rounded-lg border bg-white px-3 text-left text-[13px] transition hover:bg-neutral-50 ${
+                        fieldErrors.brandId
+                          ? "border-red-300 bg-red-50/40 text-red-900 focus:border-red-400 focus:ring-2 focus:ring-red-200"
+                          : "border-neutral-200 text-neutral-800 hover:border-neutral-300 focus:border-neutral-400 focus:ring-2 focus:ring-neutral-200"
+                      }`}
+                    >
+                      <span className={form.brandId ? "font-normal text-neutral-900" : "text-neutral-400"}>
+                        {brands.find((b) => String(b.id) === form.brandId)?.name ?? "Choose a brand"}
+                      </span>
+                      <svg
+                        viewBox="0 0 16 16"
+                        fill="none"
+                        className="h-3.5 w-3.5 text-neutral-500 shrink-0"
+                        aria-hidden="true"
+                      >
+                        <path
+                          d="m5 7 3-3 3 3M5 9l3 3 3-3"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </button>
+
+                    {brandMenuOpen ? (
+                      <div
+                        role="listbox"
+                        className="absolute top-full left-0 z-50 mt-1 max-h-60 w-full overflow-y-auto rounded-lg border border-neutral-200 bg-white py-1 shadow-lg"
+                      >
+                        <button
+                          type="button"
+                          role="option"
+                          aria-selected={!form.brandId}
+                          onClick={() => {
+                            update("brandId", "");
+                            setBrandMenuOpen(false);
+                          }}
+                          className={`flex w-full items-center justify-between px-3 py-1.5 text-left text-[13px] hover:bg-neutral-50 ${
+                            !form.brandId
+                              ? "font-medium text-neutral-900"
+                              : "text-neutral-600"
+                          }`}
+                        >
+                          <span>Choose a brand</span>
+                          {!form.brandId ? (
+                            <svg
+                              viewBox="0 0 16 16"
+                              fill="none"
+                              className="h-3.5 w-3.5 text-neutral-800 shrink-0"
+                              aria-hidden="true"
+                            >
+                              <path
+                                d="m3.5 8.5 3 3 6-6.5"
+                                stroke="currentColor"
+                                strokeWidth="1.6"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                            </svg>
+                          ) : null}
+                        </button>
+                        {brands.map((b) => {
+                          const isSelected = form.brandId === String(b.id);
+                          return (
+                            <button
+                              key={b.id}
+                              type="button"
+                              role="option"
+                              aria-selected={isSelected}
+                              onClick={() => {
+                                update("brandId", String(b.id));
+                                setBrandMenuOpen(false);
+                              }}
+                              className={`flex w-full items-center justify-between px-3 py-1.5 text-left text-[13px] hover:bg-neutral-50 ${
+                                isSelected
+                                  ? "font-medium text-neutral-900"
+                                  : "text-neutral-700"
+                              }`}
+                            >
+                              <span>{b.name}</span>
+                              {isSelected ? (
+                                <svg
+                                  viewBox="0 0 16 16"
+                                  fill="none"
+                                  className="h-3.5 w-3.5 text-neutral-800 shrink-0"
+                                  aria-hidden="true"
+                                >
+                                  <path
+                                    d="m3.5 8.5 3 3 6-6.5"
+                                    stroke="currentColor"
+                                    strokeWidth="1.6"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                  />
+                                </svg>
+                              ) : null}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ) : null}
+                  </div>
                   <FieldError message={fieldErrors.brandId} />
                   <p className="mt-1 text-[11.5px] text-neutral-500">
                     The manufacturer. e.g. Dell, Lenovo, Apple.
                   </p>
-                </div>
-
-                <div className="border-t border-neutral-100 pt-3">
-                  <button
-                    type="button"
-                    onClick={() => setAdvancedOpen((v) => !v)}
-                    className="flex items-center gap-1.5 text-[12px] text-neutral-500 hover:text-neutral-800"
-                  >
-                    <svg
-                      viewBox="0 0 16 16"
-                      fill="none"
-                      className={`h-3 w-3 transition-transform ${
-                        advancedOpen ? "rotate-90" : ""
-                      }`}
-                    >
-                      <path
-                        d="m6 4 4 4-4 4"
-                        stroke="currentColor"
-                        strokeWidth="1.6"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                    Advanced
-                  </button>
-
-                  {advancedOpen ? (
-                    <div className="mt-3">
-                      <FieldLabel hint="optional">Product type</FieldLabel>
-                      <select
-                        value={form.productType}
-                        onChange={(e) => update("productType", e.target.value)}
-                        className={inputClass}
-                      >
-                        <option value="LAPTOP">Laptop</option>
-                        <option value="DESKTOP">Desktop</option>
-                        <option value="MONITOR">Monitor</option>
-                        <option value="ACCESSORY">Accessory</option>
-                      </select>
-                      <p className="mt-1 text-[11.5px] text-neutral-500">
-                        Used for storefront filtering. Separate from the
-                        category tree.
-                      </p>
-                    </div>
-                  ) : null}
                 </div>
               </div>
             </SectionCard>

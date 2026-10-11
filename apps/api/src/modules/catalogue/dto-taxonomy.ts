@@ -19,6 +19,7 @@ export interface CreateStaffCategoryInput {
   name: string;
   slug?: string;
   description?: string | null;
+  imageUrl?: string | null;
   parentId?: number | null;
   displayOrder?: number;
 }
@@ -27,6 +28,7 @@ export interface UpdateStaffCategoryInput {
   name?: string;
   slug?: string;
   description?: string | null;
+  imageUrl?: string | null;
   parentId?: number | null;
   displayOrder?: number;
   status?: string;

@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
+import { StorageModule } from "./common/storage/storage.module";
 import { PrismaModule } from "./database/prisma.module";
 import { StaffAuthModule } from "./modules/staff-auth/staff-auth.module";
 import { PlatformSettingsModule } from "./modules/platform-settings/platform-settings.module";
@@ -21,6 +22,7 @@ import { MetaobjectsModule } from "./modules/metaobjects/metaobjects.module";
       isGlobal: true,
       envFilePath: ["../../.env", ".env"],
     }),
+    StorageModule,
     PrismaModule,
     AuditModule,
     StaffAuthModule,

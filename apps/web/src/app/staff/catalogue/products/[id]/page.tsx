@@ -10,6 +10,7 @@ import {
 import {
   activateStaffVariant,
   deactivateStaffVariant,
+  deleteStaffProduct,
   deleteStaffVariant,
   getStaffProduct,
   getStaffProductOptions,
@@ -65,6 +66,8 @@ export default function StaffCatalogueProductEditor() {
 
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [variantSavingId, setVariantSavingId] = useState<string | null>(null);
 
   const [error, setError] = useState("");
@@ -96,6 +99,27 @@ export default function StaffCatalogueProductEditor() {
   const [matrixVariants, setMatrixVariants] = useState<StaffMatrixVariant[]>([]);
   const [syncing, setSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState("");
+
+  const [categoryMenuOpen, setCategoryMenuOpen] = useState(false);
+  const [brandMenuOpen, setBrandMenuOpen] = useState(false);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      const target = event.target as HTMLElement | null;
+      if (!target) return;
+      if (!target.closest("[data-category-picker]")) {
+        setCategoryMenuOpen(false);
+      }
+      if (!target.closest("[data-brand-picker]")) {
+        setBrandMenuOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   /* ------------------ Load ------------------ */
 
@@ -163,7 +187,11 @@ export default function StaffCatalogueProductEditor() {
               (v.media?.[0]?.storageKey
                 ? `https://res.cloudinary.com/klarone/image/upload/${v.media[0].storageKey}`
                 : null),
-            quantityAvailable: 0,
+            quantityAvailable: (v.inventories ?? []).reduce(
+              (sum: number, inv: any) =>
+                sum + Number(inv.quantityAvailable || 0),
+              0,
+            ),
             optionValues: (v.optionValues ?? []).map((link: any) => ({
               productOptionId: String(link.productOptionId),
               productOptionValueId: String(link.productOptionValueId),
@@ -344,6 +372,35 @@ export default function StaffCatalogueProductEditor() {
     }
   }
 
+  /* ------------------ Delete Product ------------------ */
+
+  async function handleDeleteProduct() {
+    if (!token) return;
+    setDeleting(true);
+    setError("");
+    try {
+      await deleteStaffProduct(token, productId);
+      router.push("/staff/catalogue/products");
+    } catch (caught) {
+      if (
+        caught instanceof StaffCatalogueApiError &&
+        caught.status === 401
+      ) {
+        clearStaffAccessToken();
+        router.replace("/staff/login");
+        return;
+      }
+      setError(
+        caught instanceof Error
+          ? caught.message
+          : "Unable to delete product. Make sure there are no pending orders or inventory dependencies.",
+      );
+      setShowDeleteConfirm(false);
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   /* ------------------ Variant lifecycle ------------------ */
 
   async function removeMatrixVariant(variant: StaffMatrixVariant) {
@@ -480,14 +537,38 @@ export default function StaffCatalogueProductEditor() {
             </nav>
           </div>
 
-          <button
-            type="button"
-            onClick={() => void saveAll()}
-            disabled={saving || variants.length === 0}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-neutral-900 px-3.5 py-1.5 text-[13px] font-medium text-white hover:bg-neutral-800 disabled:opacity-50"
-          >
-            {saving ? "Saving…" : "Save"}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowDeleteConfirm(true)}
+              disabled={deleting}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 py-1.5 text-[13px] font-medium text-red-600 hover:bg-red-50 hover:border-red-300 disabled:opacity-50"
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M3 6h18" />
+                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+              </svg>
+              Delete product
+            </button>
+            <button
+              type="button"
+              onClick={() => void saveAll()}
+              disabled={saving || variants.length === 0}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-neutral-900 px-3.5 py-1.5 text-[13px] font-medium text-white hover:bg-neutral-800 disabled:opacity-50"
+            >
+              {saving ? "Saving…" : "Save"}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -561,20 +642,25 @@ export default function StaffCatalogueProductEditor() {
               </div>
             ) : null}
 
-            {/* Price — real editor for the primary variant */}
+            {/* Price — only edit base variant price if single item; otherwise show notice that matrix controls prices */}
             <div className="rounded-xl border border-neutral-200 bg-white">
               <div className="flex items-center justify-between border-b border-neutral-100 px-4 py-3">
                 <h2 className="text-[13px] font-medium text-neutral-800">
                   Price
                 </h2>
                 {variants.length > 1 ? (
-                  <span className="text-[11.5px] text-neutral-500">
-                    Editing base variant. Others from the matrix.
+                  <span className="rounded-md bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700 border border-amber-200/60">
+                    Managed in variant matrix below
                   </span>
                 ) : null}
               </div>
 
-              <div className="space-y-3 px-4 py-4">
+              {variants.length > 1 ? (
+                <div className="px-4 py-4 text-[12.5px] text-neutral-500 bg-neutral-50/50">
+                  This product has <span className="font-semibold text-neutral-800">{variants.length} variants</span>. Each variant has its own individual price, SKU, and inventory in the <span className="font-medium text-neutral-700">Variants Matrix</span> table below.
+                </div>
+              ) : (
+                <div className="space-y-3 px-4 py-4">
                 <div className="grid gap-3 md:grid-cols-3">
                   <div>
                     <label className="mb-1.5 block text-[12px] font-medium text-neutral-700">
@@ -639,6 +725,7 @@ export default function StaffCatalogueProductEditor() {
                   Charge tax on this product
                 </label>
               </div>
+              )}
             </div>
 
             {/* Variants */}
@@ -734,71 +821,247 @@ export default function StaffCatalogueProductEditor() {
             </div>
 
             {/* Product organization */}
-            <div className="rounded-xl border border-neutral-200 bg-white">
+            <div className="rounded-xl border border-neutral-200 bg-white overflow-visible">
               <div className="border-b border-neutral-100 px-4 py-3">
                 <h2 className="text-[13px] font-medium text-neutral-800">
                   Product organization
                 </h2>
               </div>
               <div className="space-y-4 px-4 py-4">
-                <div>
-                  <label className="mb-1.5 block text-[12px] font-medium text-neutral-700">
-                    Type
-                  </label>
-                  <select
-                    value={productType}
-                    onChange={(e) => setProductType(e.target.value)}
-                    className={inputClass}
-                  >
-                    <option value="LAPTOP">Laptop</option>
-                    <option value="DESKTOP">Desktop</option>
-                    <option value="MONITOR">Monitor</option>
-                    <option value="ACCESSORY">Accessory</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="mb-1.5 block text-[12px] font-medium text-neutral-700">
-                    Brand
-                  </label>
-                  <select
-                    value={brandId ?? ""}
-                    onChange={(e) =>
-                      setBrandId(
-                        e.target.value === "" ? null : Number(e.target.value),
-                      )
-                    }
-                    className={inputClass}
-                  >
-                    <option value="">Choose a brand</option>
-                    {brands.map((b) => (
-                      <option key={b.id} value={b.id}>
-                        {b.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
+                {/* Category Dropdown */}
                 <div>
                   <label className="mb-1.5 block text-[12px] font-medium text-neutral-700">
                     Category
                   </label>
-                  <select
-                    value={categoryId ?? ""}
-                    onChange={(e) =>
-                      setCategoryId(
-                        e.target.value === "" ? null : Number(e.target.value),
-                      )
-                    }
-                    className={inputClass}
-                  >
-                    <option value="">Choose a category</option>
-                    {categories.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="relative" data-category-picker>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCategoryMenuOpen((open) => !open);
+                        setBrandMenuOpen(false);
+                      }}
+                      aria-haspopup="listbox"
+                      aria-expanded={categoryMenuOpen}
+                      className="flex h-9 w-full items-center justify-between rounded-lg border border-neutral-200 bg-white px-3 text-left text-[13px] text-neutral-800 transition hover:border-neutral-300 hover:bg-neutral-50 focus:border-neutral-400 focus:ring-2 focus:ring-neutral-200"
+                    >
+                      <span className={categoryId ? "font-normal text-neutral-900" : "text-neutral-400"}>
+                        {categories.find((c) => c.id === categoryId)?.name ?? "Choose a category"}
+                      </span>
+                      <svg
+                        viewBox="0 0 16 16"
+                        fill="none"
+                        className="h-3.5 w-3.5 text-neutral-500 shrink-0"
+                        aria-hidden="true"
+                      >
+                        <path
+                          d="m5 7 3-3 3 3M5 9l3 3 3-3"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </button>
+
+                    {categoryMenuOpen ? (
+                      <div
+                        role="listbox"
+                        className="absolute top-full left-0 z-50 mt-1 max-h-60 w-full overflow-y-auto rounded-lg border border-neutral-200 bg-white py-1 shadow-lg"
+                      >
+                        <button
+                          type="button"
+                          role="option"
+                          aria-selected={!categoryId}
+                          onClick={() => {
+                            setCategoryId(null);
+                            setCategoryMenuOpen(false);
+                          }}
+                          className={`flex w-full items-center justify-between px-3 py-1.5 text-left text-[13px] hover:bg-neutral-50 ${
+                            !categoryId
+                              ? "font-medium text-neutral-900"
+                              : "text-neutral-600"
+                          }`}
+                        >
+                          <span>Choose a category</span>
+                          {!categoryId ? (
+                            <svg
+                              viewBox="0 0 16 16"
+                              fill="none"
+                              className="h-3.5 w-3.5 text-neutral-800 shrink-0"
+                              aria-hidden="true"
+                            >
+                              <path
+                                d="m3.5 8.5 3 3 6-6.5"
+                                stroke="currentColor"
+                                strokeWidth="1.6"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                            </svg>
+                          ) : null}
+                        </button>
+                        {categories.map((c) => {
+                          const isSelected = categoryId === c.id;
+                          return (
+                            <button
+                              key={c.id}
+                              type="button"
+                              role="option"
+                              aria-selected={isSelected}
+                              onClick={() => {
+                                setCategoryId(c.id);
+                                setCategoryMenuOpen(false);
+                              }}
+                              className={`flex w-full items-center justify-between px-3 py-1.5 text-left text-[13px] hover:bg-neutral-50 ${
+                                isSelected
+                                  ? "font-medium text-neutral-900"
+                                  : "text-neutral-700"
+                              }`}
+                            >
+                              <span>{c.name}</span>
+                              {isSelected ? (
+                                <svg
+                                  viewBox="0 0 16 16"
+                                  fill="none"
+                                  className="h-3.5 w-3.5 text-neutral-800 shrink-0"
+                                  aria-hidden="true"
+                                >
+                                  <path
+                                    d="m3.5 8.5 3 3 6-6.5"
+                                    stroke="currentColor"
+                                    strokeWidth="1.6"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                  />
+                                </svg>
+                              ) : null}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ) : null}
+                  </div>
+                  <p className="mt-1 text-[11px] text-neutral-400">
+                    Determines technical specifications, GST rate and HSN classification.
+                  </p>
+                </div>
+
+                {/* Brand Dropdown */}
+                <div>
+                  <label className="mb-1.5 block text-[12px] font-medium text-neutral-700">
+                    Brand
+                  </label>
+                  <div className="relative" data-brand-picker>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setBrandMenuOpen((open) => !open);
+                        setCategoryMenuOpen(false);
+                      }}
+                      aria-haspopup="listbox"
+                      aria-expanded={brandMenuOpen}
+                      className="flex h-9 w-full items-center justify-between rounded-lg border border-neutral-200 bg-white px-3 text-left text-[13px] text-neutral-800 transition hover:border-neutral-300 hover:bg-neutral-50 focus:border-neutral-400 focus:ring-2 focus:ring-neutral-200"
+                    >
+                      <span className={brandId ? "font-normal text-neutral-900" : "text-neutral-400"}>
+                        {brands.find((b) => b.id === brandId)?.name ?? "Choose a brand"}
+                      </span>
+                      <svg
+                        viewBox="0 0 16 16"
+                        fill="none"
+                        className="h-3.5 w-3.5 text-neutral-500 shrink-0"
+                        aria-hidden="true"
+                      >
+                        <path
+                          d="m5 7 3-3 3 3M5 9l3 3 3-3"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </button>
+
+                    {brandMenuOpen ? (
+                      <div
+                        role="listbox"
+                        className="absolute top-full left-0 z-50 mt-1 max-h-60 w-full overflow-y-auto rounded-lg border border-neutral-200 bg-white py-1 shadow-lg"
+                      >
+                        <button
+                          type="button"
+                          role="option"
+                          aria-selected={!brandId}
+                          onClick={() => {
+                            setBrandId(null);
+                            setBrandMenuOpen(false);
+                          }}
+                          className={`flex w-full items-center justify-between px-3 py-1.5 text-left text-[13px] hover:bg-neutral-50 ${
+                            !brandId
+                              ? "font-medium text-neutral-900"
+                              : "text-neutral-600"
+                          }`}
+                        >
+                          <span>Choose a brand</span>
+                          {!brandId ? (
+                            <svg
+                              viewBox="0 0 16 16"
+                              fill="none"
+                              className="h-3.5 w-3.5 text-neutral-800 shrink-0"
+                              aria-hidden="true"
+                            >
+                              <path
+                                d="m3.5 8.5 3 3 6-6.5"
+                                stroke="currentColor"
+                                strokeWidth="1.6"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                            </svg>
+                          ) : null}
+                        </button>
+                        {brands.map((b) => {
+                          const isSelected = brandId === b.id;
+                          return (
+                            <button
+                              key={b.id}
+                              type="button"
+                              role="option"
+                              aria-selected={isSelected}
+                              onClick={() => {
+                                setBrandId(b.id);
+                                setBrandMenuOpen(false);
+                              }}
+                              className={`flex w-full items-center justify-between px-3 py-1.5 text-left text-[13px] hover:bg-neutral-50 ${
+                                isSelected
+                                  ? "font-medium text-neutral-900"
+                                  : "text-neutral-700"
+                              }`}
+                            >
+                              <span>{b.name}</span>
+                              {isSelected ? (
+                                <svg
+                                  viewBox="0 0 16 16"
+                                  fill="none"
+                                  className="h-3.5 w-3.5 text-neutral-800 shrink-0"
+                                  aria-hidden="true"
+                                >
+                                  <path
+                                    d="m3.5 8.5 3 3 6-6.5"
+                                    stroke="currentColor"
+                                    strokeWidth="1.6"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                  />
+                                </svg>
+                              ) : null}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ) : null}
+                  </div>
+                  <p className="mt-1 text-[11px] text-neutral-400">
+                    The manufacturer. e.g. Dell, Lenovo, Apple.
+                  </p>
                 </div>
 
                 <div>
@@ -867,26 +1130,131 @@ export default function StaffCatalogueProductEditor() {
                 </div>
               </div>
             </div>
+
+            {/* Danger zone */}
+            <div className="rounded-xl border border-red-200 bg-red-50/40 p-4">
+              <h2 className="text-[13px] font-medium text-red-900">
+                Danger Zone
+              </h2>
+              <p className="mt-1 text-[12px] text-red-700 leading-relaxed">
+                Permanently delete this product, all its variants, option associations, and assigned media.
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowDeleteConfirm(true)}
+                disabled={deleting}
+                className="mt-3.5 inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-red-300 bg-white px-3 py-2 text-[12.5px] font-medium text-red-600 shadow-xs hover:bg-red-50 hover:border-red-400 disabled:opacity-50"
+              >
+                <svg
+                  width="13"
+                  height="13"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M3 6h18" />
+                  <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                  <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                </svg>
+                Delete this product
+              </button>
+            </div>
           </aside>
         </div>
       </div>
 
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-neutral-100 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-600">
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M3 6h18" />
+                  <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                  <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                  <line x1="10" y1="11" x2="10" y2="17" />
+                  <line x1="14" y1="11" x2="14" y2="17" />
+                </svg>
+              </span>
+              <div>
+                <h3 className="text-[15px] font-semibold text-neutral-900">
+                  Delete &ldquo;{product.name}&rdquo;?
+                </h3>
+                <p className="mt-0.5 text-[12.5px] text-neutral-500">
+                  This action is irreversible. All {variants.length} variant(s), option values, and images will be permanently removed.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={deleting}
+                className="rounded-lg border border-neutral-200 bg-white px-3.5 py-2 text-[13px] font-medium text-neutral-700 hover:bg-neutral-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleDeleteProduct()}
+                disabled={deleting}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-4 py-2 text-[13px] font-medium text-white shadow-xs hover:bg-red-700 disabled:opacity-50"
+              >
+                {deleting ? (
+                  <>
+                    <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                    Deleting…
+                  </>
+                ) : (
+                  "Delete product"
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {/* Bottom bar */}
-      <div className="sticky bottom-0 z-20 flex justify-end gap-2 border-t border-neutral-200 bg-white/95 px-6 py-3 backdrop-blur">
-        <Link
-          href="/staff/catalogue/products"
-          className="rounded-lg border border-neutral-200 bg-white px-4 py-2 text-[13px] font-medium text-neutral-700 hover:bg-neutral-50"
-        >
-          Cancel
-        </Link>
+      <div className="sticky bottom-0 z-20 flex justify-between items-center border-t border-neutral-200 bg-white/95 px-6 py-3 backdrop-blur">
         <button
           type="button"
-          onClick={() => void saveAll()}
-          disabled={saving || variants.length === 0}
-          className="rounded-lg bg-neutral-900 px-4 py-2 text-[13px] font-medium text-white hover:bg-neutral-800 disabled:opacity-50"
+          onClick={() => setShowDeleteConfirm(true)}
+          disabled={deleting}
+          className="text-[13px] font-medium text-red-600 hover:text-red-700 hover:underline disabled:opacity-50"
         >
-          {saving ? "Saving…" : "Save changes"}
+          Delete product
         </button>
+
+        <div className="flex gap-2">
+          <Link
+            href="/staff/catalogue/products"
+            className="rounded-lg border border-neutral-200 bg-white px-4 py-2 text-[13px] font-medium text-neutral-700 hover:bg-neutral-50"
+          >
+            Cancel
+          </Link>
+          <button
+            type="button"
+            onClick={() => void saveAll()}
+            disabled={saving || variants.length === 0}
+            className="rounded-lg bg-neutral-900 px-4 py-2 text-[13px] font-medium text-white hover:bg-neutral-800 disabled:opacity-50"
+          >
+            {saving ? "Saving…" : "Save changes"}
+          </button>
+        </div>
       </div>
     </div>
   );

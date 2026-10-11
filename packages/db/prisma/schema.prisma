@@ -338,6 +338,7 @@ model Category {
   name         String
   slug         String   @unique
   description  String?
+  imageUrl     String?
   displayOrder Int      @default(0)
   status       String   @default("ACTIVE")
   createdAt    DateTime @default(now())
@@ -351,6 +352,51 @@ model Category {
   metafieldDefinitions MetafieldDefinition[]
 
   @@index([parentId])
+}
+
+model Collection {
+  id           Int      @id @default(autoincrement())
+  title        String
+  slug         String   @unique
+  description  String?
+  bannerImage  String?
+  rules        Json?    // Optional automated rules: [{ field: "category"|"price"|"tag", operator: "equals"|"less_than", value: "..." }]
+  status       String   @default("ACTIVE")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  products     CollectionProduct[]
+  variants     CollectionVariant[]
+
+  @@index([status])
+}
+
+model CollectionProduct {
+  collectionId Int
+  productId    BigInt
+  displayOrder Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  product      Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@id([collectionId, productId])
+  @@index([collectionId])
+  @@index([productId])
+}
+
+model CollectionVariant {
+  collectionId     Int
+  productVariantId BigInt
+  displayOrder     Int      @default(0)
+  createdAt        DateTime @default(now())
+
+  collection       Collection     @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  productVariant   ProductVariant @relation(fields: [productVariantId], references: [id], onDelete: Cascade)
+
+  @@id([collectionId, productVariantId])
+  @@index([collectionId])
+  @@index([productVariantId])
 }
 
 model Product {
@@ -380,6 +426,7 @@ model Product {
   media             ProductMedia[]
   outgoingRelations ProductRelation[] @relation("ProductRelationFrom")
   incomingRelations ProductRelation[] @relation("ProductRelationTo")
+  collections       CollectionProduct[]
 
   @@index([brandId])
   @@index([categoryId])
@@ -424,6 +471,7 @@ model ProductVariant {
   serviceJobPartUsages  ServiceJobPartUsage[]
   rentalItems           RentalItem[]
   draftOrderItems       DraftOrderItem[]
+  collectionVariants    CollectionVariant[]
 
   @@index([productId])
   @@index([status])

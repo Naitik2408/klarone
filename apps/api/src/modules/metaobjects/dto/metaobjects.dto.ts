@@ -52,3 +52,27 @@ export interface SetProductMetafieldsInput {
     value: unknown;
   }>;
 }
+
+/* ------------------------------------------------------------------ */
+/* Metafield definition create / update                               */
+/* ------------------------------------------------------------------ */
+
+export interface CreateMetafieldDefinitionInput {
+  name: string;
+  key?: string;
+  namespace?: string;
+  ownerType?: "PRODUCT" | "VARIANT";
+  type: "text" | "number" | "boolean" | "select" | "metaobject";
+  metaobjectType?: string | null;
+  multiple?: boolean;
+  options?: string[] | null;
+  displayOrder?: number;
+  categoryId?: number | null;
+}
+
+export interface UpdateMetafieldDefinitionInput {
+  name?: string;
+  options?: string[] | null;
+  displayOrder?: number;
+  status?: "ACTIVE" | "INACTIVE";
+}

@@ -416,18 +416,12 @@ export default function StaffProductMediaManager({
           </div>
         </div>
       ) : (
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div className="mb-3 flex items-center justify-between">
           <span className="text-[12px] text-neutral-500">
             {media.length === 0
               ? "Upload JPEG, PNG, WebP or AVIF · max 8 MB each"
               : `${media.length} ${media.length === 1 ? "image" : "images"} · drag onto the large image to make it primary`}
           </span>
-          <input
-            value={variantId}
-            onChange={(e) => setVariantId(e.target.value)}
-            placeholder="Attach new uploads to a variant ID (optional)"
-            className="w-[260px] max-w-full rounded-lg border border-neutral-200 bg-white px-3 py-1.5 text-[12px] outline-none placeholder:text-neutral-400 hover:border-neutral-300 focus:border-neutral-400 focus:ring-2 focus:ring-neutral-200"
-          />
         </div>
       )}
 

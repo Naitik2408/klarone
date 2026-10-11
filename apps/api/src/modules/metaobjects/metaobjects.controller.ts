@@ -37,6 +37,30 @@ export class MetaobjectsController {
     return this.metaobjectsService.listMetafieldDefinitions({ categoryId });
   }
 
+  @Post("definitions")
+  @RequirePermission("catalogue.update")
+  createMetafieldDefinition(
+    @Body() body: any,
+  ) {
+    return this.metaobjectsService.createMetafieldDefinition(body);
+  }
+
+  @Patch("definitions/:id")
+  @RequirePermission("catalogue.update")
+  deleteMetafieldDefinition(
+    @Param("id") id: string,
+  ) {
+    return this.metaobjectsService.deleteMetafieldDefinition(Number(id));
+  }
+
+  @Get("definitions/:id/delete")
+  @RequirePermission("catalogue.update")
+  removeMetafieldDefinition(
+    @Param("id") id: string,
+  ) {
+    return this.metaobjectsService.deleteMetafieldDefinition(Number(id));
+  }
+
   /* ---------------- Entries ---------------- */
 
   @Get(":type/entries")

@@ -7,6 +7,7 @@ import { StaffCatalogueTaxonomyController } from "./staff-catalogue-taxonomy.con
 import { StaffCatalogueOptionsController } from "./staff-catalogue-options.controller";
 import { StaffCatalogueProductsAdvancedController } from "./staff-catalogue-products-advanced.controller";
 import { StaffProductMediaController } from "./staff-product-media.controller";
+import { StaffCatalogueCollectionsController } from "./staff-catalogue-collections.controller";
 import { CatalogueService } from "./catalogue.service";
 import { StaffProductMediaService } from "./staff-product-media.service";
 
@@ -19,6 +20,7 @@ import { StaffProductMediaService } from "./staff-product-media.service";
     StaffCatalogueOptionsController,
     StaffCatalogueProductsAdvancedController,
     StaffProductMediaController,
+    StaffCatalogueCollectionsController,
   ],
   providers: [CatalogueService, StaffProductMediaService],
   exports: [CatalogueService],
