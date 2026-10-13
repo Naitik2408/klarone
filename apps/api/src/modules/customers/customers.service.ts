@@ -624,6 +624,44 @@ export class CustomersService {
   }
 
   // ---------------------------------------------------------------
+  // Staff: delete
+  // ---------------------------------------------------------------
+  async deleteStaffCustomer(customerCode: string) {
+    const normalizedCode = customerCode.trim().toUpperCase();
+
+    const customer = await this.prisma.customer.findUnique({
+      where: { customerCode: normalizedCode },
+      select: { id: true, personId: true, userAccountId: true },
+    });
+
+    if (!customer) {
+      throw new NotFoundException("Customer not found.");
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      // Soft-delete or remove customer relationship
+      await tx.customer.delete({
+        where: { id: customer.id },
+      });
+
+      if (customer.userAccountId) {
+        await tx.authIdentity.deleteMany({
+          where: { userAccountId: customer.userAccountId },
+        });
+        await tx.userAccount.delete({
+          where: { id: customer.userAccountId },
+        });
+      }
+
+      await tx.person.delete({
+        where: { id: customer.personId },
+      });
+    });
+
+    return { success: true, customerCode: normalizedCode };
+  }
+
+  // ---------------------------------------------------------------
   // Helpers
   // ---------------------------------------------------------------
   private async generateCustomerCode(): Promise<string> {

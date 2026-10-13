@@ -1,15 +1,49 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { motion, useScroll, useTransform, useSpring, AnimatePresence } from "motion/react";
 import { useCustomerAuth } from "../auth/customer-auth-provider";
 import { useCart } from "../cart/cart-provider";
+import { getBrands, getCategories, getCollections } from "../../lib/api";
+import type {
+  CatalogueBrand,
+  CatalogueCategory,
+  CatalogueCollection,
+} from "../../types/catalogue";
 
 export function StorefrontHeader() {
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
+  const [shopSubTab, setShopSubTab] = useState<"category" | "collection" | "brand" | "all">("category");
+  const [categories, setCategories] = useState<CatalogueCategory[]>([]);
+  const [collections, setCollections] = useState<CatalogueCollection[]>([]);
+  const [brands, setBrands] = useState<CatalogueBrand[]>([]);
   const { customer, isAuthenticated } = useCustomerAuth();
   const { itemCount } = useCart();
+
+  useEffect(() => {
+    let mounted = true;
+    Promise.allSettled([getCategories(), getCollections(), getBrands()]).then(
+      ([catsRes, colsRes, brandsRes]) => {
+        if (!mounted) return;
+        if (catsRes.status === "fulfilled" && Array.isArray(catsRes.value)) {
+          // Filter subcategories or top categories (ignore root parent if preferred, or take first 6)
+          const validCats = catsRes.value.filter((c) => c.slug !== "laptops");
+          setCategories(validCats.length > 0 ? validCats : catsRes.value);
+        }
+        if (colsRes.status === "fulfilled" && Array.isArray(colsRes.value)) {
+          setCollections(colsRes.value);
+        }
+        if (brandsRes.status === "fulfilled" && Array.isArray(brandsRes.value)) {
+          setBrands(brandsRes.value);
+        }
+      },
+    );
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   // Track raw scroll distance
   const { scrollY } = useScroll();
@@ -34,9 +68,46 @@ export function StorefrontHeader() {
 
   const navItems = [
     { label: "Shop", key: "shop" },
-    { label: "Collections", key: "collections" },
-    { label: "Pages", key: "pages" },
-    { label: "Features", key: "features" },
+  ];
+
+  // Top 6 defaults / fallbacks in case API returns fewer items initially
+  const fallbackCategories = [
+    { id: 1, name: "Ultrabooks & Productivity", slug: "ultrabooks", icon: "💻", imageUrl: "/media/catalogue/categories/ultrabooks.jpg" },
+    { id: 2, name: "Gaming Laptops", slug: "gaming-laptops", icon: "⚡", imageUrl: "/media/catalogue/categories/gaming-laptops.jpg" },
+    { id: 3, name: "Creator Workstations", slug: "creator-workstations", icon: "🎨", imageUrl: null },
+    { id: 4, name: "2-in-1 Convertibles", slug: "convertibles", icon: "🔄", imageUrl: null },
+    { id: 5, name: "Business & Enterprise", slug: "business-laptops", icon: "💼", imageUrl: null },
+    { id: 6, name: "Everyday Computing", slug: "everyday-computing", icon: "🌐", imageUrl: null },
+  ];
+
+  const fallbackCollections = [
+    { id: 1, title: "Bestsellers & Staff Picks", slug: "bestsellers", icon: "⭐" },
+    { id: 2, title: "Pure OLED & Cinema Displays", slug: "pure-oled-displays", icon: "✨" },
+    { id: 3, title: "Engineered for Pro Creators", slug: "pro-creators", icon: "🚀" },
+    { id: 4, title: "Best for Students & Coding", slug: "student-and-coding", icon: "🎓" },
+    { id: 5, title: "Flagship Copilot+ PCs", slug: "copilot-pcs", icon: "🤖" },
+    { id: 6, title: "Ultra-Light Mobility Under 1.3kg", slug: "ultra-light", icon: "🪶" },
+  ];
+
+  const fallbackBrands = [
+    { id: 1, name: "Apple", slug: "apple", logoUrl: "/media/catalogue/brands/apple-logo.svg" },
+    { id: 2, name: "Dell", slug: "dell", logoUrl: "/media/catalogue/brands/dell-logo.svg" },
+    { id: 3, name: "Lenovo", slug: "lenovo", logoUrl: "/media/catalogue/brands/lenovo-logo.svg" },
+    { id: 4, name: "HP", slug: "hp", logoUrl: "/media/catalogue/brands/hp-logo.svg" },
+    { id: 5, name: "Asus", slug: "asus", logoUrl: "/media/catalogue/brands/asus-logo.svg" },
+    { id: 6, name: "Acer", slug: "acer", logoUrl: "/media/catalogue/brands/acer-logo.svg" },
+  ];
+
+  // Active items computed for right-side grid (top 6)
+  const displayCategories = categories.length > 0 ? categories.slice(0, 6) : fallbackCategories;
+  const displayCollections = collections.length > 0 ? collections.slice(0, 6) : fallbackCollections;
+  const displayBrands = brands.length > 0 ? brands.slice(0, 6) : fallbackBrands;
+
+  const leftSubTabs = [
+    { key: "category" as const, label: "Shop by Category" },
+    { key: "collection" as const, label: "Shop by Collection" },
+    { key: "brand" as const, label: "Shop by Brand" },
+    { key: "all" as const, label: "Shop All" },
   ];
 
   return (
@@ -114,7 +185,7 @@ export function StorefrontHeader() {
               href="/"
               className="font-serif text-3xl font-normal tracking-tight text-white transition hover:opacity-95 md:text-4xl"
             >
-              wellina
+              klarone
             </Link>
           </div>
 
@@ -187,264 +258,221 @@ export function StorefrontHeader() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -4 }}
               transition={{ duration: 0.18, ease: "easeOut" }}
-              className="absolute left-0 right-0 top-full mt-0 overflow-hidden rounded-t-none rounded-b-[24px] border-t border-stone-100 bg-white text-slate-900 shadow-[0_30px_70px_rgba(0,0,0,0.25)]"
+              className="absolute left-0 right-0 top-full mt-0 overflow-hidden rounded-t-none rounded-b-[28px] border-t border-stone-200/60 bg-white text-slate-900 shadow-[0_30px_70px_rgba(0,0,0,0.25)]"
             >
-              {/* SHOP MEGA MENU */}
               {activeMenu === "shop" && (
-                <div className="grid grid-cols-12 p-8 lg:p-10">
-                  {/* Left Column: Large Editorial Serif Categories matching Shopify */}
-                  <div className="col-span-3 flex flex-col justify-center space-y-4 border-r border-stone-200/80 pr-8">
-                    <Link
-                      href="/#featured-products"
-                      className="font-serif text-[28px] font-normal leading-tight text-slate-900 transition-colors hover:text-emerald-800 lg:text-[32px]"
-                    >
-                      Shop Daily Health
-                    </Link>
-                    <Link
-                      href="/#featured-products"
-                      className="font-serif text-[28px] font-normal leading-tight text-slate-900 underline underline-offset-4 transition-colors hover:text-emerald-800 lg:text-[32px]"
-                    >
-                      Shop Pregnancy
-                    </Link>
-                    <Link
-                      href="/#featured-products"
-                      className="font-serif text-[28px] font-normal leading-tight text-slate-900 transition-colors hover:text-emerald-800 lg:text-[32px]"
-                    >
-                      Shop Bestsellers
-                    </Link>
-                    <Link
-                      href="/#featured-products"
-                      className="font-serif text-[28px] font-normal leading-tight text-slate-900 transition-colors hover:text-emerald-800 lg:text-[32px]"
-                    >
-                      Shop All
-                    </Link>
+                <div className="grid grid-cols-12 items-start gap-8 px-10 py-10 lg:px-14 lg:py-12">
+                  {/* Column 1 (Left): Editorial Serif Links matching Reference Image 2 */}
+                  <div className="col-span-3 flex flex-col items-start space-y-4 border-r border-stone-200/90 pr-8">
+                    {leftSubTabs.map((tab) => {
+                      const isSelected = shopSubTab === tab.key;
+                      return (
+                        <button
+                          key={tab.key}
+                          type="button"
+                          onClick={() => setShopSubTab(tab.key)}
+                          onMouseEnter={() => setShopSubTab(tab.key)}
+                          style={{
+                            fontFamily: "var(--font-serif), 'Instrument Serif', Georgia, serif",
+                            fontSize: "28px",
+                            lineHeight: "1.2",
+                          }}
+                          className={`text-left font-normal tracking-tight transition-all duration-150 ${
+                            isSelected
+                              ? "text-slate-950 underline underline-offset-6 decoration-1"
+                              : "text-slate-800 hover:text-slate-950 hover:underline hover:underline-offset-6"
+                          }`}
+                        >
+                          {tab.label}
+                        </button>
+                      );
+                    })}
                   </div>
 
-                  {/* Middle Column: 2x4 Subcategories with thumbnails */}
-                  <div className="col-span-5 grid grid-cols-2 gap-x-6 gap-y-4 px-8">
-                    {[
-                      { title: "Prenatal & Postnatal", bg: "bg-amber-100", icon: "💊" },
-                      { title: "Best Sellers", bg: "bg-slate-200", icon: "✨" },
-                      { title: "Mom Support", bg: "bg-rose-100", icon: "🌿" },
-                      { title: "New Arrivals", bg: "bg-orange-100", icon: "🌱" },
-                      { title: "Proteins", bg: "bg-stone-300", icon: "🥄" },
-                      { title: "Shop All", bg: "bg-emerald-200", icon: "🌴" },
-                      { title: "Skin", bg: "bg-lime-200", icon: "✨" },
-                    ].map((item, idx) => (
-                      <Link
-                        key={idx}
-                        href="/#featured-products"
-                        className="group flex items-center gap-3.5 rounded-xl p-1.5 transition-colors hover:bg-stone-50"
-                      >
-                        <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${item.bg} text-lg shadow-2xs transition-transform group-hover:scale-105`}>
-                          {item.icon}
-                        </div>
-                        <span className="text-sm font-semibold text-slate-800 transition-colors group-hover:text-slate-950">
-                          {item.title}
-                        </span>
-                      </Link>
-                    ))}
+                  {/* Column 2 (Middle): 2-Column List with squircle thumbnail badges aligned to top */}
+                  <div className="col-span-4 grid grid-cols-2 gap-x-6 gap-y-5 pt-1">
+                    {shopSubTab === "category" &&
+                      displayCategories.map((cat, idx) => {
+                        const bgColors = [
+                          "bg-amber-100/90",
+                          "bg-slate-200/90",
+                          "bg-rose-100/90",
+                          "bg-orange-100/90",
+                          "bg-stone-200/90",
+                          "bg-emerald-100/90",
+                        ];
+                        const bg = bgColors[idx % bgColors.length];
+                        return (
+                          <Link
+                            key={cat.id}
+                            href={`/laptops?categorySlug=${cat.slug}`}
+                            className="group flex items-center gap-3.5 transition-transform hover:translate-x-0.5"
+                          >
+                            <div
+                              className={`relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl ${bg} shadow-2xs`}
+                            >
+                              {cat.imageUrl ? (
+                                <Image
+                                  src={cat.imageUrl}
+                                  alt={cat.name}
+                                  fill
+                                  className="object-cover transition-transform group-hover:scale-105"
+                                />
+                              ) : (
+                                <span className="text-2xl">
+                                  {"icon" in cat && cat.icon ? (cat.icon as string) : "💻"}
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-[15px] font-medium leading-snug text-slate-900 group-hover:text-emerald-950">
+                              {cat.name}
+                            </span>
+                          </Link>
+                        );
+                      })}
+
+                    {shopSubTab === "collection" &&
+                      displayCollections.map((col, idx) => {
+                        const bgColors = [
+                          "bg-slate-200/90",
+                          "bg-amber-100/90",
+                          "bg-emerald-100/90",
+                          "bg-blue-100/90",
+                          "bg-purple-100/90",
+                          "bg-rose-100/90",
+                        ];
+                        const bg = bgColors[idx % bgColors.length];
+                        return (
+                          <Link
+                            key={col.id}
+                            href={`/laptops?collectionSlug=${col.slug}`}
+                            className="group flex items-center gap-3.5 transition-transform hover:translate-x-0.5"
+                          >
+                            <div
+                              className={`relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl ${bg} shadow-2xs`}
+                            >
+                              {col.bannerImage ? (
+                                <Image
+                                  src={col.bannerImage}
+                                  alt={col.title}
+                                  fill
+                                  className="object-cover transition-transform group-hover:scale-105"
+                                />
+                              ) : (
+                                <span className="text-2xl">
+                                  {"icon" in col && col.icon ? (col.icon as string) : "✨"}
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-[15px] font-medium leading-snug text-slate-900 group-hover:text-emerald-950">
+                              {col.title}
+                            </span>
+                          </Link>
+                        );
+                      })}
+
+                    {shopSubTab === "brand" &&
+                      displayBrands.map((brand, idx) => {
+                        const bgColors = [
+                          "bg-[#f6f6f6]",
+                          "bg-[#eef2f6]",
+                          "bg-[#fff8ea]",
+                          "bg-[#f1f3f5]",
+                          "bg-[#eaf5ef]",
+                          "bg-[#f5f5f7]",
+                        ];
+                        const bg = bgColors[idx % bgColors.length];
+                        return (
+                          <Link
+                            key={brand.id}
+                            href={`/laptops?brandSlug=${brand.slug}`}
+                            className="group flex items-center gap-3.5 transition-transform hover:translate-x-0.5"
+                          >
+                            <div
+                              className={`relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl ${bg} p-2.5 shadow-2xs`}
+                            >
+                              {brand.logoUrl ? (
+                                <Image
+                                  src={brand.logoUrl}
+                                  alt={brand.name}
+                                  width={34}
+                                  height={34}
+                                  className="max-h-8 max-w-8 object-contain transition-transform group-hover:scale-110"
+                                />
+                              ) : (
+                                <span className="font-bold text-slate-700 text-sm">
+                                  {brand.name.slice(0, 2).toUpperCase()}
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-[15px] font-medium leading-snug text-slate-900 group-hover:text-emerald-950">
+                              {brand.name}
+                            </span>
+                          </Link>
+                        );
+                      })}
+
+                    {shopSubTab === "all" && (
+                      <div className="col-span-2 flex flex-col justify-start pt-2">
+                        <p
+                          style={{ fontFamily: "var(--font-serif), 'Instrument Serif', Georgia, serif" }}
+                          className="text-[32px] font-normal leading-tight text-slate-900"
+                        >
+                          Complete Flagship Lineup
+                        </p>
+                        <p className="mt-2 text-sm text-stone-600">
+                          Browse all 50+ laptops across every category, tier, and processor.
+                        </p>
+                        <Link
+                          href="/laptops"
+                          className="mt-4 inline-flex items-center text-sm font-semibold text-emerald-800 hover:underline"
+                        >
+                          View all laptops →
+                        </Link>
+                      </div>
+                    )}
                   </div>
 
-                  {/* Right Column: Promotional Editorial Card */}
-                  <div className="col-span-4 pl-4">
-                    <div className="relative flex h-full min-h-[280px] flex-col justify-end overflow-hidden rounded-[22px] bg-stone-800 p-7 text-white shadow-md">
-                      <div className="absolute inset-0 bg-gradient-to-tr from-stone-900 via-stone-800/90 to-emerald-950/40" />
+                  {/* Column 3 (Right): Featured Editorial Banner Card matching screenshot exactly */}
+                  <div className="col-span-5 pl-4">
+                    <div className="relative flex aspect-[16/9] min-h-[260px] w-full flex-col justify-between overflow-hidden rounded-[26px] bg-stone-800 p-7 text-white shadow-md lg:p-8">
+                      {/* Gradient overlay on top of image background */}
+                      <div className="absolute inset-0 bg-gradient-to-r from-stone-900/90 via-stone-800/75 to-transparent z-1" />
                       
+                      {/* Ambient background decoration */}
+                      <div className="absolute right-0 top-0 bottom-0 w-2/3 bg-stone-800">
+                        <div className="absolute inset-0 bg-radial from-stone-600/30 via-transparent to-stone-950/60" />
+                      </div>
+
+                      {/* Content */}
                       <div className="relative z-10">
-                        <span className="text-xs font-bold uppercase tracking-[0.2em] text-white/80">
+                        <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-white/80">
                           NEW IN
                         </span>
-                        <h4 className="mt-2 font-serif text-[34px] font-normal leading-[1.1] text-white lg:text-[38px]">
+                        <h4
+                          style={{ fontFamily: "var(--font-serif), 'Instrument Serif', Georgia, serif" }}
+                          className="mt-2.5 text-[38px] font-normal leading-[1.08] text-white lg:text-[44px]"
+                        >
                           More daily
                           <br />
                           essentials
                         </h4>
-
-                        <div className="mt-6">
-                          <Link
-                            href="/#featured-products"
-                            className="group inline-flex items-center gap-3 rounded-full bg-[#d6f088] py-2.5 pl-5 pr-2 text-xs font-semibold text-slate-950 shadow-md transition-all hover:scale-105 hover:bg-[#c8e678]"
-                          >
-                            <span>Shop Now</span>
-                            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-950 text-white transition-transform group-hover:translate-x-0.5">
-                              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                              </svg>
-                            </span>
-                          </Link>
-                        </div>
                       </div>
-                    </div>
-                  </div>
-                </div>
-              )}
 
-              {/* COLLECTIONS MEGA MENU */}
-              {activeMenu === "collections" && (
-                <div className="grid grid-cols-12 p-8 lg:p-10">
-                  {/* Left 3 Columns: Category link groups */}
-                  <div className="col-span-6 grid grid-cols-3 gap-6 border-r border-stone-200/80 pr-8">
-                    <div>
-                      <h4 className="font-serif text-[26px] font-normal text-slate-900">Daily Health</h4>
-                      <div className="mt-4 space-y-2.5 text-sm text-stone-600">
-                        <p className="cursor-pointer transition-colors hover:text-slate-950">Multivitamin</p>
-                        <p className="cursor-pointer transition-colors hover:text-slate-950">Nutrients</p>
-                        <p className="cursor-pointer transition-colors hover:text-slate-950">Skin</p>
-                        <p className="cursor-pointer transition-colors hover:text-slate-950">Relaxions</p>
-                        <p className="cursor-pointer transition-colors hover:text-slate-950">Recovery</p>
-                        <p className="cursor-pointer font-medium text-slate-900 hover:text-emerald-800">Shop All</p>
-                      </div>
-                    </div>
-
-                    <div>
-                      <h4 className="font-serif text-[26px] font-normal text-slate-900">Bestsellers</h4>
-                      <div className="mt-4 space-y-2.5 text-sm text-stone-600">
-                        <p className="cursor-pointer transition-colors hover:text-slate-950">Proteins</p>
-                        <p className="cursor-pointer transition-colors hover:text-slate-950">Gut Health</p>
-                        <p className="cursor-pointer transition-colors hover:text-slate-950">Nutrients</p>
-                        <p className="cursor-pointer transition-colors hover:text-slate-950">Vitamins</p>
-                        <p className="cursor-pointer transition-colors hover:text-slate-950">Fertility Support</p>
-                        <p className="cursor-pointer font-medium text-slate-900 hover:text-emerald-800">Shop All</p>
-                      </div>
-                    </div>
-
-                    <div>
-                      <h4 className="font-serif text-[26px] font-normal text-slate-900">Pregnancy</h4>
-                      <div className="mt-4 space-y-2.5 text-sm text-stone-600">
-                        <p className="cursor-pointer transition-colors hover:text-slate-950">Prenatal & Postnatal</p>
-                        <p className="cursor-pointer transition-colors hover:text-slate-950">Mom Support</p>
-                        <p className="cursor-pointer transition-colors hover:text-slate-950">Proteins</p>
-                        <p className="cursor-pointer transition-colors hover:text-slate-950">Skin</p>
-                        <p className="cursor-pointer font-medium text-slate-900 hover:text-emerald-800">Shop All</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Right 2 Feature Cards with bold serif headers */}
-                  <div className="col-span-6 grid grid-cols-2 gap-6 pl-8">
-                    {/* Card 1: Proteins */}
-                    <div className="relative flex aspect-square flex-col justify-between overflow-hidden rounded-[22px] bg-stone-700 p-6 text-white shadow-sm">
-                      <div className="absolute inset-0 bg-gradient-to-b from-stone-900/40 via-stone-800/70 to-stone-900/90" />
-                      <div className="relative z-10">
-                        <span className="rounded-full bg-stone-600/70 px-3.5 py-1 text-xs font-semibold text-white backdrop-blur">
-                          Proteins
-                        </span>
-                      </div>
-                      <div className="relative z-10 flex items-end justify-between">
-                        <h4 className="font-serif text-[32px] font-normal leading-[1.08] text-white lg:text-[36px]">
-                          Backed
-                          <br />
-                          by
-                          <br />
-                          science
-                        </h4>
-                        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#d6f088] text-slate-950 shadow-md transition-transform hover:scale-105">
-                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                          </svg>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Card 2: Formulations */}
-                    <div className="relative flex aspect-square flex-col justify-between overflow-hidden rounded-[22px] bg-[#895d36] p-6 text-white shadow-sm">
-                      <div className="absolute inset-0 bg-gradient-to-b from-amber-950/30 via-amber-900/60 to-stone-950/90" />
-                      <div className="relative z-10">
-                        <span className="rounded-full bg-stone-800/60 px-3.5 py-1 text-xs font-semibold text-white backdrop-blur">
-                          Formulations
-                        </span>
-                      </div>
-                      <div className="relative z-10 flex items-end justify-between">
-                        <h4 className="font-serif text-[32px] font-normal leading-[1.08] text-white lg:text-[36px]">
-                          Here are
-                          <br />
-                          some of
-                          <br />
-                          yours
-                        </h4>
-                        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#d6f088] text-slate-950 shadow-md transition-transform hover:scale-105">
-                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                          </svg>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* PAGES MEGA MENU */}
-              {activeMenu === "pages" && (
-                <div className="grid grid-cols-12 items-center p-8 lg:p-10">
-                  {/* Left Column: Big Editorial Serif Intro Headline matching screenshot */}
-                  <div className="col-span-4 pr-6">
-                    <h3 className="font-serif text-[32px] font-normal leading-[1.18] tracking-tight text-slate-900 lg:text-[36px]">
-                      Our most popular
-                      <br />
-                      essential supplements
-                      <br />
-                      —and for good
-                      <br />
-                      reason.
-                    </h3>
-                  </div>
-
-                  {/* Middle Column: 3 rounded visual thumbnail cards */}
-                  <div className="col-span-5 grid grid-cols-3 gap-4 px-3">
-                    {[
-                      { title: "Our Story", bg: "bg-emerald-800/80", icon: "💊" },
-                      { title: "Our Journal", bg: "bg-sky-100", icon: "💧" },
-                      { title: "Our Services", bg: "bg-amber-100", icon: "🌿" },
-                    ].map((item, idx) => (
-                      <Link
-                        key={idx}
-                        href="/#featured-products"
-                        className="group flex flex-col items-center"
-                      >
-                        <div className={`relative flex aspect-square w-full items-center justify-center overflow-hidden rounded-[20px] ${item.bg} text-3xl shadow-sm transition-transform duration-200 group-hover:scale-105`}>
-                          <span>{item.icon}</span>
-                        </div>
-                        <div className="mt-3 flex w-full items-center justify-between px-1">
-                          <span className="font-serif text-[17px] font-normal text-slate-900 group-hover:underline">
-                            {item.title}
-                          </span>
-                          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-stone-100 text-slate-800">
+                      <div className="relative z-10 mt-5">
+                        <Link
+                          href="/laptops"
+                          className="group inline-flex items-center gap-3 rounded-full bg-[#d6f088] py-2 pl-5 pr-2 text-xs font-semibold text-slate-950 shadow-md transition-all hover:scale-105 hover:bg-[#c8e678]"
+                        >
+                          <span>Shop Now</span>
+                          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-950 text-white transition-transform group-hover:translate-x-0.5">
                             <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                               <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                             </svg>
                           </span>
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
-
-                  {/* Right Column: Text Quicklinks */}
-                  <div className="col-span-3 border-l border-stone-200/80 pl-8 space-y-3 text-sm text-stone-600">
-                    <p className="cursor-pointer transition-colors hover:text-slate-950">Our Story</p>
-                    <p className="cursor-pointer transition-colors hover:text-slate-950">FAQs</p>
-                    <p className="cursor-pointer transition-colors hover:text-slate-950">Contact Us</p>
-                    <p className="cursor-pointer transition-colors hover:text-slate-950">Find A Store</p>
-                    <p className="cursor-pointer transition-colors hover:text-slate-950">Our Journal</p>
-                    <p className="cursor-pointer transition-colors hover:text-slate-950">Help Center</p>
-                  </div>
-                </div>
-              )}
-
-              {/* FEATURES MEGA MENU */}
-              {activeMenu === "features" && (
-                <div className="grid grid-cols-3 gap-6 p-8 lg:p-10">
-                  <div className="rounded-2xl bg-stone-50 p-6">
-                    <span className="font-serif text-[24px] font-normal text-slate-900">Custom Subscriptions</span>
-                    <p className="mt-2 text-sm text-stone-500">Flexible monthly deliveries with exclusive member perks and savings.</p>
-                  </div>
-                  <div className="rounded-2xl bg-stone-50 p-6">
-                    <span className="font-serif text-[24px] font-normal text-slate-900">Lab Certificates</span>
-                    <p className="mt-2 text-sm text-stone-500">Third-party purity and potency validation for every single batch.</p>
-                  </div>
-                  <div className="rounded-2xl bg-stone-50 p-6">
-                    <span className="font-serif text-[24px] font-normal text-slate-900">Practitioner Network</span>
-                    <p className="mt-2 text-sm text-stone-500">Consult with licensed naturopaths and certified nutritionists.</p>
+                        </Link>
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}

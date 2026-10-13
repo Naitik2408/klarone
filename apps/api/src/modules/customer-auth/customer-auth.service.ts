@@ -24,6 +24,7 @@ export interface CustomerAuthSessionResponse {
   accessToken: string;
   tokenType: "Bearer";
   expiresIn: number;
+  isNewUser: boolean;
   customer: {
     userAccountId: string;
     customerId: string;
@@ -83,6 +84,7 @@ export class CustomerAuthService {
       accessToken,
       tokenType: "Bearer",
       expiresIn: 1800,
+      isNewUser: customerIdentity.isNew,
       customer: {
         userAccountId:
           customerIdentity.userAccountId,
@@ -237,6 +239,7 @@ export class CustomerAuthService {
               userAccount.personId.toString(),
             provider,
             externalAuthId,
+            isNew: false,
           };
         }
 
@@ -244,7 +247,7 @@ export class CustomerAuthService {
           data: {
             firstName:
               identity.firstName?.trim() ||
-              "Customer",
+              "",
             lastName:
               identity.lastName?.trim() ||
               null,
@@ -303,6 +306,7 @@ export class CustomerAuthService {
             person.id.toString(),
           provider,
           externalAuthId,
+          isNew: true,
         };
       },
       {
@@ -325,5 +329,21 @@ export class CustomerAuthService {
     }
 
     return `KLN-CUS-${suffix}`;
+  }
+
+  async updateProfile(
+    personIdStr: string,
+    data: { firstName?: string; lastName?: string; phone?: string; email?: string },
+  ) {
+    const personId = BigInt(personIdStr);
+    return this.prisma.person.update({
+      where: { id: personId },
+      data: {
+        ...(data.firstName !== undefined && { firstName: data.firstName }),
+        ...(data.lastName !== undefined && { lastName: data.lastName }),
+        ...(data.phone !== undefined && { phone: data.phone }),
+        ...(data.email !== undefined && { email: data.email }),
+      },
+    });
   }
 }

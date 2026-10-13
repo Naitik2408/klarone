@@ -1,6 +1,8 @@
 import type {
   CatalogueBrand,
   CatalogueCategory,
+  CatalogueCollection,
+  CatalogueFacets,
   CatalogueProductDetail,
   CatalogueProductsResponse,
 } from "../types/catalogue";
@@ -41,34 +43,57 @@ export async function getCategories(): Promise<CatalogueCategory[]> {
   return apiFetch<CatalogueCategory[]>("/catalogue/categories");
 }
 
+export async function getCollections(): Promise<CatalogueCollection[]> {
+  return apiFetch<CatalogueCollection[]>("/catalogue/collections");
+}
+
+export async function getFacets(params?: {
+  categorySlug?: string;
+  collectionSlug?: string;
+}): Promise<CatalogueFacets> {
+  const searchParams = new URLSearchParams();
+  if (params?.categorySlug) searchParams.set("categorySlug", params.categorySlug);
+  if (params?.collectionSlug) searchParams.set("collectionSlug", params.collectionSlug);
+  const query = searchParams.toString();
+  return apiFetch<CatalogueFacets>(`/catalogue/facets${query ? `?${query}` : ""}`);
+}
+
 export async function getProducts(params?: {
   search?: string;
   brandSlug?: string;
+  brandSlugs?: string[];
   categorySlug?: string;
+  collectionSlug?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  ramGb?: number[];
+  storageGb?: number[];
+  inStockOnly?: boolean;
+  sortBy?: "featured" | "price-asc" | "price-desc" | "newest";
   page?: number;
   pageSize?: number;
 }): Promise<CatalogueProductsResponse> {
   const searchParams = new URLSearchParams();
 
-  if (params?.search) {
-    searchParams.set("search", params.search);
+  if (params?.search) searchParams.set("search", params.search);
+  if (params?.brandSlug) searchParams.set("brandSlug", params.brandSlug);
+  if (params?.brandSlugs && params.brandSlugs.length > 0) {
+    searchParams.set("brandSlugs", params.brandSlugs.join(","));
   }
-
-  if (params?.brandSlug) {
-    searchParams.set("brandSlug", params.brandSlug);
+  if (params?.categorySlug) searchParams.set("categorySlug", params.categorySlug);
+  if (params?.collectionSlug) searchParams.set("collectionSlug", params.collectionSlug);
+  if (params?.minPrice !== undefined) searchParams.set("minPrice", String(params.minPrice));
+  if (params?.maxPrice !== undefined) searchParams.set("maxPrice", String(params.maxPrice));
+  if (params?.ramGb && params.ramGb.length > 0) {
+    searchParams.set("ramGb", params.ramGb.join(","));
   }
-
-  if (params?.categorySlug) {
-    searchParams.set("categorySlug", params.categorySlug);
+  if (params?.storageGb && params.storageGb.length > 0) {
+    searchParams.set("storageGb", params.storageGb.join(","));
   }
-
-  if (params?.page) {
-    searchParams.set("page", String(params.page));
-  }
-
-  if (params?.pageSize) {
-    searchParams.set("pageSize", String(params.pageSize));
-  }
+  if (params?.inStockOnly) searchParams.set("inStockOnly", "true");
+  if (params?.sortBy) searchParams.set("sortBy", params.sortBy);
+  if (params?.page) searchParams.set("page", String(params.page));
+  if (params?.pageSize) searchParams.set("pageSize", String(params.pageSize));
 
   const query = searchParams.toString();
 

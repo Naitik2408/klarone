@@ -13,13 +13,22 @@ import {
 } from "../components/storefront/newsletter-and-footer";
 import { SmoothScrollProvider } from "../components/storefront/smooth-scroll-provider";
 
+import { getProducts } from "../lib/api";
+
 export const metadata: Metadata = {
   title: "Wellina — Whole Body Health Starts in the Gut",
   description:
     "Clinically formulated wellness supplements engineered for vital balance and pure nourishment.",
 };
 
-export default function StorefrontHomePage() {
+export default async function StorefrontHomePage() {
+  const topProductsResponse = await getProducts({
+    collectionSlug: "top-picks",
+    pageSize: 6,
+  }).catch(() => null);
+
+  const topProducts = topProductsResponse?.items ?? [];
+
   return (
     <SmoothScrollProvider>
       <div className="min-h-screen bg-[#8b9e76] font-sans antialiased selection:bg-[#d6f088] selection:text-slate-950">
@@ -30,8 +39,8 @@ export default function StorefrontHomePage() {
           {/* 2. Hero Section: Split Dual-Tone Background & Typography */}
           <StorefrontHero />
 
-          {/* 3. Product Catalog Section: 'Find your supplement' with carousel controls */}
-          <StorefrontProductSection />
+          {/* 3. Product Catalog Section: 'Month's top products' with carousel controls */}
+          <StorefrontProductSection initialProducts={topProducts} />
 
           {/* 4. Formulations Section: 'Science-backed formulations' with 3 feature cards */}
           <StorefrontFormulationsSection />

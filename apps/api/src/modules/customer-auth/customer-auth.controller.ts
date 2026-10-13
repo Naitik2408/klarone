@@ -42,4 +42,14 @@ export class CustomerAuthController {
       customer,
     };
   }
+
+  @Post("profile")
+  @UseGuards(CustomerAuthGuard)
+  async updateProfile(
+    @CurrentCustomer() customer: AuthenticatedCustomer,
+    @Body() body: { firstName?: string; lastName?: string; phone?: string; email?: string },
+  ) {
+    await this.customerAuthService.updateProfile(customer.personId, body);
+    return { success: true };
+  }
 }

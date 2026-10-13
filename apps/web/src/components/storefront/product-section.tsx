@@ -4,6 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "motion/react";
 import { useCart } from "../cart/cart-provider";
+import type { CatalogueProduct } from "../../types/catalogue";
+import { ProductCard } from "../catalogue/product-card";
 
 interface ProductItem {
   id: string;
@@ -183,44 +185,62 @@ function BottleMockup({ type }: { type: ProductItem["bottleType"] }) {
   );
 }
 
-export function StorefrontProductSection() {
-  const [activeTab, setActiveTab] = useState<"best_sellers" | "new_arrivals">("best_sellers");
+interface StorefrontProductSectionProps {
+  initialProducts?: CatalogueProduct[];
+}
+
+export function StorefrontProductSection({ initialProducts = [] }: StorefrontProductSectionProps) {
   const [addingId, setAddingId] = useState<string | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const { addItem } = useCart();
 
-  const maxIndex = Math.max(0, PRODUCTS.length - 4);
+  // Take top 6 products
+  const products = initialProducts.slice(0, 6);
+  const totalCount = products.length > 0 ? products.length : Math.min(PRODUCTS.length, 6);
+  // Viewport displays 4 cards, so max slide index for 6 cards is 2 (6 - 4)
+  const maxIndex = Math.max(0, totalCount - 4);
 
-  async function handleAddToCart(product: ProductItem) {
+  async function handleAddToCart(item: any) {
     try {
-      setAddingId(product.id);
-      const mockProduct: any = {
-        id: product.id,
-        name: product.name,
-        slug: product.id,
-        shortDescription: null,
-        productType: "PHYSICAL",
-        brand: { id: 1, name: "Klarone", slug: "klarone" },
-        category: { id: 1, name: product.category, slug: product.category.toLowerCase() },
-        media: [],
-        variants: [
-          {
-            id: `${product.id}-default`,
-            sku: `${product.id}-SKU`,
-            variantName: product.name,
-            ramGb: null,
-            storageGb: null,
-            operatingSystem: null,
-            sellingPrice: String(product.price),
-            compareAtPrice: product.originalPrice ? String(product.originalPrice) : null,
-            currency: "INR",
-          },
-        ],
-      };
-      await addItem({
-        product: mockProduct,
-        variantId: `${product.id}-default`,
-      });
+      const isCatalogueProduct = "brand" in item && "variants" in item;
+      const id = isCatalogueProduct ? String(item.id) : item.id;
+      setAddingId(id);
+
+      if (isCatalogueProduct) {
+        const variantId = item.variants?.[0]?.id ? String(item.variants[0].id) : `${id}-default`;
+        await addItem({
+          product: item,
+          variantId,
+        });
+      } else {
+        const mockProduct: any = {
+          id: item.id,
+          name: item.name,
+          slug: item.id,
+          shortDescription: null,
+          productType: "PHYSICAL",
+          brand: { id: 1, name: "Klarone", slug: "klarone" },
+          category: { id: 1, name: item.category, slug: item.category.toLowerCase() },
+          media: [],
+          variants: [
+            {
+              id: `${item.id}-default`,
+              sku: `${item.id}-SKU`,
+              variantName: item.name,
+              ramGb: null,
+              storageGb: null,
+              operatingSystem: null,
+              sellingPrice: String(item.price),
+              compareAtPrice: item.originalPrice ? String(item.originalPrice) : null,
+              currency: "INR",
+            },
+          ],
+        };
+        await addItem({
+          product: mockProduct,
+          variantId: `${item.id}-default`,
+        });
+      }
     } catch {
       // Cart fallback
     } finally {
@@ -246,35 +266,8 @@ export function StorefrontProductSection() {
       <div className="mx-auto max-w-[1560px] px-6 sm:px-10 lg:px-14">
         <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="font-serif text-4xl font-normal tracking-tight text-slate-900 sm:text-5xl lg:text-[56px]">
-            Find your supplement
+            Month&apos;s top products
           </h2>
-
-          {/* Minimalist Tab Switcher */}
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setActiveTab("best_sellers")}
-              className={`rounded-full px-5 py-2 text-xs font-semibold tracking-wide transition-all duration-200 ${
-                activeTab === "best_sellers"
-                  ? "bg-[#e8ece6] text-slate-900"
-                  : "text-slate-500 hover:text-slate-900"
-              }`}
-            >
-              Best Sellers
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab("new_arrivals")}
-              className={`rounded-full px-5 py-2 text-xs font-semibold tracking-wide transition-all duration-200 ${
-                activeTab === "new_arrivals"
-                  ? "bg-[#e8ece6] text-slate-900"
-                  : "text-slate-500 hover:text-slate-900"
-              }`}
-            >
-              New Arrivals
-            </button>
-          </div>
         </div>
       </div>
 
@@ -287,93 +280,134 @@ export function StorefrontProductSection() {
       <div className="mt-14 w-full overflow-hidden">
         <div className="mx-auto max-w-[1560px] pl-6 sm:pl-10 lg:pl-14 pr-0">
           <motion.div
-            className="flex gap-6 pr-6"
+            className="flex gap-6 pr-6 will-change-transform"
             animate={{
               x: `-${currentIndex * (22.8 + 1.5)}%`,
             }}
             transition={{
-              type: "spring",
-              stiffness: 280,
-              damping: 32,
-              mass: 0.8,
+              duration: 0.45,
+              ease: [0.25, 1, 0.5, 1], // Smooth cubic-bezier without spring stutter or lag
             }}
           >
-            {PRODUCTS.map((prod) => (
-              <div
-                key={prod.id}
-                /* Sized so 4 full cards occupy the width, and the 5th card peeks ~10-15% into view */
-                className="group relative flex flex-col justify-between flex-[0_0_84%] sm:flex-[0_0_45%] lg:flex-[0_0_22.8%] rounded-[24px] bg-[#f0f2ee] p-4 transition-transform duration-200"
-              >
-                {/* Badge (Sale / Best Sellers) - larger with soft, lighter organic background colors */}
-                {prod.badge && (
-                  <div className="absolute left-4 top-4 z-20">
-                    <span
-                      className={`inline-block rounded-full px-3.5 py-1.5 text-[12px] font-medium tracking-wide text-white shadow-2xs ${
-                        prod.badge.type === "sale" ? "bg-[#c64f3d]" : "bg-[#6c8868]"
-                      }`}
-                    >
-                      {prod.badge.text}
-                    </span>
-                  </div>
-                )}
+            {(products.length > 0 ? products : PRODUCTS.slice(0, 6)).map((item: any, idx: number) => {
+              const isCatalogueProduct = "brand" in item && "variants" in item;
+              const id = isCatalogueProduct ? String(item.id) : item.id;
+              const category = isCatalogueProduct ? item.category?.name || "Laptops" : item.category;
+              const name = item.name;
+              const variant = isCatalogueProduct ? item.variants?.[0] : null;
+              const price = isCatalogueProduct
+                ? Number(variant?.sellingPrice || 0)
+                : item.price;
+              const originalPrice = isCatalogueProduct
+                ? variant?.compareAtPrice ? Number(variant.compareAtPrice) : undefined
+                : item.originalPrice;
+              const primaryMedia = isCatalogueProduct ? item.media?.[0] : null;
+              const isSale = originalPrice && originalPrice > price;
+              const isBestSeller = !isSale && (idx === 0 || idx === 2);
+              const bottleType = !isCatalogueProduct
+                ? item.bottleType
+                : (["jar_clear", "tin_green", "bottle_white", "tin_white", "pouch_green", "jar_clear"][idx % 6] as ProductItem["bottleType"]);
 
-                {/* 
-                  Clean Unified Product Stage:
-                  Slightly reduced vertical height (aspect-[1/1] to aspect-[4/4.5]) so the card is compact
-                */}
-                <div className="relative flex aspect-[4/4.4] min-h-[250px] w-full items-center justify-center overflow-hidden rounded-[18px]">
-                  <BottleMockup type={prod.bottleType} />
-                </div>
-
-                {/* Card Meta & Circular Cart Button (h-11 w-11 / 44px) */}
-                <div className="mt-4 flex items-end justify-between px-1 pb-1">
-                  <div className="flex flex-col">
-                    <span className="text-xs font-normal text-stone-500">{prod.category}</span>
-                    <h3 className="mt-1 text-[16px] font-semibold tracking-tight text-slate-900">
-                      {prod.name}
-                    </h3>
-                    <div className="mt-1.5 flex items-baseline gap-2">
-                      <span className="text-sm font-semibold text-slate-900">
-                        ${prod.price.toFixed(2)}
-                      </span>
-                      {prod.originalPrice && (
-                        <span className="text-xs text-stone-400 line-through">
-                          ${prod.originalPrice.toFixed(2)}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Circular Add to Cart Button (44px) */}
-                  <motion.button
-                    whileTap={{ scale: 0.9 }}
-                    type="button"
-                    onClick={() => handleAddToCart(prod)}
-                    disabled={addingId === prod.id}
-                    aria-label={`Add ${prod.name} to cart`}
-                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-slate-950 text-white shadow-sm transition-all duration-200 hover:scale-105 hover:bg-slate-800 disabled:opacity-50"
-                  >
-                    {addingId === prod.id ? (
-                      <span className="text-xs font-bold text-lime-300">✓</span>
-                    ) : (
-                      <svg
-                        className="h-4 w-4"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        strokeWidth="2.2"
+              return (
+                <div
+                  key={id}
+                  /* Sized so 4 full cards occupy the width, and the 5th card peeks ~10-15% into view */
+                  className="group relative flex flex-col justify-between flex-[0_0_84%] sm:flex-[0_0_45%] lg:flex-[0_0_22.8%] rounded-[24px] bg-[#f0f2ee] p-4 transition-transform duration-200"
+                >
+                  {/* Badge (Sale / Best Sellers) - larger with soft, lighter organic background colors */}
+                  {(isSale || isBestSeller) && (
+                    <div className="absolute left-4 top-4 z-20">
+                      <span
+                        className={`inline-block rounded-full px-3.5 py-1.5 text-[12px] font-medium tracking-wide text-white shadow-2xs ${
+                          isSale ? "bg-[#c64f3d]" : "bg-[#6c8868]"
+                        }`}
                       >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
+                        {isSale ? "Sale" : "Best Sellers"}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Clean Unified Product Stage */}
+                  <div className="relative flex aspect-[4/4.4] min-h-[250px] w-full items-center justify-center overflow-hidden rounded-[18px] bg-white/40">
+                    {isCatalogueProduct ? (
+                      primaryMedia?.url ? (
+                        <img
+                          src={primaryMedia.url}
+                          alt={primaryMedia.altText ?? name}
+                          className="h-full w-full object-contain p-4 transition-transform duration-200 group-hover:scale-105"
                         />
-                      </svg>
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center text-5xl text-stone-400 select-none">
+                          💻
+                        </div>
+                      )
+                    ) : (
+                      <BottleMockup type={bottleType} />
                     )}
-                  </motion.button>
+                  </div>
+
+                  {/* Card Meta & Circular Cart Button (h-11 w-11 / 44px) */}
+                  <div className="mt-4 flex items-end justify-between px-1 pb-1">
+                    <div className="flex flex-col">
+                      <span className="text-xs font-normal text-stone-500">{category}</span>
+                      <h3 className="mt-1 text-[16px] font-semibold tracking-tight text-slate-900 line-clamp-1">
+                        {name}
+                      </h3>
+                      <div className="mt-1.5 flex items-baseline gap-2">
+                        <span className="text-sm font-semibold text-slate-900">
+                          {isCatalogueProduct
+                            ? new Intl.NumberFormat("en-IN", {
+                                style: "currency",
+                                currency: variant?.currency || "INR",
+                                maximumFractionDigits: 0,
+                              }).format(price)
+                            : `$${price.toFixed(2)}`}
+                        </span>
+                        {originalPrice && (
+                          <span className="text-xs text-stone-400 line-through">
+                            {isCatalogueProduct
+                              ? new Intl.NumberFormat("en-IN", {
+                                  style: "currency",
+                                  currency: variant?.currency || "INR",
+                                  maximumFractionDigits: 0,
+                                }).format(originalPrice)
+                              : `$${originalPrice.toFixed(2)}`}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Circular Add to Cart Button (44px) with original Shopping Bag Icon */}
+                    <motion.button
+                      whileTap={{ scale: 0.9 }}
+                      type="button"
+                      onClick={() => handleAddToCart(item)}
+                      disabled={addingId === id}
+                      aria-label={`Add ${name} to cart`}
+                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-slate-950 text-white shadow-sm transition-all duration-200 hover:scale-105 hover:bg-slate-800 disabled:opacity-50 cursor-pointer"
+                    >
+                      {addingId === id ? (
+                        <span className="text-xs font-bold text-lime-300">✓</span>
+                      ) : (
+                        <svg
+                          className="h-4 w-4"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth="2.2"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
+                          />
+                        </svg>
+                      )}
+                    </motion.button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </motion.div>
         </div>
       </div>

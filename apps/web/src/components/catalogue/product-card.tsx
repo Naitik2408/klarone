@@ -29,119 +29,105 @@ export function ProductCard({
   const primaryMedia = product.media[0];
 
   return (
-    <article className="group overflow-hidden rounded-2xl border border-slate-200 bg-white transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-lg">
+    <article className="group relative flex flex-col justify-between overflow-hidden rounded-[24px] bg-[#f0f2ee] transition-all duration-200 hover:shadow-sm">
+      {/* Badge (Sale / Brand) matching reference image */}
+      <div className="absolute left-3.5 top-3.5 z-20 flex items-center gap-1.5">
+        {variant && Number(variant.compareAtPrice) > Number(variant.sellingPrice) ? (
+          <span className="inline-block rounded-full bg-[#c64f3d] px-3 py-1 text-[11px] font-medium tracking-wide text-white shadow-2xs">
+            Sale
+          </span>
+        ) : (
+          <span className="inline-block rounded-full bg-[#6c8868] px-3 py-1 text-[11px] font-medium tracking-wide text-white shadow-2xs">
+            {product.brand.name}
+          </span>
+        )}
+      </div>
+
       <Link
         href={`/laptops/${product.slug}`}
-        className="block"
+        className="block flex-1"
       >
-        <div className="relative aspect-[4/3] overflow-hidden bg-slate-100">
+        {/* Full-bleed Product Image (zero padding top, left, right) */}
+        <div className="relative flex aspect-square w-full items-center justify-center overflow-hidden bg-white/40">
           {primaryMedia?.url ? (
             <img
               src={primaryMedia.url}
-              alt={
-                primaryMedia.altText ??
-                product.name
-              }
-              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+              alt={primaryMedia.altText ?? product.name}
+              className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-[1.02]"
             />
           ) : (
-            <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-slate-100 via-white to-slate-200">
-              <div className="text-center">
-                <div className="mx-auto mb-3 flex h-16 w-24 items-center justify-center rounded-lg border-2 border-slate-300 bg-white shadow-sm">
-                  <div className="h-8 w-14 rounded border border-slate-300 bg-slate-50" />
-                </div>
-
-                <p className="text-xs font-medium uppercase tracking-[0.18em] text-slate-400">
-                  Klarone
-                </p>
-              </div>
+            <div className="flex h-full w-full items-center justify-center bg-stone-200/50 text-4xl">
+              💻
             </div>
           )}
-
-          <div className="absolute left-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-xs font-medium text-slate-700 shadow-sm backdrop-blur">
-            {product.brand.name}
-          </div>
         </div>
 
-        <div className="p-5">
-          <p className="mb-1 text-xs font-medium uppercase tracking-[0.14em] text-slate-400">
+        {/* Card Content & Details (padded) */}
+        <div className="p-4 pb-2">
+          <span className="text-xs font-normal text-stone-500">
             {product.category.name}
-          </p>
+          </span>
 
-          <h3 className="text-lg font-semibold tracking-tight text-slate-950">
+          <h3 className="mt-1 text-[16px] font-semibold tracking-tight text-slate-900 group-hover:text-emerald-950 line-clamp-1">
             {product.name}
           </h3>
 
-          {product.shortDescription ? (
-            <p className="mt-2 line-clamp-2 text-sm leading-6 text-slate-600">
-              {product.shortDescription}
-            </p>
-          ) : (
-            <p className="mt-2 text-sm leading-6 text-slate-500">
-              Explore this laptop at Klarone.
-            </p>
-          )}
-
           {variant ? (
-            <div className="mt-4 flex flex-wrap gap-2">
-              {variant.ramGb ? (
-                <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
-                  {variant.ramGb}GB RAM
-                </span>
-              ) : null}
-
-              {variant.storageGb ? (
-                <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
-                  {variant.storageGb >= 1024
-                    ? `${variant.storageGb / 1024}TB`
-                    : `${variant.storageGb}GB`}{" "}
-                  SSD
-                </span>
-              ) : null}
-
-              {variant.operatingSystem ? (
-                <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
-                  {variant.operatingSystem}
-                </span>
-              ) : null}
-            </div>
-          ) : null}
-
-          {variant ? (
-            <div className="mt-5 flex items-end justify-between gap-4">
-              <div>
-                <p className="text-xl font-semibold tracking-tight text-slate-950">
-                  {formatPrice(
-                    variant.sellingPrice,
-                    variant.currency,
-                  )}
-                </p>
-
-                {variant.compareAtPrice &&
-                variant.compareAtPrice !==
-                  variant.sellingPrice ? (
-                  <p className="mt-1 text-sm text-slate-400 line-through">
-                    {formatPrice(
-                      variant.compareAtPrice,
-                      variant.currency,
-                    )}
-                  </p>
-                ) : null}
-              </div>
-
-              <span className="rounded-full bg-slate-950 px-4 py-2 text-sm font-medium text-white transition-colors group-hover:bg-blue-600">
-                View laptop
+            <div className="mt-1.5 flex items-baseline gap-2">
+              <span className="text-sm font-semibold text-slate-900">
+                {formatPrice(variant.sellingPrice, variant.currency)}
               </span>
+              {variant.compareAtPrice &&
+              Number(variant.compareAtPrice) > Number(variant.sellingPrice) ? (
+                <span className="text-xs text-stone-400 line-through">
+                  {formatPrice(variant.compareAtPrice, variant.currency)}
+                </span>
+              ) : null}
             </div>
           ) : (
-            <div className="mt-5">
-              <span className="text-sm font-medium text-slate-500">
-                View details
-              </span>
-            </div>
+            <p className="mt-1 text-xs text-stone-500">Check availability</p>
           )}
         </div>
       </Link>
+
+      {/* Bottom Specs & 44px Circular Add to Cart Button */}
+      <div className="flex items-center justify-between px-4 pb-4 pt-1">
+        <div className="flex flex-wrap gap-1.5">
+          {variant?.ramGb ? (
+            <span className="rounded-md bg-white/80 px-2 py-0.5 text-[10px] font-medium text-stone-600 shadow-2xs">
+              {variant.ramGb}GB
+            </span>
+          ) : null}
+          {variant?.storageGb ? (
+            <span className="rounded-md bg-white/80 px-2 py-0.5 text-[10px] font-medium text-stone-600 shadow-2xs">
+              {variant.storageGb >= 1024
+                ? `${variant.storageGb / 1024}TB`
+                : `${variant.storageGb}GB`}
+            </span>
+          ) : null}
+        </div>
+
+        {/* 44px Circular Add to Cart Button */}
+        <Link
+          href={`/laptops/${product.slug}`}
+          aria-label={`View ${product.name}`}
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-black text-white shadow-md transition-all duration-200 hover:scale-105 hover:bg-stone-800 active:scale-95"
+        >
+          <svg
+            className="h-5 w-5 text-white fill-none stroke-white"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <path d="M16 10a4 4 0 0 1-8 0" />
+          </svg>
+        </Link>
+      </div>
     </article>
   );
 }

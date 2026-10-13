@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import {
@@ -11,6 +11,7 @@ import {
 
 import {
   getStaffCustomers,
+  deleteStaffCustomer,
   StaffCustomersApiError,
 } from "../../../lib/staff-customers-api";
 
@@ -31,26 +32,29 @@ function customerName(customer: StaffCustomerListItem) {
 
 function money(value: string, currency = "INR") {
   const amount = Number(value);
-
-  if (!Number.isFinite(amount)) {
-    return value;
-  }
+  if (!Number.isFinite(amount)) return value;
 
   return new Intl.NumberFormat("en-IN", {
     style: "currency",
     currency,
-    maximumFractionDigits: 2,
+    maximumFractionDigits: 0,
   }).format(amount);
+}
+
+function formatDate(value: string | null) {
+  if (!value) return "—";
+  return new Intl.DateTimeFormat("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(new Date(value));
 }
 
 export default function StaffCustomersPage() {
   const router = useRouter();
 
   const [token, setToken] = useState<string | null>(null);
-  const [customers, setCustomers] = useState<
-    StaffCustomerListItem[]
-  >([]);
-
+  const [customers, setCustomers] = useState<StaffCustomerListItem[]>([]);
   const [search, setSearch] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
@@ -60,12 +64,13 @@ export default function StaffCustomersPage() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [successNotice, setSuccessNotice] = useState("");
 
-  async function load(
-    activeToken: string,
-    currentPage: number,
-    currentSearch: string,
-  ) {
+  // Delete Confirmation State
+  const [customerToDelete, setCustomerToDelete] = useState<StaffCustomerListItem | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  async function loadCustomers(activeToken: string, currentPage: number, currentSearch: string) {
     try {
       setLoading(true);
       setError("");
@@ -79,24 +84,14 @@ export default function StaffCustomersPage() {
 
       setCustomers(result.customers);
       setTotal(result.pagination.total);
-      setTotalPages(
-        Math.max(result.pagination.totalPages, 1),
-      );
+      setTotalPages(Math.max(result.pagination.totalPages, 1));
     } catch (caught) {
-      if (
-        caught instanceof StaffCustomersApiError &&
-        caught.status === 401
-      ) {
+      if (caught instanceof StaffCustomersApiError && caught.status === 401) {
         clearStaffAccessToken();
         router.replace("/staff/login");
         return;
       }
-
-      setError(
-        caught instanceof Error
-          ? caught.message
-          : "Unable to load customers.",
-      );
+      setError(caught instanceof Error ? caught.message : "Unable to load customers.");
     } finally {
       setLoading(false);
     }
@@ -104,53 +99,53 @@ export default function StaffCustomersPage() {
 
   useEffect(() => {
     const activeToken = getStaffAccessToken();
-
     if (!activeToken) {
       router.replace("/staff/login");
       return;
     }
-
     setToken(activeToken);
-    void load(activeToken, 1, "");
-
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    void loadCustomers(activeToken, 1, "");
   }, [router]);
 
-  function submitSearch(
-    event: React.FormEvent<HTMLFormElement>,
-  ) {
-    event.preventDefault();
-
+  function submitSearch(e: React.FormEvent) {
+    e.preventDefault();
     if (!token) return;
-
     setPage(1);
-    void load(token, 1, search);
+    void loadCustomers(token, 1, search);
   }
 
   function changePage(nextPage: number) {
-    if (!token || nextPage < 1 || nextPage > totalPages) {
-      return;
-    }
-
+    if (!token || nextPage < 1 || nextPage > totalPages || nextPage === page) return;
     setPage(nextPage);
-    void load(token, nextPage, search);
+    void loadCustomers(token, nextPage, search);
   }
 
-  function openCustomer(customerCode: string) {
-    router.push(
-      `/staff/customers/${encodeURIComponent(customerCode)}`,
-    );
+  async function confirmDeleteCustomer() {
+    if (!token || !customerToDelete) return;
+    setIsDeleting(true);
+    setError("");
+    try {
+      await deleteStaffCustomer(token, customerToDelete.customerCode);
+      setSuccessNotice(`Customer "${customerName(customerToDelete)}" deleted successfully.`);
+      setCustomerToDelete(null);
+      void loadCustomers(token, page, search);
+      setTimeout(() => setSuccessNotice(""), 3500);
+    } catch (caught) {
+      if (caught instanceof StaffCustomersApiError && caught.status === 401) {
+        clearStaffAccessToken();
+        router.replace("/staff/login");
+        return;
+      }
+      setError(caught instanceof Error ? caught.message : "Failed to delete customer.");
+    } finally {
+      setIsDeleting(false);
+    }
   }
 
   const allSelected =
-    customers.length > 0 &&
-    selectedIds.length === customers.length;
-
+    customers.length > 0 && selectedIds.length === customers.length;
   const someSelected =
-    selectedIds.length > 0 &&
-    selectedIds.length < customers.length;
-
-  const selectedCount = selectedIds.length;
+    selectedIds.length > 0 && selectedIds.length < customers.length;
 
   return (
     <div className="min-h-screen bg-white text-[13px] text-[#303030]">
@@ -162,13 +157,13 @@ export default function StaffCustomersPage() {
               <svg
                 width="16"
                 height="16"
-                viewBox="0 0 20 20"
+                viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="1.6"
               >
-                <circle cx="10" cy="7" r="3" />
-                <path d="M3.5 17c.7-3 3.3-5 6.5-5s5.8 2 6.5 5" strokeLinecap="round" />
+                <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
               </svg>
             </span>
             <h1 className="text-[20px] font-semibold text-[#1a1a1a]">
@@ -186,25 +181,12 @@ export default function StaffCustomersPage() {
               Export
             </button>
 
-            <button
-              type="button"
-              disabled
-              title="Coming soon"
-              className="inline-flex h-8 items-center justify-center rounded-lg border border-[#d4d4d4] bg-white px-3 text-[13px] font-medium text-[#303030] shadow-xs hover:bg-[#f7f7f7] disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Import
-            </button>
-
             <Link
               href="/staff/customers/new"
               style={{ color: "#ffffff", backgroundColor: "#1a1a1a" }}
               className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg px-4 text-[13px] font-medium !text-white shadow-sm hover:!bg-[#303030] transition-colors active:!bg-[#000]"
             >
-              <svg
-                viewBox="0 0 16 16"
-                fill="none"
-                className="h-3.5 w-3.5"
-              >
+              <svg viewBox="0 0 16 16" fill="none" className="h-3.5 w-3.5">
                 <path
                   d="M8 3v10M3 8h10"
                   stroke="currentColor"
@@ -219,11 +201,16 @@ export default function StaffCustomersPage() {
           </div>
         </div>
 
-        {/* Body */}
-        <div>
+        {/* Notices */}
+        {successNotice ? (
+          <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-[13px] text-emerald-800">
+            {successNotice}
+          </div>
+        ) : null}
+
         {error ? (
           <div
-            className="mb-4 flex items-start gap-2 rounded-lg border border-[#fed3d1] bg-[#fff4f4] px-4 py-2.5 text-[13px] text-[#8a1c14]"
+            className="mb-4 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-[13px] text-red-700"
             role="alert"
           >
             <svg
@@ -242,184 +229,83 @@ export default function StaffCustomersPage() {
           </div>
         ) : null}
 
-        {/* Search bar */}
-        <form onSubmit={submitSearch}>
-          <div className="flex items-center gap-0 overflow-hidden rounded-xl border border-neutral-200 bg-white">
-            <div className="flex items-center gap-1 border-r border-neutral-200 px-3 py-2 text-[13px] text-neutral-700">
-              <span className="font-medium">All</span>
+        {/* Search Bar */}
+        <div className="flex items-stretch gap-0 rounded-xl border border-neutral-200 bg-white">
+          <form onSubmit={submitSearch} className="relative flex-1">
+            <svg
+              viewBox="0 0 16 16"
+              fill="none"
+              className="pointer-events-none absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2 text-neutral-500"
+              aria-hidden="true"
+            >
+              <circle cx="7" cy="7" r="4.5" stroke="currentColor" strokeWidth="1.5" />
+              <path
+                d="m10.5 10.5 3 3"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              />
+            </svg>
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search customers by name, email, phone, or code..."
+              className="h-full w-full bg-transparent py-2.5 pr-3 pl-9 text-[13px] text-neutral-800 outline-none placeholder:text-neutral-500"
+            />
+          </form>
+
+          <div className="flex items-center gap-2 border-l border-neutral-200 px-3 py-2">
+            <button
+              type="button"
+              onClick={() => token && void loadCustomers(token, 1, search)}
+              disabled={loading}
+              aria-label="Refresh"
+              className="inline-flex h-7 w-7 items-center justify-center rounded-md text-neutral-600 hover:bg-neutral-100 disabled:opacity-50"
+            >
               <svg
                 viewBox="0 0 16 16"
                 fill="none"
-                className="h-3.5 w-3.5 text-neutral-500"
+                className="h-4 w-4"
                 aria-hidden="true"
               >
                 <path
-                  d="m5 7 3-3 3 3M5 9l3 3 3-3"
+                  d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9M13.5 3v3h-3"
                   stroke="currentColor"
-                  strokeWidth="1.5"
+                  strokeWidth="1.4"
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 />
               </svg>
-            </div>
-
-            <div className="relative flex-1">
-              <svg
-                viewBox="0 0 16 16"
-                fill="none"
-                className="pointer-events-none absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2 text-neutral-500"
-                aria-hidden="true"
-              >
-                <circle
-                  cx="7"
-                  cy="7"
-                  r="4.5"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                />
-                <path
-                  d="m10.5 10.5 3 3"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                />
-              </svg>
-              <input
-                value={search}
-                onChange={(event) =>
-                  setSearch(event.target.value)
-                }
-                placeholder="Search customers"
-                className="w-full bg-transparent py-2.5 pr-3 pl-9 text-[13px] text-neutral-800 outline-none placeholder:text-neutral-500"
-              />
-            </div>
-
-            <div className="flex items-center gap-2 border-l border-neutral-200 px-3 py-2">
-              <button
-                type="submit"
-                aria-label="Search"
-                className="inline-flex h-7 w-7 items-center justify-center rounded-md text-neutral-600 hover:bg-neutral-100"
-              >
-                <svg
-                  viewBox="0 0 16 16"
-                  fill="none"
-                  className="h-4 w-4"
-                  aria-hidden="true"
-                >
-                  <circle
-                    cx="7"
-                    cy="7"
-                    r="4.5"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                  />
-                  <path
-                    d="m10.5 10.5 3 3"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                  />
-                </svg>
-              </button>
-
-              <button
-                type="button"
-                aria-label="Toggle columns"
-                className="inline-flex h-7 w-7 items-center justify-center rounded-md text-neutral-600 hover:bg-neutral-100"
-              >
-                <svg
-                  viewBox="0 0 16 16"
-                  fill="none"
-                  className="h-4 w-4"
-                  aria-hidden="true"
-                >
-                  <rect
-                    x="2"
-                    y="3"
-                    width="12"
-                    height="10"
-                    rx="1.5"
-                    stroke="currentColor"
-                    strokeWidth="1.3"
-                  />
-                  <path
-                    d="M10 3v10"
-                    stroke="currentColor"
-                    strokeWidth="1.3"
-                  />
-                </svg>
-              </button>
-            </div>
-          </div>
-        </form>
-
-        {/* Bulk action bar */}
-        {selectedCount > 0 ? (
-          <div className="mt-3 flex items-center gap-3 rounded-xl border border-neutral-200 bg-white px-4 py-2.5 text-[13px]">
-            <span className="font-medium">
-              {selectedCount} selected
-            </span>
-            <span className="text-neutral-400">·</span>
-            <button
-              type="button"
-              disabled
-              title="Coming soon"
-              className="text-neutral-700 hover:underline disabled:opacity-60"
-            >
-              Add tags
-            </button>
-            <span className="text-neutral-400">·</span>
-            <button
-              type="button"
-              disabled
-              title="Coming soon"
-              className="text-neutral-700 hover:underline disabled:opacity-60"
-            >
-              Subscribe to email
-            </button>
-            <span className="text-neutral-400">·</span>
-            <button
-              type="button"
-              disabled
-              title="Coming soon"
-              className="text-neutral-700 hover:underline disabled:opacity-60"
-            >
-              Delete
             </button>
           </div>
-        ) : null}
+        </div>
 
         {/* Table */}
         <div className="mt-3 overflow-hidden rounded-xl border border-neutral-200 bg-white">
           <div className="overflow-x-auto">
-            <div className="min-w-[900px]">
-              <div className="grid grid-cols-[36px_minmax(220px,2.4fr)_minmax(160px,1.2fr)_minmax(140px,1fr)_minmax(90px,0.7fr)_minmax(140px,1fr)] items-center gap-3 border-b border-neutral-200 bg-[#f7f7f7] px-4 py-2.5 text-[12px] font-medium text-neutral-600">
+            <div className="min-w-[800px]">
+              <div className="grid grid-cols-[36px_minmax(240px,2fr)_minmax(120px,1fr)_minmax(90px,0.8fr)_minmax(120px,1fr)_minmax(130px,1.1fr)] items-center gap-3 border-b border-neutral-200 bg-[#f7f7f7] px-4 py-2.5 text-[12px] font-medium text-neutral-600">
                 <div className="flex justify-center">
                   <input
                     type="checkbox"
                     aria-label="Select all customers"
                     checked={allSelected}
                     ref={(element) => {
-                      if (element)
-                        element.indeterminate = someSelected;
+                      if (element) element.indeterminate = someSelected;
                     }}
                     onChange={(event) =>
                       setSelectedIds(
-                        event.target.checked
-                          ? customers.map((c) => c.id)
-                          : [],
+                        event.target.checked ? customers.map((c) => c.id) : [],
                       )
                     }
                     className="h-3.5 w-3.5 rounded border-neutral-300 accent-neutral-800"
                   />
                 </div>
-                <div>Customer name</div>
-                <div>Email subscription</div>
-                <div>Location</div>
-                <div className="text-right">Orders</div>
-                <div className="text-right">
-                  Amount spent
-                </div>
+                <div>Customer</div>
+                <div>Status</div>
+                <div className="text-center">Orders</div>
+                <div className="text-right">Spent</div>
+                <div className="text-right pr-2">Joined</div>
               </div>
 
               {loading ? (
@@ -428,141 +314,119 @@ export default function StaffCustomersPage() {
                   Loading customers...
                 </div>
               ) : customers.length === 0 ? (
-                <div className="flex flex-col items-center gap-2 py-20 text-center">
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    className="h-6 w-6 text-neutral-400"
-                    aria-hidden="true"
-                  >
-                    <circle
-                      cx="11"
-                      cy="11"
-                      r="7"
-                      stroke="currentColor"
-                      strokeWidth="1.6"
-                    />
-                    <path
-                      d="m21 21-4.3-4.3"
-                      stroke="currentColor"
-                      strokeWidth="1.6"
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                  <p className="text-[13px] font-medium text-neutral-800">
-                    No customers found
-                  </p>
+                <div className="py-20 text-center">
                   <p className="text-[13px] text-neutral-500">
                     {search
-                      ? "Try a different search"
-                      : "Try adding a customer to get started"}
+                      ? "No customers match your search"
+                      : "No customers found"}
                   </p>
                   {!search ? (
                     <Link
                       href="/staff/customers/new"
-                      className="mt-1 text-[13px] font-medium text-blue-600 hover:underline"
+                      className="mt-3 inline-block text-[13px] font-medium text-blue-600 hover:underline"
                     >
                       Add customer
                     </Link>
                   ) : null}
                 </div>
               ) : (
-                customers.map((customer) => {
-                  const checked = selectedIds.includes(
-                    customer.id,
-                  );
+                customers.map((c) => {
+                  const isActive = c.status === "ACTIVE";
+                  const isChecked = selectedIds.includes(c.id);
 
                   return (
                     <div
-                      key={customer.id}
+                      key={c.id}
                       role="link"
                       tabIndex={0}
-                      aria-label={`Open ${customerName(
-                        customer,
-                      )}`}
+                      aria-label={`Open ${customerName(c)}`}
                       onClick={() =>
-                        openCustomer(customer.customerCode)
+                        router.push(`/staff/customers/${encodeURIComponent(c.customerCode)}`)
                       }
                       onKeyDown={(event) => {
-                        if (
-                          event.key === "Enter" ||
-                          event.key === " "
-                        ) {
+                        if (event.key === "Enter" || event.key === " ") {
                           event.preventDefault();
-                          openCustomer(
-                            customer.customerCode,
-                          );
+                          router.push(`/staff/customers/${encodeURIComponent(c.customerCode)}`);
                         }
                       }}
-                      className="grid cursor-pointer grid-cols-[36px_minmax(220px,2.4fr)_minmax(160px,1.2fr)_minmax(140px,1fr)_minmax(90px,0.7fr)_minmax(140px,1fr)] items-center gap-3 border-b border-neutral-100 px-4 py-3 last:border-b-0 hover:bg-[#f7f7f7] focus-visible:bg-[#f7f7f7] focus-visible:outline-none"
+                      className="grid cursor-pointer grid-cols-[36px_minmax(240px,2fr)_minmax(120px,1fr)_minmax(90px,0.8fr)_minmax(120px,1fr)_minmax(130px,1.1fr)] items-center gap-3 border-b border-neutral-100 px-4 py-3 last:border-b-0 hover:bg-[#f7f7f7] focus-visible:bg-[#f7f7f7] focus-visible:outline-none"
                     >
                       <div
                         className="flex justify-center"
-                        onClick={(event) =>
-                          event.stopPropagation()
-                        }
+                        onClick={(event) => event.stopPropagation()}
                       >
                         <input
                           type="checkbox"
-                          aria-label={`Select ${customerName(
-                            customer,
-                          )}`}
-                          checked={checked}
+                          aria-label={`Select ${customerName(c)}`}
+                          checked={isChecked}
                           onChange={(event) =>
-                            setSelectedIds((current) =>
+                            setSelectedIds((prev) =>
                               event.target.checked
-                                ? [...current, customer.id]
-                                : current.filter(
-                                  (id) =>
-                                    id !== customer.id,
-                                ),
+                                ? [...prev, c.id]
+                                : prev.filter((id) => id !== c.id),
                             )
                           }
                           className="h-3.5 w-3.5 rounded border-neutral-300 accent-neutral-800"
                         />
                       </div>
 
-                      <div className="min-w-0">
-                        <Link
-                          href={`/staff/customers/${encodeURIComponent(
-                            customer.customerCode,
-                          )}`}
-                          onClick={(event) =>
-                            event.stopPropagation()
-                          }
-                          className="block truncate text-[13px] font-medium text-neutral-900 hover:underline"
-                        >
-                          {customerName(customer)}
-                        </Link>
-                        {customer.person.email ? (
-                          <p className="mt-0.5 truncate text-[12px] text-neutral-500">
-                            {customer.person.email}
-                          </p>
-                        ) : null}
+                      <div className="flex min-w-0 items-center gap-2.5">
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full border border-neutral-200 bg-neutral-100 text-[11px] font-semibold text-neutral-600">
+                          {customerName(c).slice(0, 2).toUpperCase()}
+                        </div>
+                        <div className="min-w-0">
+                          <Link
+                            href={`/staff/customers/${encodeURIComponent(c.customerCode)}`}
+                            onClick={(event) => event.stopPropagation()}
+                            className="block truncate text-[13px] font-medium text-neutral-900 hover:underline"
+                          >
+                            {customerName(c)}
+                          </Link>
+                        </div>
                       </div>
 
                       <div>
-                        {customer.emailMarketing ? (
-                          <span className="inline-flex items-center rounded-md bg-[#a6e8b1] px-2 py-0.5 text-[12px] font-medium text-[#0b5c2a]">
-                            Subscribed
+                        {isActive ? (
+                          <span className="inline-flex items-center gap-1.5 rounded-full bg-[#cbf4c9] px-2.5 py-0.5 text-[11px] font-normal text-[#0e6245]">
+                            <svg
+                              width="10"
+                              height="10"
+                              viewBox="0 0 20 20"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                            >
+                              <circle cx="10" cy="10" r="7" />
+                            </svg>
+                            Active
                           </span>
                         ) : (
-                          <span className="inline-flex items-center rounded-md bg-neutral-100 px-2 py-0.5 text-[12px] font-medium text-neutral-600">
-                            Not subscribed
+                          <span className="inline-flex items-center gap-1.5 rounded-full bg-neutral-100 px-2.5 py-0.5 text-[11px] font-normal text-neutral-600 border border-neutral-200">
+                            <svg
+                              width="10"
+                              height="10"
+                              viewBox="0 0 20 20"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                            >
+                              <circle cx="10" cy="10" r="7" />
+                            </svg>
+                            {c.status}
                           </span>
                         )}
                       </div>
 
-                      <div className="truncate text-[13px] text-neutral-700">
-                        {customer.location?.country ?? "—"}
+                      <div className="text-center text-[13px] text-neutral-800">
+                        {c.orderCount}
                       </div>
 
-                      <div className="text-right text-[13px] text-neutral-800">
-                        {customer.orderCount}
+                      <div className="text-right text-[13px] font-medium text-neutral-900">
+                        {money(c.totalSpent)}
                       </div>
 
-                      <div className="text-right text-[13px] text-neutral-800">
-                        {money(customer.totalSpent)}
+                      <div className="text-right pr-2 text-[13px] text-neutral-500">
+                        {formatDate(c.createdAt)}
                       </div>
                     </div>
                   );
@@ -570,40 +434,97 @@ export default function StaffCustomersPage() {
               )}
             </div>
           </div>
-        </div>
 
-        {/* Footer + pagination */}
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-[12px] text-neutral-500">
-          <span>
-            {total} customer{total === 1 ? "" : "s"}
-            {total > 0
-              ? ` · Page ${page} of ${totalPages}`
-              : null}
-          </span>
-
-          {totalPages > 1 ? (
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                disabled={page <= 1 || loading}
-                onClick={() => changePage(page - 1)}
-                className="inline-flex h-7 items-center rounded-lg border border-neutral-200 bg-white px-3 text-[12px] font-medium text-neutral-800 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Previous
-              </button>
-
-              <button
-                type="button"
-                disabled={page >= totalPages || loading}
-                onClick={() => changePage(page + 1)}
-                className="inline-flex h-7 items-center rounded-lg border border-neutral-200 bg-white px-3 text-[12px] font-medium text-neutral-800 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Next
-              </button>
+          {/* Pagination Footer */}
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#e3e3e3] px-4 py-3 bg-white text-[12px] text-[#616161]">
+            <div>
+              Showing {customers.length} of {total} customer{total === 1 ? "" : "s"}
+              {totalPages > 1 && ` · Page ${page} of ${totalPages}`}
             </div>
-          ) : null}
+
+            {totalPages > 1 && (
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  disabled={page <= 1 || loading}
+                  onClick={() => changePage(page - 1)}
+                  className="inline-flex h-7 items-center justify-center rounded-lg border border-[#d4d4d4] bg-white px-2.5 font-medium text-[#303030] shadow-xs hover:bg-[#f7f7f7] disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  disabled={page >= totalPages || loading}
+                  onClick={() => changePage(page + 1)}
+                  className="inline-flex h-7 items-center justify-center rounded-lg border border-[#d4d4d4] bg-white px-2.5 font-medium text-[#303030] shadow-xs hover:bg-[#f7f7f7] disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
+              </div>
+            )}
+          </div>
         </div>
-        </div>
+
+        {/* Delete Confirmation Modal (used when triggered) */}
+        {customerToDelete ? (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
+            <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-neutral-100 animate-in fade-in zoom-in-95 duration-150">
+              <div className="flex items-center gap-3">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-600">
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M3 6h18" />
+                    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                  </svg>
+                </span>
+                <div>
+                  <h3 className="text-[15px] font-semibold text-neutral-900">
+                    Delete customer
+                  </h3>
+                  <p className="text-[12px] text-neutral-500">
+                    This action is permanent and cannot be undone.
+                  </p>
+                </div>
+              </div>
+
+              <p className="mt-4 text-[13px] text-neutral-600">
+                Are you sure you want to delete{" "}
+                <span className="font-semibold text-neutral-900">
+                  {customerName(customerToDelete)}
+                </span>
+                ? This will permanently remove their profile and authentication identity.
+              </p>
+
+              <div className="mt-6 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  disabled={isDeleting}
+                  onClick={() => setCustomerToDelete(null)}
+                  className="rounded-lg border border-neutral-200 px-3.5 py-1.5 text-[13px] font-medium text-neutral-700 hover:bg-neutral-50 transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={isDeleting}
+                  onClick={confirmDeleteCustomer}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-3.5 py-1.5 text-[13px] font-medium text-white hover:bg-red-700 transition-colors disabled:opacity-50"
+                >
+                  {isDeleting ? "Deleting..." : "Delete customer"}
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
       </div>
     </div>
   );

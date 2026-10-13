@@ -48,6 +48,10 @@ export class StaffPermissionGuard implements CanActivate {
       );
     }
 
+    if (staff.roles?.includes("SUPER_ADMIN")) {
+      return true;
+    }
+
     const cacheKey = staff.userAccountId.toString();
     const now = Date.now();
     const cached = StaffPermissionGuard.permissionCache.get(cacheKey);
@@ -83,6 +87,7 @@ export class StaffPermissionGuard implements CanActivate {
         role: {
           select: {
             id: true,
+            name: true,
             permissions: {
               select: {
                 permission: {
@@ -104,12 +109,20 @@ export class StaffPermissionGuard implements CanActivate {
     }
 
     const permissionSet = new Set<string>();
+    let isSuperAdmin = false;
     for (const ur of userRoles) {
+      if (ur.role.name === "SUPER_ADMIN") {
+        isSuperAdmin = true;
+      }
       for (const rp of ur.role.permissions) {
         if (rp.permission?.code) {
           permissionSet.add(rp.permission.code);
         }
       }
+    }
+
+    if (isSuperAdmin) {
+      return true;
     }
 
     // Cache permissions for 60 seconds

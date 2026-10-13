@@ -16,6 +16,7 @@ export interface CustomerAuthResult {
   accessToken: string;
   expiresIn: number;
   tokenType: string;
+  isNewUser?: boolean;
   customer: CustomerMeResponse["customer"];
 }
 
@@ -167,4 +168,29 @@ export async function getCustomerMe(
   );
 
   return parseResponse<CustomerMeResponse>(response);
+}
+
+export async function updateCustomerProfile(
+  data: { firstName?: string; lastName?: string; phone?: string; email?: string },
+  accessToken?: string | null,
+): Promise<{ success: boolean }> {
+  const token = accessToken ?? getCustomerAccessToken();
+
+  if (!token) {
+    throw new CustomerAuthError("No customer session is available.", {
+      status: 401,
+      code: "UNAUTHORIZED",
+    });
+  }
+
+  const response = await fetch(`${API_BASE_URL}/customer-auth/profile`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
+  });
+
+  return parseResponse<{ success: boolean }>(response);
 }

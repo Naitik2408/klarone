@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -71,6 +72,16 @@ export class StaffCustomersController {
     return this.customersService.updateStaffCustomer(
       customerCode,
       body,
+    );
+  }
+
+  @Delete(":customerCode")
+  @RequirePermission("customers.delete")
+  async deleteCustomer(
+    @Param("customerCode") customerCode: string,
+  ) {
+    return this.customersService.deleteStaffCustomer(
+      customerCode,
     );
   }
 }

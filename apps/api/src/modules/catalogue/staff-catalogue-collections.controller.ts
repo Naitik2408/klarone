@@ -68,7 +68,7 @@ export class StaffCatalogueCollectionsController {
         take: pageSize,
         include: {
           _count: {
-            select: { variants: true },
+            select: { variants: true, products: true },
           },
         },
       }),
@@ -83,7 +83,7 @@ export class StaffCatalogueCollectionsController {
       bannerImage: c.bannerImage,
       rules: c.rules,
       status: c.status,
-      productCount: c._count.variants,
+      productCount: Math.max(c._count.products, c._count.variants),
       createdAt: c.createdAt,
       updatedAt: c.updatedAt,
     }));
@@ -147,6 +147,25 @@ export class StaffCatalogueCollectionsController {
     const collection = await this.prisma.collection.findUnique({
       where: { id: colId },
       include: {
+        products: {
+          include: {
+            product: {
+              include: {
+                brand: true,
+                category: true,
+                media: { take: 1, orderBy: { displayOrder: "asc" } },
+                variants: {
+                  where: { status: "ACTIVE" },
+                  orderBy: { sellingPrice: "asc" },
+                  take: 1,
+                  include: {
+                    media: { take: 1, orderBy: { displayOrder: "asc" } },
+                  },
+                },
+              },
+            },
+          },
+        },
         variants: {
           orderBy: { displayOrder: "asc" },
           include: {
@@ -171,22 +190,36 @@ export class StaffCatalogueCollectionsController {
       throw new NotFoundException("Collection not found.");
     }
 
-    return {
-      id: collection.id,
-      title: collection.title,
-      slug: collection.slug,
-      description: collection.description,
-      bannerImage: collection.bannerImage,
-      rules: collection.rules,
-      status: collection.status,
-      createdAt: collection.createdAt,
-      updatedAt: collection.updatedAt,
-      variants: collection.variants.map((cv) => {
-        const v = cv.productVariant;
-        const p = v.product;
-        const img = v.media[0]?.url ?? p.media[0]?.url ?? null;
+    const variantItems = collection.variants.map((cv) => {
+      const v = cv.productVariant;
+      const p = v.product;
+      const img = v.media[0]?.url ?? p.media[0]?.url ?? null;
 
-        return {
+      return {
+        id: String(v.id),
+        productId: String(p.id),
+        productName: p.name,
+        variantName: v.variantName || "Standard",
+        sku: v.sku,
+        ramGb: v.ramGb,
+        storageGb: v.storageGb,
+        sellingPrice: v.sellingPrice,
+        brandName: p.brand.name,
+        categoryName: p.category.name,
+        imageUrl: img,
+        displayOrder: cv.displayOrder,
+      };
+    });
+
+    // Also include products linked via CollectionProduct (if not already represented)
+    const existingVariantIds = new Set(variantItems.map((item) => item.id));
+    for (const cp of collection.products) {
+      const p = cp.product;
+      const v = p.variants[0];
+      if (v && !existingVariantIds.has(String(v.id))) {
+        existingVariantIds.add(String(v.id));
+        const img = v.media[0]?.url ?? p.media[0]?.url ?? null;
+        variantItems.push({
           id: String(v.id),
           productId: String(p.id),
           productName: p.name,
@@ -198,9 +231,22 @@ export class StaffCatalogueCollectionsController {
           brandName: p.brand.name,
           categoryName: p.category.name,
           imageUrl: img,
-          displayOrder: cv.displayOrder,
-        };
-      }),
+          displayOrder: variantItems.length,
+        });
+      }
+    }
+
+    return {
+      id: collection.id,
+      title: collection.title,
+      slug: collection.slug,
+      description: collection.description,
+      bannerImage: collection.bannerImage,
+      rules: collection.rules,
+      status: collection.status,
+      createdAt: collection.createdAt,
+      updatedAt: collection.updatedAt,
+      variants: variantItems,
     };
   }
 

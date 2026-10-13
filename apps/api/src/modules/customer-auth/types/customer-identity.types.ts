@@ -25,4 +25,5 @@ export interface CustomerIdentityResult {
   personId: string;
   provider: string;
   externalAuthId: string;
+  isNew: boolean;
 }

@@ -169,8 +169,17 @@ export function CustomerAuthProvider({
 
     storeCustomerAccessToken(response.accessToken);
 
+    // Fetch complete customer profile with person record populated
+    let fullCustomer = response.customer;
+    try {
+      const meResponse = await getCustomerMe(response.accessToken);
+      fullCustomer = meResponse.customer;
+    } catch {
+      // fallback to initial
+    }
+
     setAccessToken(response.accessToken);
-    setCustomer(response.customer);
+    setCustomer(fullCustomer);
 
     return response;
   }

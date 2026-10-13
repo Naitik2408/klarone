@@ -358,7 +358,15 @@ export class CatalogueService {
   async findProducts(params: {
     search?: string;
     brandSlug?: string;
+    brandSlugs?: string[];
     categorySlug?: string;
+    collectionSlug?: string;
+    minPrice?: number;
+    maxPrice?: number;
+    ramGb?: number[];
+    storageGb?: number[];
+    inStockOnly?: boolean;
+    sortBy?: "featured" | "price-asc" | "price-desc" | "newest";
     page?: number;
     pageSize?: number;
   }) {
@@ -370,7 +378,47 @@ export class CatalogueService {
 
     const search = params.search?.trim();
 
-    const where = {
+    // Variant-level conditions (for price, ram, storage, inStock)
+    const variantWhere: Record<string, unknown> = {
+      status: "ACTIVE",
+    };
+
+    if (params.minPrice !== undefined || params.maxPrice !== undefined) {
+      variantWhere.sellingPrice = {
+        ...(params.minPrice !== undefined ? { gte: params.minPrice } : {}),
+        ...(params.maxPrice !== undefined ? { lte: params.maxPrice } : {}),
+      };
+    }
+
+    if (params.ramGb && params.ramGb.length > 0) {
+      variantWhere.ramGb = { in: params.ramGb };
+    }
+
+    if (params.storageGb && params.storageGb.length > 0) {
+      variantWhere.storageGb = { in: params.storageGb };
+    }
+
+    if (params.inStockOnly) {
+      variantWhere.inventories = {
+        some: { quantityAvailable: { gt: 0 } },
+      };
+    }
+
+    // Brands condition (single or multiple)
+    let brandCondition: Record<string, unknown> | undefined = undefined;
+    if (params.brandSlugs && params.brandSlugs.length > 0) {
+      brandCondition = {
+        slug: { in: params.brandSlugs },
+        status: "ACTIVE",
+      };
+    } else if (params.brandSlug) {
+      brandCondition = {
+        slug: params.brandSlug,
+        status: "ACTIVE",
+      };
+    }
+
+    const where: Record<string, unknown> = {
       status: "PUBLISHED",
       ...(search
         ? {
@@ -398,14 +446,7 @@ export class CatalogueService {
           ],
         }
         : {}),
-      ...(params.brandSlug
-        ? {
-          brand: {
-            slug: params.brandSlug,
-            status: "ACTIVE",
-          },
-        }
-        : {}),
+      ...(brandCondition ? { brand: brandCondition } : {}),
       ...(params.categorySlug
         ? {
           category: {
@@ -414,12 +455,33 @@ export class CatalogueService {
           },
         }
         : {}),
+      ...(params.collectionSlug
+        ? {
+          collections: {
+            some: {
+              collection: {
+                slug: params.collectionSlug,
+                status: "ACTIVE",
+              },
+            },
+          },
+        }
+        : {}),
+      variants: {
+        some: variantWhere,
+      },
     };
+
+    // Determine sorting
+    let orderBy: Record<string, "asc" | "desc"> = { name: "asc" };
+    if (params.sortBy === "newest") {
+      orderBy = { createdAt: "desc" };
+    }
 
     const [items, total] = await Promise.all([
       this.prisma.product.findMany({
         where,
-        orderBy: { name: "asc" },
+        orderBy,
         skip: (page - 1) * pageSize,
         take: pageSize,
         select: {
@@ -449,7 +511,6 @@ export class CatalogueService {
           variants: {
             where: { status: "ACTIVE" },
             orderBy: { sellingPrice: "asc" },
-            take: 1,
             select: {
               id: true,
               sku: true,
@@ -460,12 +521,32 @@ export class CatalogueService {
               sellingPrice: true,
               compareAtPrice: true,
               currency: true,
+              inventories: {
+                select: {
+                  quantityAvailable: true,
+                },
+              },
             },
           },
         },
       }),
       this.prisma.product.count({ where }),
     ]);
+
+    // In-memory sorting for price if needed (since price lives on variant)
+    if (params.sortBy === "price-asc") {
+      items.sort((a, b) => {
+        const pA = a.variants[0] ? Number(a.variants[0].sellingPrice.toString()) : 0;
+        const pB = b.variants[0] ? Number(b.variants[0].sellingPrice.toString()) : 0;
+        return pA - pB;
+      });
+    } else if (params.sortBy === "price-desc") {
+      items.sort((a, b) => {
+        const pA = a.variants[0] ? Number(a.variants[0].sellingPrice.toString()) : 0;
+        const pB = b.variants[0] ? Number(b.variants[0].sellingPrice.toString()) : 0;
+        return pB - pA;
+      });
+    }
 
     return toJsonSafe({
       items,
@@ -474,6 +555,175 @@ export class CatalogueService {
         pageSize,
         total,
         totalPages: Math.ceil(total / pageSize),
+      },
+    });
+  }
+
+  async findProductFacets(params: {
+    categorySlug?: string;
+    collectionSlug?: string;
+  }) {
+    // Fetch all published products within scope to aggregate faceted counts
+    const baseWhere: Record<string, unknown> = {
+      status: "PUBLISHED",
+      ...(params.categorySlug
+        ? {
+          category: {
+            slug: params.categorySlug,
+            status: "ACTIVE",
+          },
+        }
+        : {}),
+      ...(params.collectionSlug
+        ? {
+          collections: {
+            some: {
+              collection: {
+                slug: params.collectionSlug,
+                status: "ACTIVE",
+              },
+            },
+          },
+        }
+        : {}),
+    };
+
+    const products = await this.prisma.product.findMany({
+      where: baseWhere,
+      select: {
+        brand: {
+          select: { id: true, name: true, slug: true },
+        },
+        category: {
+          select: { id: true, name: true, slug: true },
+        },
+        collections: {
+          where: {
+            collection: { status: "ACTIVE" },
+          },
+          select: {
+            collection: {
+              select: { id: true, title: true, slug: true },
+            },
+          },
+        },
+        variants: {
+          where: { status: "ACTIVE" },
+          select: {
+            sellingPrice: true,
+            ramGb: true,
+            storageGb: true,
+            collectionVariants: {
+              where: {
+                collection: { status: "ACTIVE" },
+              },
+              select: {
+                collection: {
+                  select: { id: true, title: true, slug: true },
+                },
+              },
+            },
+            inventories: {
+              select: {
+                quantityAvailable: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const brandCounts = new Map<string, { id: number; name: string; slug: string; count: number }>();
+    const collectionCounts = new Map<string, { id: number; title: string; slug: string; count: number }>();
+    const ramCounts = new Map<number, number>();
+    const storageCounts = new Map<number, number>();
+    let inStockCount = 0;
+    let outOfStockCount = 0;
+    let minPrice = Infinity;
+    let maxPrice = 0;
+
+    for (const p of products) {
+      // Brands
+      const bKey = p.brand.slug;
+      const existingB = brandCounts.get(bKey);
+      if (existingB) {
+        existingB.count += 1;
+      } else {
+        brandCounts.set(bKey, { ...p.brand, count: 1 });
+      }
+
+      // Collections (collect unique collections for this product)
+      const seenProductColSlugs = new Set<string>();
+      for (const cp of p.collections) {
+        if (cp.collection && !seenProductColSlugs.has(cp.collection.slug)) {
+          seenProductColSlugs.add(cp.collection.slug);
+          const col = cp.collection;
+          const existingCol = collectionCounts.get(col.slug);
+          if (existingCol) {
+            existingCol.count += 1;
+          } else {
+            collectionCounts.set(col.slug, { id: col.id, title: col.title, slug: col.slug, count: 1 });
+          }
+        }
+      }
+
+      // Stock check
+      const isProductInStock = p.variants.some((v) =>
+        v.inventories.some((inv) => inv.quantityAvailable > 0),
+      );
+      if (isProductInStock) {
+        inStockCount += 1;
+      } else {
+        outOfStockCount += 1;
+      }
+
+      // Variants
+      for (const v of p.variants) {
+        // Also capture collection links at variant level if any
+        for (const cv of v.collectionVariants || []) {
+          if (cv.collection && !seenProductColSlugs.has(cv.collection.slug)) {
+            seenProductColSlugs.add(cv.collection.slug);
+            const col = cv.collection;
+            const existingCol = collectionCounts.get(col.slug);
+            if (existingCol) {
+              existingCol.count += 1;
+            } else {
+              collectionCounts.set(col.slug, { id: col.id, title: col.title, slug: col.slug, count: 1 });
+            }
+          }
+        }
+
+        const price = Number(v.sellingPrice.toString());
+        if (price < minPrice) minPrice = price;
+        if (price > maxPrice) maxPrice = price;
+
+        if (v.ramGb) {
+          ramCounts.set(v.ramGb, (ramCounts.get(v.ramGb) ?? 0) + 1);
+        }
+        if (v.storageGb) {
+          storageCounts.set(v.storageGb, (storageCounts.get(v.storageGb) ?? 0) + 1);
+        }
+      }
+    }
+
+    if (minPrice === Infinity) minPrice = 0;
+
+    return toJsonSafe({
+      brands: Array.from(brandCounts.values()).sort((a, b) => b.count - a.count),
+      collections: Array.from(collectionCounts.values()).sort((a, b) => b.count - a.count),
+      priceRange: {
+        min: minPrice,
+        max: maxPrice,
+      },
+      ramOptions: Array.from(ramCounts.entries())
+        .map(([ramGb, count]) => ({ ramGb, count }))
+        .sort((a, b) => a.ramGb - b.ramGb),
+      storageOptions: Array.from(storageCounts.entries())
+        .map(([storageGb, count]) => ({ storageGb, count }))
+        .sort((a, b) => a.storageGb - b.storageGb),
+      availability: {
+        inStockCount,
+        outOfStockCount,
       },
     });
   }
@@ -2325,10 +2575,27 @@ export class CatalogueService {
         name: true,
         slug: true,
         description: true,
+        imageUrl: true,
       },
     });
 
     return toJsonSafe(categories);
+  }
+
+  async findCollections() {
+    const collections = await this.prisma.collection.findMany({
+      where: { status: "ACTIVE" },
+      orderBy: { updatedAt: "desc" },
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        description: true,
+        bannerImage: true,
+      },
+    });
+
+    return toJsonSafe(collections);
   }
 
   /* ---------------------------------------------------------------

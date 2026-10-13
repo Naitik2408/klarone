@@ -11,6 +11,24 @@ export interface CatalogueCategory {
   name: string;
   slug: string;
   description: string | null;
+  imageUrl?: string | null;
+}
+
+export interface CatalogueCollection {
+  id: number;
+  title: string;
+  slug: string;
+  description: string | null;
+  bannerImage: string | null;
+}
+
+export interface CatalogueFacets {
+  brands: Array<{ id: number; name: string; slug: string; count: number }>;
+  collections?: Array<{ id: number; title: string; slug: string; count: number }>;
+  priceRange: { min: number; max: number };
+  ramOptions: Array<{ ramGb: number; count: number }>;
+  storageOptions: Array<{ storageGb: number; count: number }>;
+  availability: { inStockCount: number; outOfStockCount: number };
 }
 
 export interface CatalogueVariantSummary {

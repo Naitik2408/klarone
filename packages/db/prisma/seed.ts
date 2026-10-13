@@ -168,6 +168,12 @@ const permissions = [
     action: "update",
     description: "Update customer records",
   },
+  {
+    code: "customers.delete",
+    module: "customers",
+    action: "delete",
+    description: "Delete customer records",
+  },
 
     {
     code: "orders.read",

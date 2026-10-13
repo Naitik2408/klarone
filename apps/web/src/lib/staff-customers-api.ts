@@ -128,3 +128,16 @@ export async function updateStaffCustomer(
     },
   );
 }
+
+export async function deleteStaffCustomer(
+  token: string,
+  customerCode: string,
+) {
+  return request<{ success: boolean; customerCode: string }>(
+    `/staff/customers/${encodeURIComponent(customerCode)}`,
+    token,
+    {
+      method: "DELETE",
+    },
+  );
+}

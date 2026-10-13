@@ -20,7 +20,8 @@
     "migrate:status": "prisma migrate status",
     "seed": "prisma db seed",
     "catalogue:seed": "tsx prisma/catalogue-dev-seed.ts",
-    "backfill:options": "tsx prisma/backfill-options.ts"
+    "backfill:options": "tsx prisma/backfill-options.ts",
+    "sync:collections": "tsx prisma/sync-usecase-collections.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "7.10.0",
