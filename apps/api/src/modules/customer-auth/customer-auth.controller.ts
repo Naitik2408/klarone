@@ -29,6 +29,13 @@ export class CustomerAuthController {
     return this.customerAuthService.verifyOtp(body);
   }
 
+  @Post("sync-session")
+  async syncSession(
+    @Body() body: { email: string; name?: string; betterAuthUserId?: string },
+  ) {
+    return this.customerAuthService.syncBetterAuthSession(body);
+  }
+
   @Get("me")
   @UseGuards(CustomerAuthGuard)
   async me(

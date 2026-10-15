@@ -140,14 +140,14 @@ export function StorefrontCollectionsShowcase() {
       {/* =========================================================================
           PART 2: FORMULATED TO REALLY WORK & 4 STATS CARDS (Pale Olive Tint Surface)
           ========================================================================= */}
-      <div className="bg-[#e4ebdb] pt-20 pb-24 sm:pt-24 sm:pb-28">
-        <div className="mx-auto max-w-[1440px] px-6 sm:px-10 lg:px-14">
+      <div className="bg-[#e4ebdb] pt-16 pb-20 sm:pt-24 sm:pb-28">
+        <div className="mx-auto max-w-[1440px] px-4 sm:px-10 lg:px-14">
           {/* Header */}
           <div className="text-center">
             <span className="text-xs font-semibold uppercase tracking-[0.25em] text-stone-600 sm:text-sm">
               SNACKABLE, PACKABLE
             </span>
-            <h2 className="mt-3 font-serif text-4xl font-normal tracking-tight text-slate-900 sm:text-5xl lg:text-[58px]">
+            <h2 className="mt-3 font-serif text-3xl font-normal tracking-tight text-slate-900 sm:text-5xl lg:text-[58px]">
               Formulated to really work
             </h2>
           </div>
@@ -205,8 +205,8 @@ export function StorefrontCollectionsShowcase() {
         {/* Ambient Dark Gradient Vignette for crisp text contrast */}
         <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/50 to-black/30 pointer-events-none" />
 
-        <div className="relative z-10 mx-auto flex h-full min-h-[640px] sm:min-h-[700px] lg:min-h-[760px] xl:min-h-[820px] max-w-[1520px] flex-col justify-center px-6 py-14 sm:px-10 sm:py-20 lg:px-14">
-          <div className="grid grid-cols-1 gap-12 lg:grid-cols-12 lg:gap-14 items-center">
+        <div className="relative z-10 mx-auto flex h-full min-h-[640px] sm:min-h-[700px] lg:min-h-[760px] xl:min-h-[820px] max-w-[1520px] flex-col justify-center px-4 py-12 sm:px-10 sm:py-20 lg:px-14">
+          <div className="grid grid-cols-1 gap-10 lg:grid-cols-12 lg:gap-14 items-center">
             {/* LEFT SIDE: Interactive Tabs + Description + CTA */}
             <div className="lg:col-span-7 flex flex-col justify-center">
               <span className="text-xs font-semibold uppercase tracking-[0.25em] text-stone-300 sm:text-sm">
@@ -214,7 +214,7 @@ export function StorefrontCollectionsShowcase() {
               </span>
 
               {/* 3 Interactive Tab Headlines with smooth color transitions and spring underline */}
-              <div className="mt-6 flex flex-col items-start space-y-3 sm:space-y-4">
+              <div className="mt-6 flex flex-col items-start space-y-2 sm:space-y-4">
                 {(["strength", "probiotic", "bioavailability"] as CollectionTab[]).map(
                   (tabKey) => {
                     const isSelected = activeTab === tabKey;
@@ -226,7 +226,7 @@ export function StorefrontCollectionsShowcase() {
                           onClick={() => setActiveTab(tabKey)}
                           style={{
                             fontFamily: "var(--font-serif), 'Instrument Serif', Georgia, serif",
-                            fontSize: "clamp(3.75rem, 8vw, 6.25rem)",
+                            fontSize: "clamp(2.75rem, 7.5vw, 6.25rem)",
                             lineHeight: "1.05",
                           }}
                           className={`relative block text-left tracking-tight transition-opacity duration-300 ease-out cursor-pointer ${
@@ -238,7 +238,7 @@ export function StorefrontCollectionsShowcase() {
                           <span
                             style={{
                               fontFamily: "var(--font-serif), 'Instrument Serif', Georgia, serif",
-                              fontSize: "clamp(3.75rem, 8vw, 6.25rem)",
+                              fontSize: "clamp(2.75rem, 7.5vw, 6.25rem)",
                               lineHeight: "1.05",
                               fontStyle: isSelected ? "italic" : "normal",
                             }}

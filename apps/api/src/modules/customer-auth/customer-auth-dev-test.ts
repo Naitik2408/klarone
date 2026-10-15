@@ -26,7 +26,7 @@ async function main(): Promise<void> {
 
   try {
     const authProvider =
-      new DevCustomerAuthProvider();
+      new DevCustomerAuthProvider(prisma);
 
     const service = new CustomerAuthService(
       prisma,

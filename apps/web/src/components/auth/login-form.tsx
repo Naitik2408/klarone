@@ -243,9 +243,29 @@ export function LoginForm() {
     }
   }
 
-  function handleGoogleAuth() {
-    // For demo Google flow: auto-fill name from prompt, create session
-    setError("Google authentication active. You can enter your email below to log in or register instantly.");
+  async function handleGoogleAuth() {
+    setError(null);
+    setIsSubmitting(true);
+    try {
+      const { authClient } = await import("@/lib/auth-client");
+      const returnPath = getSafeReturnPath();
+      // Ensure redirect lands on frontend port (3001) instead of backend port (3000)
+      const frontendOrigin =
+        typeof window !== "undefined" ? window.location.origin : "http://localhost:3001";
+      const fullCallbackUrl = `${frontendOrigin}${returnPath}`;
+
+      await authClient.signIn.social({
+        provider: "google",
+        callbackURL: fullCallbackUrl,
+      });
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to connect with Google. Please enter your email below to log in.",
+      );
+      setIsSubmitting(false);
+    }
   }
 
   return (

@@ -135,7 +135,7 @@ export function StorefrontTestimonialSection() {
     <section className="relative z-10 w-full overflow-hidden bg-[#162e20] text-white">
       <div className="grid grid-cols-1 lg:grid-cols-2">
         {/* LEFT COLUMN: Full bleed lifestyle photo with smooth crossfade and floating product card */}
-        <div className="relative min-h-[480px] sm:min-h-[560px] lg:min-h-[660px] xl:min-h-[720px] w-full overflow-hidden">
+        <div className="relative min-h-[360px] sm:min-h-[520px] lg:min-h-[660px] xl:min-h-[720px] w-full overflow-hidden">
           {/* Smooth Image Crossfade Transition with scale drift */}
           <AnimatePresence mode="popLayout" initial={false}>
             <motion.div
@@ -156,10 +156,10 @@ export function StorefrontTestimonialSection() {
           </AnimatePresence>
 
           {/* Subtle soft gradient over image */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/10 pointer-events-none z-10" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/10 pointer-events-none z-10" />
 
           {/* Floating Product Glass Card with smooth content transition */}
-          <div className="absolute bottom-6 left-6 sm:bottom-10 sm:left-10 z-20 flex items-center justify-between gap-4 rounded-2xl bg-black/40 backdrop-blur-md border border-white/20 p-3 sm:p-3.5 shadow-2xl min-w-[280px] sm:min-w-[320px]">
+          <div className="absolute bottom-4 left-4 right-4 sm:right-auto sm:bottom-10 sm:left-10 z-20 flex items-center justify-between gap-3 sm:gap-4 rounded-2xl bg-black/40 backdrop-blur-md border border-white/20 p-3 sm:p-3.5 shadow-2xl min-w-0 sm:min-w-[320px]">
             <AnimatePresence mode="wait">
               <motion.div
                 key={current.product.name}
@@ -214,9 +214,9 @@ export function StorefrontTestimonialSection() {
         </div>
 
         {/* RIGHT COLUMN: Deep Forest Green background, Large Serif Editorial Quote with animated transitions */}
-        <div className="flex flex-col justify-between bg-[#162e20] p-8 sm:p-12 md:p-16 lg:p-20 xl:p-24 relative overflow-hidden">
+        <div className="flex flex-col justify-between bg-[#162e20] p-6 sm:p-12 md:p-16 lg:p-20 xl:p-24 relative overflow-hidden">
           {/* Main Testimonial Quote & Author Animated Block */}
-          <div className="my-auto pt-4 pb-12 sm:pb-16 min-h-[300px] flex flex-col justify-center">
+          <div className="my-auto pt-2 pb-8 sm:pb-16 min-h-[220px] sm:min-h-[300px] flex flex-col justify-center">
             <AnimatePresence mode="wait">
               <motion.div
                 key={current.id}
@@ -226,7 +226,7 @@ export function StorefrontTestimonialSection() {
                 transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
                 className="flex flex-col"
               >
-                <blockquote className="font-serif text-3xl font-normal leading-[1.25] tracking-tight text-white sm:text-4xl md:text-[42px] lg:text-[46px] xl:text-[50px]">
+                <blockquote className="font-serif text-2xl font-normal leading-[1.3] tracking-tight text-white sm:text-4xl md:text-[42px] lg:text-[46px] xl:text-[50px]">
                   {current.quote}
                 </blockquote>
 

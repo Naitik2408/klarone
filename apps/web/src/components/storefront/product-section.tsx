@@ -259,13 +259,13 @@ export function StorefrontProductSection({ initialProducts = [] }: StorefrontPro
   return (
     <section
       id="featured-products"
-      /* Generous top white space: pt-24 md:pt-32 */
-      className="relative z-10 min-h-screen rounded-t-[44px] bg-white pt-24 pb-28 shadow-[0_-25px_70px_rgba(0,0,0,0.18)] md:rounded-t-[56px] md:pt-32"
+      /* Generous top white space: pt-16 sm:pt-24 md:pt-32 */
+      className="relative z-10 min-h-screen rounded-t-[32px] sm:rounded-t-[44px] bg-white pt-16 pb-20 sm:pt-24 sm:pb-28 shadow-[0_-25px_70px_rgba(0,0,0,0.18)] md:rounded-t-[56px] md:pt-32"
     >
       {/* Header Container: Inset aligned with the first product card */}
-      <div className="mx-auto max-w-[1560px] px-6 sm:px-10 lg:px-14">
-        <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="font-serif text-4xl font-normal tracking-tight text-slate-900 sm:text-5xl lg:text-[56px]">
+      <div className="mx-auto max-w-[1560px] px-4 sm:px-10 lg:px-14">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <h2 className="font-serif text-3xl sm:text-5xl lg:text-[56px] font-normal tracking-tight text-slate-900">
             Month&apos;s top products
           </h2>
         </div>
@@ -273,17 +273,20 @@ export function StorefrontProductSection({ initialProducts = [] }: StorefrontPro
 
       {/* 
         Full-bleed right overflow slider:
-        - Left padding aligns the 1st card with the header (px-6 sm:px-10 lg:px-14)
-        - Right side flows naturally to the edge of the screen
-        - Exactly 4 cards fill the main viewport, and the 5th card peeks in by ~10% at the right edge
+        - On mobile: native touch swipe/scroll (overflow-x-auto, scrollbar-none, snap-x)
+        - On desktop: animated motion track controlled by next/prev buttons
       */}
-      <div className="mt-14 w-full overflow-hidden">
-        <div className="mx-auto max-w-[1560px] pl-6 sm:pl-10 lg:pl-14 pr-0">
+      <div className="mt-8 sm:mt-14 w-full overflow-x-auto sm:overflow-hidden scrollbar-none overscroll-x-contain">
+        <div className="mx-auto max-w-[1560px] pl-4 sm:pl-10 lg:pl-14 pr-4 sm:pr-0">
           <motion.div
-            className="flex gap-6 pr-6 will-change-transform"
-            animate={{
-              x: `-${currentIndex * (22.8 + 1.5)}%`,
-            }}
+            className="flex gap-4 sm:gap-6 pr-6 will-change-transform"
+            animate={
+              typeof window !== "undefined" && window.innerWidth >= 640
+                ? {
+                    x: `-${currentIndex * (window.innerWidth < 1024 ? 47.5 : 24.3)}%`,
+                  }
+                : undefined
+            }
             transition={{
               duration: 0.45,
               ease: [0.25, 1, 0.5, 1], // Smooth cubic-bezier without spring stutter or lag
@@ -311,8 +314,8 @@ export function StorefrontProductSection({ initialProducts = [] }: StorefrontPro
               return (
                 <div
                   key={id}
-                  /* Sized so 4 full cards occupy the width, and the 5th card peeks ~10-15% into view */
-                  className="group relative flex flex-col justify-between flex-[0_0_84%] sm:flex-[0_0_45%] lg:flex-[0_0_22.8%] rounded-[24px] bg-[#f0f2ee] p-4 transition-transform duration-200"
+                  /* Sized so 4 full cards occupy the width on desktop, and user can scroll smoothly via touch on mobile */
+                  className="group relative flex flex-col justify-between shrink-0 flex-[0_0_84%] sm:flex-[0_0_45%] lg:flex-[0_0_22.8%] snap-start rounded-[24px] bg-[#f0f2ee] p-4 transition-transform duration-200"
                 >
                   {/* Badge (Sale / Best Sellers) - larger with soft, lighter organic background colors */}
                   {(isSale || isBestSeller) && (
@@ -412,11 +415,11 @@ export function StorefrontProductSection({ initialProducts = [] }: StorefrontPro
         </div>
       </div>
 
-      {/* Carousel Bottom Row: Dynamic Progress Track & Circular Arrow Controls */}
-      <div className="mx-auto mt-12 max-w-[1560px] px-6 sm:px-10 lg:px-14">
+      {/* Carousel Bottom Row: Dynamic Progress Track & Circular Arrow Controls (Hidden on mobile where user scrolls via screen) */}
+      <div className="hidden sm:block mx-auto mt-8 sm:mt-12 max-w-[1560px] px-4 sm:px-10 lg:px-14">
         <div className="flex items-center justify-between pt-2">
           {/* Progress bar line matching card width (22.8% of the grid track) and slightly increased thickness */}
-          <div className="relative h-[3.5px] w-[84%] sm:w-[45%] lg:w-[22.8%] overflow-hidden rounded-full bg-stone-200/90">
+          <div className="relative h-[3px] sm:h-[3.5px] w-[60%] sm:w-[45%] lg:w-[22.8%] overflow-hidden rounded-full bg-stone-200/90">
             <motion.div
               className="h-full rounded-full bg-slate-950"
               animate={{
@@ -426,8 +429,8 @@ export function StorefrontProductSection({ initialProducts = [] }: StorefrontPro
             />
           </div>
 
-          {/* Previous / Next buttons: h-12 w-12 (48px) - slightly larger than the 44px cart circle */}
-          <div className="flex items-center gap-3">
+          {/* Previous / Next buttons */}
+          <div className="flex items-center gap-2 sm:gap-3">
             <motion.button
               whileTap={{ scale: 0.92 }}
               type="button"

@@ -607,7 +607,7 @@ export default function StaffCustomerDetailPage() {
                     <span className="absolute -left-6 top-1 h-3 w-3 rounded-full border-2 border-white bg-neutral-900 shadow-xs" />
                     <div>
                       <div className="flex flex-wrap items-center justify-between gap-2">
-                        {act.link ? (
+                        {"link" in act && act.link ? (
                           <Link href={act.link} className="font-medium text-neutral-900 hover:underline">
                             {act.title}
                           </Link>

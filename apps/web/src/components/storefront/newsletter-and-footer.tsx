@@ -3,16 +3,6 @@
 import React, { useState } from "react";
 import Link from "next/link";
 
-/* 6 Curated Instagram Grid Photos */
-const INSTAGRAM_POSTS = [
-  { id: 1, src: "/insta-leaf.jpg", alt: "Fresh botanicals" },
-  { id: 2, src: "/skin-health-woman.jpg", alt: "Active wellness stretch" },
-  { id: 3, src: "/insta-gel.jpg", alt: "Active serum essence" },
-  { id: 4, src: "/insta-pouch.jpg", alt: "Eco conscious packaging" },
-  { id: 5, src: "/insta-face.jpg", alt: "Glowing healthy skin" },
-  { id: 6, src: "/insta-sachet.jpg", alt: "Daily supplement ritual" },
-];
-
 export function StorefrontNewsletterSection() {
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
@@ -51,29 +41,32 @@ export function StorefrontNewsletterSection() {
         </svg>
       </div>
 
-      <div className="relative z-10 mx-auto max-w-4xl px-6 text-center sm:px-8">
+      <div className="relative z-10 mx-auto max-w-4xl px-4 text-center sm:px-8">
         {/* Editorial Serif Heading */}
-        <h2 className="font-serif text-3xl font-normal tracking-tight text-slate-900 sm:text-4xl md:text-5xl lg:text-[54px] leading-tight">
-          Subscribe for updates, tips & exclusive offers
+        <h2
+          style={{ fontFamily: "var(--font-serif), 'Instrument Serif', Georgia, serif" }}
+          className="text-2xl font-normal tracking-tight text-slate-900 sm:text-4xl md:text-5xl lg:text-[54px] leading-tight"
+        >
+          Subscribe for hardware launches, price drops & drops
         </h2>
 
         {/* Pill Newsletter Input Bar */}
         <form
           onSubmit={handleSubmit}
-          className="mx-auto mt-9 sm:mt-11 flex max-w-xl items-center rounded-full bg-white p-2 sm:p-2.5 shadow-md ring-1 ring-black/5"
+          className="mx-auto mt-6 sm:mt-8 flex max-w-xl items-center rounded-full bg-white p-1 sm:p-1.5 shadow-md shadow-stone-900/5 ring-1 ring-black/5"
         >
           <input
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="Enter your email"
+            placeholder="Enter your email address"
             required
-            className="w-full flex-1 bg-transparent px-5 sm:px-6 text-sm sm:text-base text-slate-900 placeholder:text-stone-400 focus:outline-none"
+            className="w-full min-w-0 flex-1 bg-transparent px-4 sm:px-6 text-xs sm:text-base text-slate-900 placeholder:text-stone-400 focus:outline-none"
           />
           <button
             type="submit"
             aria-label="Submit newsletter subscription"
-            className="flex h-11 w-11 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-full bg-slate-950 text-white transition-transform duration-200 hover:scale-105 active:scale-95"
+            className="flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-full bg-slate-950 text-white transition-transform duration-200 hover:scale-105 active:scale-95"
           >
             <svg
               viewBox="0 0 24 24"
@@ -96,17 +89,17 @@ export function StorefrontNewsletterSection() {
         )}
 
         {/* Disclaimer Link text */}
-        <p className="mt-6 text-xs text-stone-600 sm:text-[13px]">
+        <p className="mt-5 sm:mt-6 text-xs text-stone-600 sm:text-[13px]">
           By subscribing you agree to the{" "}
           <Link
-            href="#terms"
+            href="/terms"
             className="underline underline-offset-2 hover:text-slate-950"
           >
             Terms of Use
           </Link>{" "}
           &{" "}
           <Link
-            href="#privacy"
+            href="/privacy"
             className="underline underline-offset-2 hover:text-slate-950"
           >
             Privacy Policy
@@ -120,249 +113,215 @@ export function StorefrontNewsletterSection() {
 
 export function StorefrontFooter() {
   return (
-    <footer className="relative z-10 bg-[#0b281d] text-white pt-16 pb-12 sm:pt-20 sm:pb-16 lg:pt-24">
-      <div className="mx-auto max-w-[1440px] px-6 sm:px-10 lg:px-14">
+    <footer className="relative z-10 bg-[#0b281d] text-white pt-14 pb-12 sm:pt-20 sm:pb-16 lg:pt-20">
+      <div className="mx-auto max-w-[1440px] px-4 sm:px-10 lg:px-14">
         {/* Top Footer Section: Brand Headline + Navigation Columns */}
         <div className="grid grid-cols-1 gap-12 lg:grid-cols-12 lg:gap-14">
           {/* Brand Left Column (col-span-5) */}
           <div className="lg:col-span-5 flex flex-col justify-start">
-            <span className="font-serif text-3xl sm:text-4xl font-normal tracking-tight text-white">
-              wellina
-            </span>
-            <p className="mt-6 font-serif text-3xl sm:text-4xl md:text-5xl lg:text-[46px] font-normal leading-[1.12] tracking-tight text-white max-w-sm">
-              We’re obsessed with building the best.
+            <Link
+              href="/"
+              style={{ fontFamily: "var(--font-serif), 'Instrument Serif', Georgia, serif" }}
+              className="text-4xl sm:text-5xl font-normal tracking-tight text-white hover:opacity-95 transition"
+            >
+              klarone
+            </Link>
+            <p
+              style={{ fontFamily: "var(--font-serif), 'Instrument Serif', Georgia, serif" }}
+              className="mt-6 text-3xl sm:text-4xl md:text-5xl lg:text-[44px] font-normal leading-[1.14] tracking-tight text-white max-w-sm"
+            >
+              Curated performance computing, delivered across India.
+            </p>
+            <p className="mt-4 text-xs leading-relaxed text-stone-400 max-w-sm">
+              Authentic manufacturer warranties, verified IMEI / serial hardware checks, and seamless express dispatch from our Kolkata flagship warehouse.
             </p>
           </div>
 
           {/* Links Columns (col-span-7) */}
           <div className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-3 gap-10">
-            {/* Company Column */}
+            {/* Laptops & Catalogue Column */}
             <div className="flex flex-col space-y-4">
-              <h4 className="font-serif text-2xl font-normal text-white tracking-tight">
-                Company
+              <h4
+                style={{ fontFamily: "var(--font-serif), 'Instrument Serif', Georgia, serif" }}
+                className="text-2xl font-normal text-white tracking-tight"
+              >
+                Catalogue
               </h4>
               <ul className="space-y-3 text-sm text-stone-300">
                 <li>
-                  <Link href="#story" className="transition-colors hover:text-white">
-                    Our Story
+                  <Link href="/laptops" className="transition-colors hover:text-white">
+                    All Laptops
                   </Link>
                 </li>
                 <li>
-                  <Link href="#contact" className="transition-colors hover:text-white">
-                    Contact
+                  <Link href="/laptops?categorySlug=ultrabooks" className="transition-colors hover:text-white">
+                    Ultrabooks
                   </Link>
                 </li>
                 <li>
-                  <Link href="#faqs" className="transition-colors hover:text-white">
-                    FAQs
+                  <Link href="/laptops?categorySlug=gaming-laptops" className="transition-colors hover:text-white">
+                    Gaming Rigs
                   </Link>
                 </li>
                 <li>
-                  <Link href="#blog" className="transition-colors hover:text-white">
-                    Blog
+                  <Link href="/laptops?collectionSlug=copilot-pcs" className="transition-colors hover:text-white">
+                    Copilot+ AI PCs
                   </Link>
                 </li>
                 <li>
-                  <Link href="#stores" className="transition-colors hover:text-white">
-                    Find a Store
+                  <Link href="/select" className="transition-colors hover:text-white flex items-center gap-1.5">
+                    <span>AI Laptop Advisor</span>
+                    <span className="h-1.5 w-1.5 rounded-full bg-[#d6f088]" />
                   </Link>
                 </li>
               </ul>
             </div>
 
-            {/* Get Help Column */}
+            {/* Customer Care Column */}
             <div className="flex flex-col space-y-4">
-              <h4 className="font-serif text-2xl font-normal text-white tracking-tight">
-                Get Help
+              <h4
+                style={{ fontFamily: "var(--font-serif), 'Instrument Serif', Georgia, serif" }}
+                className="text-2xl font-normal text-white tracking-tight"
+              >
+                Customer Care
               </h4>
               <ul className="space-y-3 text-sm text-stone-300">
                 <li>
-                  <Link href="#help" className="transition-colors hover:text-white">
-                    Help Center
+                  <Link href="/account" className="transition-colors hover:text-white">
+                    My Account
                   </Link>
                 </li>
                 <li>
-                  <Link href="#chat" className="transition-colors hover:text-white">
-                    Live Chat
+                  <Link href="/account/orders" className="transition-colors hover:text-white">
+                    Track Orders
                   </Link>
                 </li>
                 <li>
-                  <Link href="#returns" className="transition-colors hover:text-white">
-                    Return Policy
+                  <Link href="/cart" className="transition-colors hover:text-white">
+                    Shopping Cart
                   </Link>
                 </li>
                 <li>
-                  <Link href="#shipping" className="transition-colors hover:text-white">
-                    Shipping Info
+                  <Link href="/privacy" className="transition-colors hover:text-white">
+                    Privacy Policy
                   </Link>
                 </li>
                 <li>
-                  <Link href="#bulk" className="transition-colors hover:text-white">
-                    Bulk Orders
+                  <Link href="/staff/login" className="transition-colors hover:text-white">
+                    Staff Portal
                   </Link>
                 </li>
               </ul>
             </div>
 
-            {/* Information Column */}
+            {/* Studio & Contact Column */}
             <div className="flex flex-col space-y-3.5">
-              <h4 className="font-serif text-2xl font-normal text-white tracking-tight">
-                Information
+              <h4
+                style={{ fontFamily: "var(--font-serif), 'Instrument Serif', Georgia, serif" }}
+                className="text-2xl font-normal text-white tracking-tight"
+              >
+                Experience Studio
               </h4>
               <p className="text-sm leading-relaxed text-stone-300">
-                3772 Village View Drive, Immokalee, Florida
+                Park Street, Central Kolkata, West Bengal 700016
               </p>
               <p className="text-sm text-stone-300 underline underline-offset-2">
-                <a href="mailto:littlepebble@gmail.com" className="hover:text-white">
-                  littlepebble@gmail.com
+                <a href="mailto:support@klarone.in" className="hover:text-white">
+                  support@klarone.in
                 </a>
               </p>
               <p className="text-sm text-stone-300">
-                +1 888-234-1234 (tool-free)
+                +91 90605 57296 (Toll-Free Support)
+              </p>
+              <p className="text-xs text-stone-400 pt-1">
+                Mon – Sat: 10:00 AM – 8:00 PM IST
               </p>
             </div>
-          </div>
-        </div>
-
-        {/* Middle Footer Section: "Follow Us on Instagram" Strip */}
-        <div className="mt-16 sm:mt-20 pt-10 border-t border-white/10">
-          <div className="flex items-center justify-between pb-6">
-            <h3 className="font-serif text-2xl sm:text-3xl font-normal tracking-tight text-white">
-              Follow Us on Instagram
-            </h3>
-            <span className="text-sm text-stone-400">@littlepebble.co</span>
-          </div>
-
-          {/* 6 Square Rounded Cards Grid - scaled down for compact editorial elegance */}
-          <div className="grid grid-cols-3 gap-3 sm:gap-4 md:grid-cols-6 max-w-full">
-            {INSTAGRAM_POSTS.map((post) => (
-              <div
-                key={post.id}
-                className="group relative h-28 sm:h-32 md:h-36 lg:h-40 w-full overflow-hidden rounded-[20px] bg-stone-900 shadow-sm"
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={post.src}
-                  alt={post.alt}
-                  className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
-                />
-                <div className="absolute inset-0 bg-black/20 opacity-0 transition-opacity duration-300 group-hover:opacity-100 flex items-center justify-center">
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                    className="h-5 w-5 text-white"
-                  >
-                    <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
-                    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
-                    <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
-                  </svg>
-                </div>
-              </div>
-            ))}
           </div>
         </div>
 
         {/* Social Icons Pill Buttons + Policy Links */}
-        <div className="mt-12 flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-16 pt-8 border-t border-white/10 flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
           {/* Social Icons row in rounded dark green squares */}
           <div className="flex items-center gap-2.5">
             {/* X / Twitter */}
             <a
-              href="#twitter"
-              aria-label="X"
+              href="https://twitter.com"
+              target="_blank"
+              rel="noreferrer"
+              aria-label="X (Twitter)"
               className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 border border-white/10 text-stone-300 transition-colors hover:bg-white/10 hover:text-white"
             >
               <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
                 <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
               </svg>
             </a>
-            {/* Instagram */}
+            {/* LinkedIn */}
             <a
-              href="#instagram"
-              aria-label="Instagram"
-              className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 border border-white/10 text-stone-300 transition-colors hover:bg-white/10 hover:text-white"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
-                <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
-                <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
-                <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
-              </svg>
-            </a>
-            {/* TikTok */}
-            <a
-              href="#tiktok"
-              aria-label="TikTok"
+              href="https://linkedin.com"
+              target="_blank"
+              rel="noreferrer"
+              aria-label="LinkedIn"
               className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 border border-white/10 text-stone-300 transition-colors hover:bg-white/10 hover:text-white"
             >
               <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
-                <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64c.29 0 .58.04.85.12V9.32a6.37 6.37 0 0 0-1-.07A6.34 6.34 0 0 0 3 15.59a6.34 6.34 0 0 0 6.34 6.34c3.48 0 6.34-2.83 6.34-6.34V8.71a8.21 8.21 0 0 0 4.91 1.63V6.89a4.88 4.88 0 0 1-1-.2z" />
+                <path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.88 8.56a1.68 1.68 0 0 0 1.68-1.68c0-.93-.75-1.69-1.68-1.69a1.69 1.69 0 0 0-1.69 1.69c0 .93.76 1.68 1.69 1.68m1.39 9.94v-8.37H5.5v8.37h2.77z" />
               </svg>
             </a>
-            {/* Pinterest */}
+            {/* YouTube */}
             <a
-              href="#pinterest"
-              aria-label="Pinterest"
+              href="https://youtube.com"
+              target="_blank"
+              rel="noreferrer"
+              aria-label="YouTube"
               className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 border border-white/10 text-stone-300 transition-colors hover:bg-white/10 hover:text-white"
             >
               <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
-                <path d="M12 0C5.373 0 0 5.373 0 12c0 5.084 3.163 9.426 7.627 11.174-.105-.949-.2-2.405.042-3.441.218-.937 1.407-5.965 1.407-5.965s-.359-.719-.359-1.782c0-1.668.967-2.914 2.171-2.914 1.023 0 1.518.769 1.518 1.69 0 1.029-.655 2.568-.994 3.995-.283 1.194.599 2.169 1.777 2.169 2.133 0 3.772-2.249 3.772-5.495 0-2.873-2.064-4.882-5.012-4.882-3.414 0-5.418 2.561-5.418 5.207 0 1.031.397 2.138.893 2.738a.36.36 0 0 1 .083.345l-.333 1.36c-.053.22-.174.267-.402.161-1.499-.698-2.436-2.889-2.436-4.649 0-3.785 2.75-7.262 7.929-7.262 4.163 0 7.398 2.967 7.398 6.931 0 4.136-2.607 7.464-6.227 7.464-1.216 0-2.359-.631-2.75-1.378l-.748 2.853c-.271 1.043-1.002 2.35-1.492 3.146C9.57 23.812 10.763 24 12 24c6.627 0 12-5.373 12-12 0-6.627-5.373-12-12-12z" />
+                <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
               </svg>
             </a>
           </div>
 
           {/* Legal Links */}
           <div className="flex items-center gap-6 text-xs text-stone-300">
-            <Link href="#accessibility" className="hover:text-white">
-              Accessibility
+            <Link href="/privacy" className="hover:text-white transition">
+              Privacy Policy
             </Link>
-            <Link href="#terms" className="hover:text-white">
+            <Link href="/terms" className="hover:text-white transition">
               Terms of Service
             </Link>
-            <Link href="#privacy" className="hover:text-white">
-              Privacy Policy
+            <Link href="/staff/login" className="hover:text-white transition">
+              Staff Access
             </Link>
           </div>
         </div>
 
         {/* Bottom Bar: Copyright + Currency Selector + Payment Icons */}
-        <div className="mt-10 pt-8 border-t border-white/10 flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between text-xs text-stone-400">
+        <div className="mt-8 pt-6 border-t border-white/10 flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between text-xs text-stone-400">
           <div>
-            © 2026 Pebble Wellina, Powered by Shopify
+            © {new Date().getFullYear()} Klarone Retail Pvt. Ltd. All rights reserved.
           </div>
 
           <div className="flex flex-wrap items-center gap-4">
             {/* Country / Currency Pill */}
             <div className="flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs text-white">
-              <span className="text-sm">🇺🇸</span>
-              <span>USD/ EN</span>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-3 w-3">
-                <path d="m6 9 6 6 6-6" />
-              </svg>
+              <span className="text-sm">🇮🇳</span>
+              <span>INR (₹) / India</span>
             </div>
 
             {/* Payment Method Badges */}
             <div className="flex items-center gap-1.5">
-              {/* Visa */}
-              <div className="flex h-5 w-8 items-center justify-center rounded bg-[#1a1f71] text-[8px] font-bold text-white tracking-wider">
-                VISA
+              <div className="flex h-5 px-2 items-center justify-center rounded bg-[#1a1f71] text-[8px] font-bold text-white tracking-wider">
+                UPI
               </div>
-              {/* Mastercard */}
-              <div className="flex h-5 w-8 items-center justify-center rounded bg-[#eb001b] text-[8px] font-bold text-white tracking-wider">
-                MC
+              <div className="flex h-5 px-2 items-center justify-center rounded bg-[#eb001b] text-[8px] font-bold text-white tracking-wider">
+                CARD
               </div>
-              {/* Amex */}
-              <div className="flex h-5 w-8 items-center justify-center rounded bg-[#006fcf] text-[8px] font-bold text-white tracking-wider">
-                AMEX
+              <div className="flex h-5 px-2 items-center justify-center rounded bg-[#006fcf] text-[8px] font-bold text-white tracking-wider">
+                NET BANKING
               </div>
-              {/* PayPal */}
-              <div className="flex h-5 w-8 items-center justify-center rounded bg-[#003087] text-[8px] font-bold text-white tracking-wider">
-                PAYPAL
-              </div>
-              {/* Discover */}
-              <div className="flex h-5 w-8 items-center justify-center rounded bg-[#f47216] text-[8px] font-bold text-white tracking-wider">
-                DISC
+              <div className="flex h-5 px-2 items-center justify-center rounded bg-[#0b241b] border border-white/20 text-[8px] font-bold text-[#d6f088] tracking-wider">
+                EMI
               </div>
             </div>
           </div>

@@ -113,6 +113,7 @@ export async function getProduct(
 export async function startRecommendation(params: {
   message: string;
   sessionToken?: string;
+  history?: Array<{ role: "user" | "model"; text: string }>;
 }): Promise<RecommendationStartResponse> {
   return apiFetch<RecommendationStartResponse>(
     "/recommendations/start",

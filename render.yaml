@@ -1,0 +1,86 @@
+services:
+  # ----------------------------------------------------------------------------
+  # 1. NestJS Backend API Service
+  # ----------------------------------------------------------------------------
+  - type: web
+    name: klarone-api
+    runtime: node
+    plan: free
+    region: singapore # or oregon / frankfurt
+    buildCommand: pnpm install --frozen-lockfile && pnpm --filter @klarone/db generate && pnpm --filter @klarone/db build && pnpm --filter api build
+    startCommand: pnpm --filter api start:prod
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: DATABASE_URL
+        sync: false
+      - key: DIRECT_URL
+        sync: false
+      - key: WEB_ORIGINS
+        sync: false
+      - key: STAFF_AUTH_JWT_SECRET
+        generateValue: true
+      - key: STAFF_AUTH_JWT_EXPIRES_IN
+        value: 12h
+      - key: STAFF_AUTH_JWT_ISSUER
+        value: klarone-api
+      - key: STAFF_AUTH_JWT_AUDIENCE
+        value: klarone-admin
+      - key: CUSTOMER_AUTH_JWT_SECRET
+        generateValue: true
+      - key: CUSTOMER_AUTH_JWT_EXPIRES_IN
+        value: 30m
+      - key: CUSTOMER_AUTH_JWT_ISSUER
+        value: klarone-api
+      - key: CUSTOMER_AUTH_JWT_AUDIENCE
+        value: klarone-customer
+      - key: BETTER_AUTH_SECRET
+        generateValue: true
+      - key: BETTER_AUTH_URL
+        sync: false
+      - key: BETTER_AUTH_API_KEY
+        sync: false
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: 587
+
+  # ----------------------------------------------------------------------------
+  # 2. Next.js Web Storefront & Staff Portal
+  # ----------------------------------------------------------------------------
+  - type: web
+    name: klarone-web
+    runtime: node
+    plan: free
+    region: singapore # or oregon / frankfurt
+    buildCommand: pnpm install --frozen-lockfile && pnpm --filter web build
+    startCommand: pnpm --filter web start -p 10000
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: NEXT_PUBLIC_API_BASE_URL
+        sync: false

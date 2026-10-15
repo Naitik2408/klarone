@@ -18,31 +18,31 @@ interface SlideData {
 const SLIDES: SlideData[] = [
   {
     id: 1,
-    subtitle: "FORMULATIONS",
-    titlePrimary: "Whole body health",
-    titleSecondary: "starts in the gut.",
-    ctaText: "Shop Now",
-    ctaLink: "#featured-products",
+    subtitle: "KLARONE SELECT",
+    titlePrimary: "Find the right laptop",
+    titleSecondary: "with guided AI.",
+    ctaText: "Get Advice",
+    ctaLink: "/select",
     leftBg: "#8b9c75",
     rightBg: "#2d4422",
   },
   {
     id: 2,
-    subtitle: "DAILY NOURISHMENT",
-    titlePrimary: "Clean botanical fuel",
-    titleSecondary: "for mind & body.",
-    ctaText: "Explore More",
-    ctaLink: "#featured-products",
+    subtitle: "PRECISION MATCHING",
+    titlePrimary: "Tell us what you do",
+    titleSecondary: "we find your fit.",
+    ctaText: "Find Laptop",
+    ctaLink: "/select",
     leftBg: "#7f9169",
     rightBg: "#263c1d",
   },
   {
     id: 3,
-    subtitle: "PURE BALANCE",
-    titlePrimary: "Clinically validated",
-    titleSecondary: "living cultures.",
-    ctaText: "Shop Collection",
-    ctaLink: "#featured-products",
+    subtitle: "UNBIASED ADVICE",
+    titlePrimary: "Transparent specs,",
+    titleSecondary: "genuine reason.",
+    ctaText: "Start Fitting",
+    ctaLink: "/select",
     leftBg: "#869870",
     rightBg: "#2a4020",
   },
@@ -66,39 +66,30 @@ export function StorefrontHero() {
       Sticky hero container: Stays anchored on screen while the following product
       section scrolls and slides over it smoothly with rounded corners and shadow elevation.
     */
-    <div className="sticky top-0 z-0 h-screen w-full overflow-hidden">
-      {/* Background Split Screen */}
-      <div className="absolute inset-0 -z-10 flex h-full w-full">
-        {/* Left half: Soft organic sage/moss tone */}
+    <div className="sticky top-0 z-0 h-screen w-full overflow-hidden bg-[#07090e]">
+      {/* Cinematic Night Cityscape Architecture Background */}
+      <div className="absolute inset-0 -z-10 h-full w-full overflow-hidden">
+        {/* Photographic Dusk Cityscape Layer */}
         <div
-          className="relative h-full w-1/2 transition-colors duration-700 ease-out"
-          style={{ backgroundColor: slide.leftBg }}
-        >
-          <div className="absolute inset-0 bg-gradient-to-tr from-black/15 via-transparent to-white/10" />
-        </div>
-
-        {/* Right half: Lush palm leaf deep green with subtle frond diagonal lines */}
-        <div
-          className="relative h-full w-1/2 transition-colors duration-700 ease-out"
+          className="absolute inset-0 h-full w-full bg-cover bg-center bg-no-repeat transition-transform duration-1000 scale-[1.02]"
           style={{
-            backgroundColor: slide.rightBg,
-            backgroundImage: `
-              radial-gradient(ellipse at 35% 50%, rgba(255,255,255,0.08), transparent 65%),
-              repeating-linear-gradient(
-                115deg,
-                rgba(0, 0, 0, 0.12) 0px,
-                rgba(0, 0, 0, 0.12) 2px,
-                transparent 2px,
-                transparent 16px
-              )
-            `,
+            backgroundImage: "url('/hero-night-cityscape.jpg')",
           }}
-        >
-          <div className="absolute inset-0 bg-gradient-to-bl from-transparent via-transparent to-black/20" />
-        </div>
+        />
+
+        {/* Top Dark Vignette: keeps floating navbar & upper text perfectly legible */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/85 via-black/45 to-transparent" />
+
+        {/* Radial Center Glow: softens illuminated office cubicles in midground */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(0,0,0,0.15)_0%,_rgba(0,0,0,0.75)_100%)]" />
+
+        {/* Bottom Atmospheric Fade: seamlessly grounds into the following section */}
+        <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-[#07090e] via-[#07090e]/70 to-transparent" />
       </div>
 
-      <div className="relative mx-auto flex h-full max-w-7xl flex-col items-center justify-center px-4 pt-16 pb-12 text-center sm:px-6 lg:px-8">
+      <div className="relative mx-auto flex h-full max-w-7xl flex-col items-center justify-between px-4 pt-24 pb-8 text-center sm:px-6 sm:justify-center sm:pt-16 sm:pb-12 lg:px-8">
+        <div className="hidden sm:block sm:h-4" />
+
         <AnimatePresence mode="wait">
           <motion.div
             key={slide.id}
@@ -106,15 +97,15 @@ export function StorefrontHero() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -14 }}
             transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
-            className="flex flex-col items-center"
+            className="flex my-auto flex-col items-center"
           >
             {/* Category Eyebrow */}
-            <p className="mb-4 text-xs font-semibold uppercase tracking-[0.22em] text-white/90 drop-shadow-sm sm:text-sm">
+            <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-white/90 drop-shadow-sm sm:mb-4 sm:text-sm">
               {slide.subtitle}
             </p>
 
             {/* Editorial Serif Headline */}
-            <h1 className="max-w-4xl font-serif text-[52px] font-normal leading-[1.08] tracking-tight text-white drop-shadow-sm sm:text-7xl md:text-8xl lg:text-[104px]">
+            <h1 className="max-w-4xl font-serif text-[42px] font-normal leading-[1.08] tracking-tight text-white drop-shadow-sm sm:text-7xl md:text-8xl lg:text-[104px]">
               <span className="block">{slide.titlePrimary}</span>
               <span className="block font-serif italic font-normal tracking-normal text-white">
                 {slide.titleSecondary}
@@ -122,7 +113,7 @@ export function StorefrontHero() {
             </h1>
 
             {/* CTA Pill Button with circle arrow */}
-            <div className="mt-9 flex items-center justify-center">
+            <div className="mt-8 flex items-center justify-center sm:mt-9">
               <Link
                 href={slide.ctaLink}
                 className="group flex items-center gap-3.5 rounded-full bg-[#d6f088] py-2.5 pl-6 pr-2.5 text-sm font-semibold tracking-tight text-slate-900 shadow-md transition-all duration-200 hover:scale-105 hover:bg-[#c8e678] active:scale-95"
@@ -145,14 +136,14 @@ export function StorefrontHero() {
         </AnimatePresence>
 
         {/* Bottom Pagination & Interactive Controls */}
-        <div className="mt-12 flex items-center gap-6 text-white/95">
+        <div className="mt-auto flex w-full max-w-xs items-center justify-between text-white/95 sm:mt-12 sm:w-auto sm:gap-6">
           {/* Slide Indicator */}
-          <span className="min-w-[40px] text-xs font-medium tracking-widest sm:text-sm">
+          <span className="min-w-[36px] text-xs font-medium tracking-widest sm:text-sm">
             {currentSlideIndex + 1} / {SLIDES.length}
           </span>
 
           {/* Smooth Progress Bar Line */}
-          <div className="h-[2px] w-16 overflow-hidden rounded-full bg-white/35 sm:w-24">
+          <div className="mx-3 h-[2px] flex-1 overflow-hidden rounded-full bg-white/35 sm:mx-0 sm:w-24 sm:flex-none">
             <motion.div
               className="h-full bg-white"
               animate={{ width: `${((currentSlideIndex + 1) / SLIDES.length) * 100}%` }}

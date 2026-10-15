@@ -26,6 +26,12 @@ export class PrismaService
       keepAliveInitialDelayMillis: 10000,
     });
 
+    pool.on("error", (err) => {
+      // In PgBouncer transaction mode or network drops, idle connections can be terminated by server.
+      // Handling pool error prevents unhandled exception crashes.
+      console.warn("[PrismaService] pg-pool client error:", err.message);
+    });
+
     const adapter = new PrismaPg(pool);
 
     super({

@@ -48,23 +48,25 @@ async function parseResponse<T>(response: Response): Promise<T> {
   }
 
   if (!response.ok) {
-    if (response.status === 401) {
-      throw new CustomerAuthError(
-        "Your session has expired. Please sign in again.",
-        {
-          status: 401,
-          code: "UNAUTHORIZED",
-        },
-      );
-    }
-
     const message =
       data &&
       typeof data === "object" &&
       "message" in data &&
       typeof data.message === "string"
         ? data.message
-        : "Customer authentication request failed";
+        : response.status === 401
+          ? "Invalid verification code or session expired."
+          : "Customer authentication request failed";
+
+    if (response.status === 401) {
+      throw new CustomerAuthError(
+        message,
+        {
+          status: 401,
+          code: "UNAUTHORIZED",
+        },
+      );
+    }
 
     throw new CustomerAuthError(message, {
       status: response.status,
@@ -100,8 +102,24 @@ export function clearStoredCustomerAccessToken(): void {
 }
 
 export async function requestCustomerOtp(
-  phone: string,
+  identifier: string,
 ): Promise<CustomerOtpRequestResult> {
+  const isEmail = identifier.includes("@");
+
+  // 1. Trigger Better Auth email OTP if an email is provided
+  if (isEmail) {
+    try {
+      const { authClient } = await import("@/lib/auth-client");
+      await authClient.emailOtp.sendVerificationOtp({
+        email: identifier,
+        type: "sign-in",
+      });
+    } catch (err) {
+      console.warn("[Better Auth] emailOtp sendVerificationOtp notice:", err);
+    }
+  }
+
+  // 2. Call backend customer-auth service to coordinate session challenge
   const response = await fetch(
     `${API_BASE_URL}/customer-auth/request-otp`,
     {
@@ -110,7 +128,7 @@ export async function requestCustomerOtp(
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        phone,
+        phone: identifier,
       }),
     },
   );
@@ -120,9 +138,25 @@ export async function requestCustomerOtp(
 
 export async function verifyCustomerOtp(
   challengeId: string,
-  phone: string,
+  identifier: string,
   code: string,
 ): Promise<CustomerAuthResult> {
+  const isEmail = identifier.includes("@");
+
+  // 1. Verify with Better Auth email OTP
+  if (isEmail) {
+    try {
+      const { authClient } = await import("@/lib/auth-client");
+      await authClient.signIn.emailOtp({
+        email: identifier,
+        otp: code,
+      });
+    } catch (err) {
+      console.warn("[Better Auth] emailOtp verify notice:", err);
+    }
+  }
+
+  // 2. Verify with customer-auth service to return customer token & profile
   const response = await fetch(
     `${API_BASE_URL}/customer-auth/verify-otp`,
     {
@@ -132,7 +166,7 @@ export async function verifyCustomerOtp(
       },
       body: JSON.stringify({
         challengeId,
-        phone,
+        phone: identifier,
         code,
       }),
     },

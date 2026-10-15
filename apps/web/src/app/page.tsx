@@ -13,7 +13,7 @@ import {
 } from "../components/storefront/newsletter-and-footer";
 import { SmoothScrollProvider } from "../components/storefront/smooth-scroll-provider";
 
-import { getProducts } from "../lib/api";
+import { getProducts, getCollections } from "../lib/api";
 
 export const metadata: Metadata = {
   title: "Wellina — Whole Body Health Starts in the Gut",
@@ -22,43 +22,49 @@ export const metadata: Metadata = {
 };
 
 export default async function StorefrontHomePage() {
-  const topProductsResponse = await getProducts({
-    collectionSlug: "top-picks",
-    pageSize: 6,
-  }).catch(() => null);
+  const [topProductsResponse, collectionsData] = await Promise.all([
+    getProducts({
+      collectionSlug: "top-picks",
+      pageSize: 6,
+    }).catch(() => null),
+    getCollections().catch(() => []),
+  ]);
 
   const topProducts = topProductsResponse?.items ?? [];
+  const collections = collectionsData ?? [];
 
   return (
     <SmoothScrollProvider>
-      <div className="min-h-screen bg-[#8b9e76] font-sans antialiased selection:bg-[#d6f088] selection:text-slate-950">
+      <div className="min-h-screen w-full overflow-x-clip bg-[#07090e] font-sans antialiased selection:bg-[#d6f088] selection:text-slate-950">
         {/* 1. Floating Capsule Header */}
         <StorefrontHeader />
 
-        <main className="relative">
+        <main className="relative w-full overflow-x-clip">
           {/* 2. Hero Section: Split Dual-Tone Background & Typography */}
           <StorefrontHero />
 
           {/* 3. Product Catalog Section: 'Month's top products' with carousel controls */}
           <StorefrontProductSection initialProducts={topProducts} />
 
-          {/* 4. Formulations Section: 'Science-backed formulations' with 3 feature cards */}
-          <StorefrontFormulationsSection />
+          {/* 4. Collections Section: Top 3 curated collections from admin panel */}
+          <StorefrontFormulationsSection initialCollections={collections} />
 
-          {/* 5. Gut Health Section: 'The future of gut health' with 4 icon columns */}
+          {/* 5. Services Section: 4 Core Klarone Services (Select, Setup, Care, Upgrade) */}
           <StorefrontGutHealthSection />
 
-          {/* 6. Testimonial Section: Split lifestyle photo & editorial quote slider */}
+          {/* 
+            Sections commented out for later use:
+            - Testimonial Section
+            - Skin Health Section
+            - Collections Showcase (Ticker + Stats + Interactive Tabs)
+            - Newsletter Section
+          */}
+          {/*
           <StorefrontTestimonialSection />
-
-          {/* 7. Skin Health Section: Left timeline with right sticky stacked photography */}
           <StorefrontSkinHealthSection />
-
-          {/* 8. Collections Showcase: Top ticker + Stats cards + Interactive collections tabs */}
           <StorefrontCollectionsShowcase />
-
-          {/* 9. Newsletter Section: 'Subscribe for updates, tips & exclusive offers' */}
           <StorefrontNewsletterSection />
+          */}
         </main>
 
         {/* 10. Storefront Luxury Editorial Footer */}

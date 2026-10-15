@@ -1,0 +1,45 @@
+# syntax=docker/dockerfile:1
+FROM node:20-alpine AS base
+RUN corepack enable && corepack prepare pnpm@12.5.1 --activate
+WORKDIR /app
+
+# Stage 1: Install dependencies and build shared packages
+FROM base AS builder
+WORKDIR /app
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+COPY packages/db/package.json ./packages/db/
+COPY apps/api/package.json ./apps/api/
+
+RUN pnpm install --frozen-lockfile
+
+COPY packages/db ./packages/db
+COPY apps/api ./apps/api
+
+# Generate Prisma Client & compile DB package
+WORKDIR /app/packages/db
+RUN pnpm generate && pnpm build
+
+# Build NestJS API
+WORKDIR /app/apps/api
+RUN pnpm build
+
+# Stage 2: Production runner
+FROM base AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+ENV PORT=3000
+
+COPY --from=builder /app/package.json /app/pnpm-workspace.yaml /app/pnpm-lock.yaml ./
+COPY --from=builder /app/packages/db/package.json ./packages/db/
+COPY --from=builder /app/packages/db/dist ./packages/db/dist
+COPY --from=builder /app/packages/db/prisma ./packages/db/prisma
+COPY --from=builder /app/packages/db/src/generated ./packages/db/src/generated
+COPY --from=builder /app/apps/api/package.json ./apps/api/
+COPY --from=builder /app/apps/api/dist ./apps/api/dist
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/apps/api/node_modules ./apps/api/node_modules
+COPY --from=builder /app/packages/db/node_modules ./packages/db/node_modules
+
+EXPOSE 3000
+
+CMD ["node", "apps/api/dist/main"]

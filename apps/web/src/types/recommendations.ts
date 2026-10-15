@@ -86,4 +86,5 @@ export type RecommendationStartResponse = {
     executionTimeMs: number | null;
   };
   results: RecommendationResult[];
+  conversationalReply?: string;
 };

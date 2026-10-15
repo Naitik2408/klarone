@@ -23,6 +23,9 @@ import {
   type CustomerAuthResult,
 } from "@/lib/customer-auth-api";
 
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:3000";
+
 interface VerifyOtpAndSignInInput {
   challengeId: string;
   phone: string;
@@ -33,6 +36,7 @@ interface CustomerAuthContextValue {
   customer: CustomerMeResponse["customer"] | null;
   accessToken: string | null;
   isLoading: boolean;
+  isAuthLoading: boolean;
   isAuthenticated: boolean;
 
   verifyOtpAndSignIn(
@@ -94,7 +98,36 @@ export function CustomerAuthProvider({
   }, [router]);
 
   const restoreSession = useCallback(async () => {
-    const storedToken = getCustomerAccessToken();
+    let storedToken = getCustomerAccessToken();
+
+    // If local token not found, check if Better Auth has an active cookie session (e.g. from Google OAuth)
+    if (!storedToken) {
+      try {
+        const { authClient } = await import("@/lib/auth-client");
+        const sessionRes = await authClient.getSession();
+        if (sessionRes?.data?.user?.email) {
+          // Sync Better Auth user with backend customer-auth service
+          const syncRes = await fetch(`${API_BASE_URL}/customer-auth/sync-session`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              email: sessionRes.data.user.email,
+              name: sessionRes.data.user.name,
+              betterAuthUserId: sessionRes.data.user.id,
+            }),
+          });
+          if (syncRes.ok) {
+            const syncData = (await syncRes.json()) as { accessToken: string };
+            if (syncData.accessToken) {
+              storeCustomerAccessToken(syncData.accessToken);
+              storedToken = syncData.accessToken;
+            }
+          }
+        }
+      } catch (sessionErr) {
+        console.warn("[CustomerAuth] Better Auth session check notice:", sessionErr);
+      }
+    }
 
     if (!storedToken) {
       setAccessToken(null);
@@ -119,8 +152,6 @@ export function CustomerAuthProvider({
         return;
       }
 
-      // Temporary server/network errors should not destroy
-      // an otherwise potentially valid local session.
       setAccessToken(storedToken);
       setCustomer(null);
     } finally {
@@ -225,6 +256,7 @@ export function CustomerAuthProvider({
       customer,
       accessToken,
       isLoading,
+      isAuthLoading: isLoading,
       isAuthenticated: Boolean(accessToken && customer),
       verifyOtpAndSignIn,
       logout,

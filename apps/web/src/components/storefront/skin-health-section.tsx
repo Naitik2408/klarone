@@ -95,31 +95,31 @@ function CircularStampBadge() {
 export function StorefrontSkinHealthSection() {
   return (
     <section className="relative z-10 bg-white py-20 sm:py-24 lg:py-28 text-slate-900">
-      <div className="mx-auto max-w-[1440px] px-6 sm:px-10 lg:px-14">
+      <div className="mx-auto max-w-[1440px] px-4 sm:px-10 lg:px-14">
         {/* Section Header */}
         <div className="text-center">
           <span className="text-xs font-semibold uppercase tracking-[0.25em] text-stone-500 sm:text-sm">
             THE FUTURE OF SKIN HEALTH
           </span>
-          <h2 className="mt-4 font-serif text-4xl font-normal tracking-tight text-slate-900 sm:text-5xl lg:text-[58px]">
+          <h2 className="mt-4 font-serif text-3xl font-normal tracking-tight text-slate-900 sm:text-5xl lg:text-[58px]">
             Glow that builds over time.
           </h2>
         </div>
 
         {/* Two Column Layout: Left scrolling timeline content, Right sticky image container */}
-        <div className="mt-16 sm:mt-20 grid grid-cols-1 gap-12 lg:grid-cols-12 lg:gap-16 items-start">
+        <div className="mt-12 sm:mt-20 grid grid-cols-1 gap-12 lg:grid-cols-12 lg:gap-16 items-start">
           {/* LEFT COLUMN: Vertical Timeline (col-span-6) */}
           <div className="lg:col-span-6 flex flex-col justify-start">
-            <div className="relative pl-8 sm:pl-12">
+            <div className="relative pl-6 sm:pl-12">
               {/* Vertical dotted connecting line */}
               <div className="absolute left-[5px] sm:left-[7px] top-3 bottom-8 w-[1.5px] border-l-2 border-dashed border-stone-300" />
 
               {/* Timeline Steps */}
-              <div className="flex flex-col space-y-16 sm:space-y-20 lg:space-y-24">
+              <div className="flex flex-col space-y-12 sm:space-y-20 lg:space-y-24">
                 {TIMELINE_STEPS.map((step) => (
                   <div key={step.id} className="relative group">
                     {/* Dark forest green circle node */}
-                    <div className="absolute -left-[32px] sm:-left-[48px] top-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[#162e20] ring-4 ring-white" />
+                    <div className="absolute -left-[30px] sm:-left-[48px] top-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[#162e20] ring-4 ring-white" />
 
                     {/* Step Badge */}
                     <span className="inline-block rounded-full bg-[#e8f3e5] px-4 py-1.5 text-xs font-semibold tracking-tight text-stone-800">
@@ -127,12 +127,12 @@ export function StorefrontSkinHealthSection() {
                     </span>
 
                     {/* Step Title */}
-                    <h3 className="mt-4 font-serif text-3xl font-normal tracking-tight text-stone-900 sm:text-[34px]">
+                    <h3 className="mt-3 sm:mt-4 font-serif text-2xl font-normal tracking-tight text-stone-900 sm:text-[34px]">
                       {step.title}
                     </h3>
 
                     {/* Step Description */}
-                    <p className="mt-3.5 max-w-lg text-sm sm:text-base leading-relaxed text-stone-600">
+                    <p className="mt-2.5 sm:mt-3.5 max-w-lg text-sm sm:text-base leading-relaxed text-stone-600">
                       {step.description}
                     </p>
                   </div>
@@ -145,12 +145,12 @@ export function StorefrontSkinHealthSection() {
           <div className="lg:col-span-6 lg:sticky lg:top-28">
             <div className="relative mx-auto max-w-[540px]">
               {/* Circular rotating stamp badge overlapping at top-right */}
-              <div className="absolute -top-10 -right-4 sm:-right-8 z-30">
+              <div className="absolute -top-8 -right-2 sm:-top-10 sm:-right-8 z-30 scale-75 sm:scale-100 origin-top-right">
                 <CircularStampBadge />
               </div>
 
               {/* Main Wellness Lifestyle Portrait Card */}
-              <div className="relative h-[480px] sm:h-[540px] md:h-[580px] w-full overflow-hidden rounded-[32px] bg-stone-100 shadow-md">
+              <div className="relative h-[360px] sm:h-[540px] md:h-[580px] w-full overflow-hidden rounded-[24px] sm:rounded-[32px] bg-stone-100 shadow-md">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src="/skin-health-woman.jpg"
@@ -160,12 +160,12 @@ export function StorefrontSkinHealthSection() {
               </div>
 
               {/* Overlapping Supplement Jar Card (bottom-right overlap) */}
-              <div className="absolute -bottom-8 -right-4 sm:-right-8 z-20 h-48 w-44 sm:h-56 sm:w-52 overflow-hidden rounded-[26px] bg-white p-3 shadow-2xl ring-1 ring-black/5">
+              <div className="absolute -bottom-6 -right-2 sm:-bottom-8 sm:-right-8 z-20 h-36 w-32 sm:h-56 sm:w-52 overflow-hidden rounded-[20px] sm:rounded-[26px] bg-white p-2 sm:p-3 shadow-2xl ring-1 ring-black/5">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src="/skin-health-capsules.jpg"
                   alt="Supplement capsules jar"
-                  className="h-full w-full object-cover rounded-[18px]"
+                  className="h-full w-full object-cover rounded-[14px] sm:rounded-[18px]"
                 />
               </div>
             </div>

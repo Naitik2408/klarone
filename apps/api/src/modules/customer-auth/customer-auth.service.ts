@@ -48,6 +48,70 @@ export class CustomerAuthService {
     return this.authProvider.requestOtp(phone);
   }
 
+  async syncBetterAuthSession(input: {
+    email: string;
+    name?: string;
+    betterAuthUserId?: string;
+  }): Promise<CustomerAuthSessionResponse> {
+    const normalizedEmail = (input.email || "").toLowerCase().trim();
+
+    const identity: VerifiedCustomerIdentity = {
+      provider: "BETTER_AUTH_GOOGLE",
+      externalAuthId: normalizedEmail,
+      identifierType: "EMAIL",
+      identifierValue: normalizedEmail,
+      firstName: input.name ? input.name.split(" ")[0] : null,
+      lastName: input.name && input.name.includes(" ") ? input.name.split(" ").slice(1).join(" ") : null,
+      email: normalizedEmail,
+      phone: null,
+      metadata: {
+        source: "google_oauth",
+        betterAuthUserId: input.betterAuthUserId || null,
+      },
+    };
+
+    const customerIdentity = await this.resolveVerifiedIdentity(identity);
+
+    // Link Better Auth User table to domain UserAccount if present
+    if (input.betterAuthUserId) {
+      try {
+        await this.prisma.user.update({
+          where: { id: input.betterAuthUserId },
+          data: {
+            userAccountId: BigInt(customerIdentity.userAccountId),
+          },
+        });
+      } catch (linkErr) {
+        // user may already be linked
+      }
+    }
+
+    const payload: CustomerJwtPayload = {
+      sub: customerIdentity.userAccountId,
+      userAccountId: customerIdentity.userAccountId,
+      customerId: customerIdentity.customerId,
+      personId: customerIdentity.personId,
+      tokenType: "customer-access",
+    };
+
+    const accessToken = await this.jwtService.signAsync(payload, {
+      issuer: this.configService.get<string>("CUSTOMER_AUTH_JWT_ISSUER", "klarone-api"),
+      audience: this.configService.get<string>("CUSTOMER_AUTH_JWT_AUDIENCE", "klarone-customer"),
+    });
+
+    return {
+      accessToken,
+      tokenType: "Bearer",
+      expiresIn: 1800,
+      isNewUser: customerIdentity.isNew,
+      customer: {
+        userAccountId: customerIdentity.userAccountId,
+        customerId: customerIdentity.customerId,
+        personId: customerIdentity.personId,
+      },
+    };
+  }
+
   async verifyOtp(
     input: CustomerOtpVerificationInput,
   ): Promise<CustomerAuthSessionResponse> {
@@ -243,7 +307,78 @@ export class CustomerAuthService {
           };
         }
 
-        const person = await tx.person.create({
+        // Check if an existing person already exists by email or phone
+        let person = null;
+        if (identity.email) {
+          person = await tx.person.findFirst({
+            where: { email: identity.email },
+            include: { userAccount: { include: { customer: true } } },
+          });
+        }
+        if (!person && identity.phone) {
+          person = await tx.person.findFirst({
+            where: { phone: identity.phone },
+            include: { userAccount: { include: { customer: true } } },
+          });
+        }
+
+        if (person && person.userAccount) {
+          // Link this provider identity to the existing userAccount and update missing details
+          const userAccount = person.userAccount;
+          let customer = userAccount.customer;
+
+          if (!customer) {
+            customer = await tx.customer.create({
+              data: {
+                personId: person.id,
+                userAccountId: userAccount.id,
+                customerCode: this.generateCustomerCode(),
+                status: "ACTIVE",
+              },
+            });
+          }
+
+          // Update person names if provided and not previously set
+          await tx.person.update({
+            where: { id: person.id },
+            data: {
+              firstName:
+                (person.firstName && person.firstName.trim().length > 0)
+                  ? person.firstName
+                  : (identity.firstName ?? person.firstName),
+              lastName:
+                (person.lastName && person.lastName.trim().length > 0)
+                  ? person.lastName
+                  : (identity.lastName ?? person.lastName),
+              email: person.email ?? identity.email,
+              phone: person.phone ?? identity.phone,
+            },
+          });
+
+          await tx.authIdentity.create({
+            data: {
+              userAccountId: userAccount.id,
+              provider,
+              externalAuthId,
+              identifierType: identity.identifierType,
+              identifierValue: identity.identifierValue ?? null,
+              metadata: identity.metadata ?? undefined,
+              verifiedAt: new Date(),
+              status: "ACTIVE",
+            },
+          });
+
+          return {
+            userAccountId: userAccount.id.toString(),
+            customerId: customer.id.toString(),
+            personId: person.id.toString(),
+            provider,
+            externalAuthId,
+            isNew: false,
+          };
+        }
+
+        const newPerson = await tx.person.create({
           data: {
             firstName:
               identity.firstName?.trim() ||
@@ -264,7 +399,7 @@ export class CustomerAuthService {
         const userAccount =
           await tx.userAccount.create({
             data: {
-              personId: person.id,
+              personId: newPerson.id,
               accountType: "CUSTOMER",
               status: "ACTIVE",
             },
@@ -273,7 +408,7 @@ export class CustomerAuthService {
         const customer =
           await tx.customer.create({
             data: {
-              personId: person.id,
+              personId: newPerson.id,
               userAccountId: userAccount.id,
               customerCode:
                 this.generateCustomerCode(),
@@ -303,7 +438,7 @@ export class CustomerAuthService {
           customerId:
             customer.id.toString(),
           personId:
-            person.id.toString(),
+            newPerson.id.toString(),
           provider,
           externalAuthId,
           isNew: true,

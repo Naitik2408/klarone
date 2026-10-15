@@ -14,6 +14,7 @@ import {
   REQUIREMENT_EXTRACTOR,
   type RequirementExtractor,
 } from "./requirement-extractor";
+import { GeminiAdvisorExplainerService } from "./gemini-advisor-explainer.service";
 
 const MAX_RESULTS = 5;
 
@@ -24,6 +25,7 @@ export class RecommendationsService {
     @Inject(REQUIREMENT_EXTRACTOR)
     private readonly requirementExtractor: RequirementExtractor,
     private readonly recommendationEngine: RecommendationEngineService,
+    private readonly advisorExplainer: GeminiAdvisorExplainerService,
   ) { }
 
   async startRecommendation(input: StartRecommendationDto) {
@@ -58,257 +60,145 @@ export class RecommendationsService {
       });
     }
 
-    const requirementProfile =
-      await this.prisma.requirementProfile.create({
-        data: {
-          recommendationSessionId: session.id,
-          rawUserInput: message,
-          extractedByModel: "PENDING",
-          extractionVersion: "V1",
-        },
-      });
+    const allCandidates = await this.findCandidateVariants();
 
-    const extractedRequirements =
-      await this.requirementExtractor.extract(message);
+    // Converse with Gemini using function-calling / tool-calling:
+    // Only searches the database and produces laptop cards when user requirements are actually present!
+    let matchingResults: any[] = [];
+    let extractedRequirements: any = null;
 
-    await this.prisma.requirementProfile.update({
-      where: {
-        id: requirementProfile.id,
+    const conversationResult = await this.advisorExplainer.converse({
+      userMessage: message,
+      history: input.history,
+      searchCatalogCallback: async (args) => {
+        // Build query filters based on tool args
+        let pool = allCandidates;
+
+        if (args.brand) {
+          const brandLower = args.brand.toLowerCase();
+          const brandFiltered = pool.filter((c) =>
+            c.product.brand.name.toLowerCase().includes(brandLower),
+          );
+          if (brandFiltered.length > 0) pool = brandFiltered;
+        }
+
+        if (args.minRamGb) {
+          const ramFiltered = pool.filter((c) => (c.ramGb ?? 0) >= args.minRamGb!);
+          if (ramFiltered.length > 0) pool = ramFiltered;
+        }
+
+        if (args.maxBudget) {
+          // Allow pool up to 15% above maxBudget so the advisor can evaluate an honest stretch option
+          const stretchBudget = args.maxBudget * 1.15;
+          const budgetFiltered = pool.filter(
+            (c) => Number(c.sellingPrice) <= stretchBudget,
+          );
+          if (budgetFiltered.length > 0) pool = budgetFiltered;
+        }
+
+        extractedRequirements = {
+          budgetMax: args.maxBudget ?? null,
+          minimumRamGb: args.minRamGb ?? null,
+          primaryUseCase: args.useCase ? args.useCase.toUpperCase() : "GENERAL",
+        };
+
+        const engineCandidates = this.toEngineCandidates(pool);
+        const rankedResults = this.recommendationEngine.scoreCandidates(
+          extractedRequirements,
+          engineCandidates,
+        );
+
+        const topRanked = rankedResults.slice(0, MAX_RESULTS);
+        const candidateMap = new Map(
+          pool.map((c) => [c.id.toString(), c]),
+        );
+
+        matchingResults = topRanked.map((result) => {
+          const candidate = candidateMap.get(result.productVariantId.toString());
+          const primaryImage = candidate?.product.media.find(
+            (media) =>
+              media.url && media.mediaType.toLowerCase().includes("image"),
+          );
+
+          return {
+            rank: result.rank,
+            productVariantId: result.productVariantId,
+            overallScore: result.overallScore,
+            budgetScore: result.budgetScore,
+            performanceScore: result.performanceScore,
+            useCaseScore: result.useCaseScore,
+            portabilityScore: result.portabilityScore,
+            batteryScore: result.batteryScore,
+            displayScore: result.displayScore,
+            upgradeabilityScore: result.upgradeabilityScore,
+            ownershipScore: result.ownershipScore,
+            recommendationType: result.recommendationType,
+            matchReason: result.matchReason,
+            tradeoffs: result.tradeoffs,
+            product: candidate
+              ? {
+                id: candidate.product.id,
+                name: candidate.product.name,
+                slug: candidate.product.slug,
+                shortDescription: candidate.product.shortDescription,
+                imageUrl: primaryImage?.url ?? null,
+                imageAlt: primaryImage?.altText ?? candidate.product.name,
+                brand: candidate.product.brand,
+                category: candidate.product.category,
+              }
+              : null,
+            variant: candidate
+              ? {
+                id: candidate.id,
+                sku: candidate.sku,
+                variantName: candidate.variantName,
+                ramGb: candidate.ramGb,
+                storageGb: candidate.storageGb,
+                operatingSystem: candidate.operatingSystem,
+                sellingPrice: candidate.sellingPrice,
+                currency: candidate.currency,
+                warrantyMonths: candidate.warrantyMonths,
+              }
+              : null,
+          };
+        });
+
+        return matchingResults.map((r) => {
+          const cand = candidateMap.get(r.productVariantId.toString());
+          return {
+            name: r.product?.name ?? "Laptop",
+            brand: r.product?.brand?.name ?? "Klarone",
+            variantName: r.variant?.variantName ?? null,
+            priceInr: Number(r.variant?.sellingPrice ?? 0),
+            ramGb: r.variant?.ramGb ?? null,
+            storageGb: r.variant?.storageGb ?? null,
+            displaySize: cand?.specification?.displaySizeInches
+              ? `${cand.specification.displaySizeInches}″`
+              : null,
+            weightKg: cand?.specification?.weightKg
+              ? String(cand.specification.weightKg)
+              : null,
+            cpuModel: cand?.specification?.cpuModel ?? null,
+            gpuModel: cand?.specification?.gpuModel ?? null,
+            batteryWh: cand?.specification?.batteryCapacityWh
+              ? String(cand.specification.batteryCapacityWh)
+              : null,
+            matchScorePercent: Math.round(r.overallScore * 100),
+            rank: r.rank,
+          };
+        });
       },
-      data: {
-        budgetMin: extractedRequirements.budgetMin,
-        budgetMax: extractedRequirements.budgetMax,
-        primaryUseCase:
-          extractedRequirements.primaryUseCase,
-        portabilityPreference:
-          extractedRequirements.portabilityPreference,
-        gamingRequirement:
-          extractedRequirements.gamingRequirement,
-        codingRequirement:
-          extractedRequirements.codingRequirement,
-        designRequirement:
-          extractedRequirements.designRequirement,
-        officeRequirement:
-          extractedRequirements.officeRequirement,
-        batteryPriority:
-          extractedRequirements.batteryPriority,
-        displayPriority:
-          extractedRequirements.displayPriority,
-        performancePriority:
-          extractedRequirements.performancePriority,
-        preferredOs:
-          extractedRequirements.preferredOs,
-        minimumRamGb:
-          extractedRequirements.minimumRamGb,
-        minimumStorageGb:
-          extractedRequirements.minimumStorageGb,
-        preferredScreenSize:
-          extractedRequirements.preferredScreenSize,
-        weightPreference:
-          extractedRequirements.weightPreference,
-        expectedOwnershipYears:
-          extractedRequirements.expectedOwnershipYears,
-        purchaseIntent:
-          extractedRequirements.purchaseIntent,
-        extractedByModel:
-          this.requirementExtractor.modelName,
-        extractionVersion: "V1",
-      },
-    });
-
-    const candidates =
-      await this.findCandidateVariants();
-
-    const eligibleCandidates =
-      this.filterHardRequirements(
-        extractedRequirements,
-        candidates,
-        message,
-      );
-
-    const engineCandidates =
-      this.toEngineCandidates(eligibleCandidates);
-
-    const startedAt = Date.now();
-
-    const rankedResults =
-      this.recommendationEngine.scoreCandidates(
-        extractedRequirements,
-        engineCandidates,
-      );
-
-    const executionTimeMs =
-      Date.now() - startedAt;
-
-    const topResults =
-      rankedResults.slice(0, MAX_RESULTS);
-
-    const recommendationRun =
-      await this.prisma.recommendationRun.create({
-        data: {
-          recommendationSessionId: session.id,
-          requirementProfileId:
-            requirementProfile.id,
-          algorithmVersion:
-            this.recommendationEngine
-              .algorithmVersion,
-          candidateCount:
-            eligibleCandidates.length,
-          executionTimeMs,
-        },
-      });
-
-    if (topResults.length > 0) {
-      await this.prisma.recommendationResult.createMany({
-        data: topResults.map((result) => ({
-          recommendationRunId:
-            recommendationRun.id,
-          productVariantId:
-            result.productVariantId,
-          rank: result.rank,
-          overallScore: result.overallScore,
-          budgetScore: result.budgetScore,
-          performanceScore:
-            result.performanceScore,
-          useCaseScore:
-            result.useCaseScore,
-          portabilityScore:
-            result.portabilityScore,
-          batteryScore:
-            result.batteryScore,
-          displayScore:
-            result.displayScore,
-          upgradeabilityScore:
-            result.upgradeabilityScore,
-          ownershipScore:
-            result.ownershipScore,
-          matchReason:
-            result.matchReason,
-          tradeoffs:
-            result.tradeoffs,
-          recommendationType:
-            result.recommendationType,
-        })),
-      });
-    }
-
-    const candidateMap = new Map(
-      eligibleCandidates.map((candidate) => [
-        candidate.id.toString(),
-        candidate,
-      ]),
-    );
-
-    const results = topResults.map((result) => {
-      const candidate = candidateMap.get(
-        result.productVariantId.toString(),
-      );
-
-      const primaryImage = candidate?.product.media.find(
-        (media) =>
-          media.url &&
-          media.mediaType.toLowerCase().includes("image"),
-      );
-
-      return {
-        rank: result.rank,
-        productVariantId:
-          result.productVariantId,
-        overallScore:
-          result.overallScore,
-        budgetScore:
-          result.budgetScore,
-        performanceScore:
-          result.performanceScore,
-        useCaseScore:
-          result.useCaseScore,
-        portabilityScore:
-          result.portabilityScore,
-        batteryScore:
-          result.batteryScore,
-        displayScore:
-          result.displayScore,
-        upgradeabilityScore:
-          result.upgradeabilityScore,
-        ownershipScore:
-          result.ownershipScore,
-        recommendationType:
-          result.recommendationType,
-        matchReason:
-          result.matchReason,
-        tradeoffs:
-          result.tradeoffs,
-        product: candidate
-          ? {
-            id: candidate.product.id,
-            name: candidate.product.name,
-            slug: candidate.product.slug,
-            shortDescription:
-              candidate.product.shortDescription,
-            imageUrl: primaryImage?.url ?? null,
-            imageAlt:
-              primaryImage?.altText ??
-              candidate.product.name,
-            brand: candidate.product.brand,
-            category:
-              candidate.product.category,
-          }
-          : null,
-        variant: candidate
-          ? {
-            id: candidate.id,
-            sku: candidate.sku,
-            variantName:
-              candidate.variantName,
-            ramGb: candidate.ramGb,
-            storageGb:
-              candidate.storageGb,
-            operatingSystem:
-              candidate.operatingSystem,
-            sellingPrice:
-              candidate.sellingPrice,
-            currency:
-              candidate.currency,
-            warrantyMonths:
-              candidate.warrantyMonths,
-          }
-          : null,
-      };
     });
 
     return toJsonSafe({
+      conversationalReply: conversationResult.replyText,
+      results: conversationResult.shouldSearchCatalog ? matchingResults : [],
+      extractedRequirements,
       session: {
         id: session.id,
-        sessionToken:
-          session.sessionToken,
+        sessionToken: session.sessionToken,
         status: session.status,
       },
-
-      requirementProfile: {
-        id: requirementProfile.id,
-        rawUserInput: message,
-        extractedByProvider:
-          this.requirementExtractor
-            .providerName,
-        extractedByModel:
-          this.requirementExtractor
-            .modelName,
-        extractionVersion: "V1",
-      },
-
-      extractedRequirements,
-
-      recommendationRun: {
-        id: recommendationRun.id,
-        algorithmVersion:
-          this.recommendationEngine
-            .algorithmVersion,
-        candidateCount:
-          eligibleCandidates.length,
-        executionTimeMs,
-      },
-
-      results,
     });
   }
 
@@ -542,13 +432,6 @@ export class RecommendationsService {
         product: {
           status: "PUBLISHED",
           productType: "LAPTOP",
-        },
-        inventories: {
-          some: {
-            quantityAvailable: {
-              gt: 0,
-            },
-          },
         },
       },
       orderBy: [

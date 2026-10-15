@@ -58,6 +58,18 @@ export async function staffLogin(
   email: string,
   password: string,
 ) {
+  // 1. Attempt Better Auth email/password authentication
+  try {
+    const { authClient } = await import("@/lib/auth-client");
+    await authClient.signIn.email({
+      email,
+      password,
+    });
+  } catch (err) {
+    console.warn("[Better Auth] staff signIn notice:", err);
+  }
+
+  // 2. Call backend staff-auth/login to issue RBAC token
   const response = await fetch(
     `${API_BASE_URL}/staff-auth/login`,
     {
