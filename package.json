@@ -8,7 +8,7 @@
     "build:api": "pnpm build:db && pnpm --filter api build",
     "build:web": "pnpm --filter web build",
     "start:api": "node apps/api/dist/main.js",
-    "start:web": "pnpm --filter web start"
+    "start:web": "pnpm --filter web exec next start -p 10000"
   },
   "keywords": [],
   "author": "",
