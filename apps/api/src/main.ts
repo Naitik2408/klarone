@@ -8,6 +8,9 @@ async function bootstrap(): Promise<void> {
     rawBody: true,
   });
 
+  // Trust Render reverse proxy for accurate client IP and secure cookies
+  app.set("trust proxy", true);
+
   app.useBodyParser("json", { limit: "25mb" });
   app.useBodyParser("urlencoded", { limit: "25mb", extended: true });
 

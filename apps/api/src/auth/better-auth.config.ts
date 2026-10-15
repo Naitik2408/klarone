@@ -45,9 +45,18 @@ export function createBetterAuth(prisma: PrismaClient) {
     trustedOrigins: [
       "http://localhost:3001",
       "http://127.0.0.1:3001",
-      "https://recorder-arctic-sterling-rescue.trycloudflare.com",
+      "https://klarone-web.onrender.com",
       ...(process.env.WEB_ORIGINS ? process.env.WEB_ORIGINS.split(",").map((s) => s.trim()) : []),
     ],
+    advanced: {
+      useSecureCookies: process.env.NODE_ENV === "production",
+      crossSubDomainCookies: {
+        enabled: false,
+      },
+      ipAddress: {
+        ipAddressHeaders: ["x-forwarded-for", "cf-connecting-ip", "x-real-ip"],
+      },
+    },
     emailAndPassword: {
       enabled: true,
       autoSignIn: true,
