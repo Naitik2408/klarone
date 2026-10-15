@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { requestCustomerOtp, updateCustomerProfile, getCustomerMe } from "@/lib/customer-auth-api";
 import { useCustomerAuth } from "./customer-auth-provider";
@@ -25,6 +25,7 @@ function getSafeReturnPath(): string {
 
 export function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { verifyOtpAndSignIn, refreshCustomer, isAuthenticated } = useCustomerAuth();
 
   const [step, setStep] = useState<LoginStep>("IDENTIFIER");
@@ -54,12 +55,21 @@ export function LoginForm() {
   }, [isAuthenticated, router, step, isSubmitting]);
 
   useEffect(() => {
+    const errorParam = searchParams.get("error");
+    if (errorParam) {
+      if (errorParam === "state_mismatch" || errorParam === "state_not_found") {
+        setError("Sign-in session timed out or was interrupted. Please try clicking Continue with Google again.");
+      } else {
+        setError(`Authentication error: ${errorParam}`);
+      }
+    }
+
     const storedNotice = sessionStorage.getItem(AUTH_NOTICE_STORAGE_KEY);
     if (storedNotice) {
       setNotice(storedNotice);
       sessionStorage.removeItem(AUTH_NOTICE_STORAGE_KEY);
     }
-  }, []);
+  }, [searchParams]);
 
   async function handleRequestOtp(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();

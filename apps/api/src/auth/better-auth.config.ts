@@ -48,6 +48,11 @@ export function createBetterAuth(prisma: PrismaClient) {
       "https://klarone-web.onrender.com",
       ...(process.env.WEB_ORIGINS ? process.env.WEB_ORIGINS.split(",").map((s) => s.trim()) : []),
     ],
+    account: {
+      accountLinking: {
+        enabled: true,
+      },
+    },
     advanced: {
       useSecureCookies: true,
       defaultCookieAttributes: {
