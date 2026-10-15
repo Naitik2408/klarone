@@ -49,7 +49,11 @@ export function createBetterAuth(prisma: PrismaClient) {
       ...(process.env.WEB_ORIGINS ? process.env.WEB_ORIGINS.split(",").map((s) => s.trim()) : []),
     ],
     advanced: {
-      useSecureCookies: process.env.NODE_ENV === "production",
+      useSecureCookies: true,
+      defaultCookieAttributes: {
+        sameSite: "none",
+        secure: true,
+      },
       crossSubDomainCookies: {
         enabled: false,
       },
