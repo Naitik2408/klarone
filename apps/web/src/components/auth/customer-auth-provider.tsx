@@ -104,12 +104,19 @@ export function CustomerAuthProvider({
     if (!storedToken) {
       try {
         const { authClient } = await import("@/lib/auth-client");
-        const sessionRes = await authClient.getSession();
+        const sessionRes = await authClient.getSession({
+          fetchOptions: {
+            credentials: "include",
+          },
+        });
+        console.log("[CustomerAuth] Better Auth session check result:", sessionRes);
+
         if (sessionRes?.data?.user?.email) {
           // Sync Better Auth user with backend customer-auth service
           const syncRes = await fetch(`${API_BASE_URL}/customer-auth/sync-session`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
+            credentials: "include",
             body: JSON.stringify({
               email: sessionRes.data.user.email,
               name: sessionRes.data.user.name,
@@ -122,6 +129,8 @@ export function CustomerAuthProvider({
               storeCustomerAccessToken(syncData.accessToken);
               storedToken = syncData.accessToken;
             }
+          } else {
+            console.error("[CustomerAuth] sync-session returned error status:", syncRes.status);
           }
         }
       } catch (sessionErr) {

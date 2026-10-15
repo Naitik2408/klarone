@@ -59,6 +59,7 @@ export function createBetterAuth(prisma: PrismaClient) {
       defaultCookieAttributes: {
         sameSite: "none",
         secure: true,
+        partitioned: true,
       },
       crossSubDomainCookies: {
         enabled: false,

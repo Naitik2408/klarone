@@ -82,7 +82,10 @@ export function getCustomerAccessToken(): string | null {
     return null;
   }
 
-  return sessionStorage.getItem(CUSTOMER_ACCESS_TOKEN_KEY);
+  return (
+    localStorage.getItem(CUSTOMER_ACCESS_TOKEN_KEY) ??
+    sessionStorage.getItem(CUSTOMER_ACCESS_TOKEN_KEY)
+  );
 }
 
 export function storeCustomerAccessToken(token: string): void {
@@ -90,6 +93,11 @@ export function storeCustomerAccessToken(token: string): void {
     return;
   }
 
+  try {
+    localStorage.setItem(CUSTOMER_ACCESS_TOKEN_KEY, token);
+  } catch {
+    // ignore quota errors
+  }
   sessionStorage.setItem(CUSTOMER_ACCESS_TOKEN_KEY, token);
 }
 
@@ -98,6 +106,7 @@ export function clearStoredCustomerAccessToken(): void {
     return;
   }
 
+  localStorage.removeItem(CUSTOMER_ACCESS_TOKEN_KEY);
   sessionStorage.removeItem(CUSTOMER_ACCESS_TOKEN_KEY);
 }
 
