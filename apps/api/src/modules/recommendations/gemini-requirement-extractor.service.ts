@@ -140,20 +140,12 @@ export class GeminiRequirementExtractor
 
   constructor(private readonly config: ConfigService) {
     const apiKey =
-      this.config.get<string>("GEMINI_API_KEY");
+      this.config.get<string>("GEMINI_API_KEY") || process.env.GEMINI_API_KEY || "";
     const model =
-      this.config.get<string>("GEMINI_MODEL");
-
-    if (!apiKey) {
-      throw new Error("GEMINI_API_KEY is not configured");
-    }
-
-    if (!model) {
-      throw new Error("GEMINI_MODEL is not configured");
-    }
+      this.config.get<string>("GEMINI_MODEL") || process.env.GEMINI_MODEL || "gemini-2.5-flash";
 
     this.client = new GoogleGenAI({
-      apiKey,
+      apiKey: apiKey || "unconfigured",
     });
 
     this.modelName = model;
