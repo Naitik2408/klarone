@@ -7,7 +7,7 @@
     "build:db": "pnpm --filter @klarone/db generate && pnpm --filter @klarone/db build",
     "build:api": "pnpm build:db && pnpm --filter api build",
     "build:web": "pnpm --filter web build",
-    "start:api": "pnpm --filter api start:prod",
+    "start:api": "node apps/api/dist/main.js",
     "start:web": "pnpm --filter web start"
   },
   "keywords": [],
