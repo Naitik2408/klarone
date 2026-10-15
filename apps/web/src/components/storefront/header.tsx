@@ -867,7 +867,7 @@ export function StorefrontHeader() {
                 onClick={() => setMobileDrawerOpen(false)}
                 className="flex w-full items-center justify-center rounded-full bg-[#e3f49c] py-3.5 text-sm font-semibold tracking-tight text-slate-900 shadow-sm transition-transform active:scale-95 hover:bg-[#d6f088]"
               >
-                {isAuthenticated ? (customer?.firstName ? `Hi, ${customer.firstName}` : "My Account") : "Sign In/ Register"}
+                {isAuthenticated ? (customer?.person?.firstName ? `Hi, ${customer.person.firstName}` : "My Account") : "Sign In/ Register"}
               </Link>
 
               {/* Currency / Country Indicator */}
