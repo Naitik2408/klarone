@@ -52,6 +52,7 @@ export function createBetterAuth(prisma: PrismaClient) {
       accountLinking: {
         enabled: true,
       },
+      skipStateCookieCheck: true,
     },
     advanced: {
       useSecureCookies: true,
