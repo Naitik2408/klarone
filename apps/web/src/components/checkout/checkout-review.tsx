@@ -679,9 +679,9 @@ export function CheckoutReview() {
     );
 
   return (
-    <div className="py-2 sm:py-4">
+    <div className="py-2 sm:py-4 pb-20 sm:pb-0">
       {/* Header matching Cart page style */}
-      <div className="border-b border-stone-200/80 pb-5 sm:pb-6 mb-6 sm:mb-8">
+      <div className="border-b border-stone-200/80 pb-4 sm:pb-6 mb-5 sm:mb-8">
         <h1
           style={{ fontFamily: "var(--font-serif), 'Instrument Serif', Georgia, serif" }}
           className="text-3xl font-normal tracking-tight text-slate-950 sm:text-4xl md:text-5xl"
@@ -707,19 +707,19 @@ export function CheckoutReview() {
 
           {/* Shipping & Delivery Address Form */}
           <div className="rounded-2xl border border-stone-200/90 bg-[#f0f2ee]/50 p-4 sm:p-6 shadow-2xs">
-            <div className="flex items-center justify-between border-b border-stone-200/60 pb-3.5 sm:pb-4 mb-4 sm:mb-5">
-              <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-                <div className="flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-xl bg-slate-900 text-white shadow-2xs">
+            <div className="flex items-start sm:items-center justify-between gap-3 border-b border-stone-200/60 pb-3.5 sm:pb-4 mb-4 sm:mb-5">
+              <div className="flex items-start sm:items-center gap-2.5 sm:gap-3 min-w-0">
+                <div className="flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-xl bg-slate-900 text-white shadow-2xs mt-0.5 sm:mt-0">
                   <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
                 </div>
                 <div className="min-w-0">
-                  <h2 className="text-sm sm:text-base font-semibold text-slate-900 truncate">
+                  <h2 className="text-sm sm:text-base font-semibold text-slate-900 leading-tight sm:leading-normal">
                     Shipping &amp; Delivery Destination
                   </h2>
-                  <p className="text-[11px] sm:text-xs text-stone-500 truncate">
+                  <p className="text-[11px] sm:text-xs text-stone-500 mt-0.5 leading-snug">
                     Direct delivery in Kolkata &amp; all-India insured dispatch
                   </p>
                 </div>
@@ -732,7 +732,7 @@ export function CheckoutReview() {
               ) : (
                 <Link
                   href="/login?redirect=/checkout"
-                  className="shrink-0 text-xs font-semibold text-slate-900 underline underline-offset-4 hover:text-stone-700"
+                  className="shrink-0 text-xs font-semibold text-slate-900 underline underline-offset-4 hover:text-stone-700 whitespace-nowrap mt-0.5 sm:mt-0"
                 >
                   Sign in
                 </Link>
@@ -1083,14 +1083,14 @@ export function CheckoutReview() {
         </aside>
       </div>
 
-      {/* Mobile Sticky Bottom Pay/Confirm Bar */}
-      <div className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-stone-200 px-4 py-3 shadow-[0_-4px_16px_rgba(0,0,0,0.06)] pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+      {/* Mobile Sticky Bottom Pay/Confirm Bar - z-30 to remain below any navigation overlays while floating cleanly */}
+      <div className="sm:hidden fixed bottom-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-t border-stone-200 px-4 py-2.5 shadow-[0_-4px_16px_rgba(0,0,0,0.08)] pb-[calc(0.6rem+env(safe-area-inset-bottom))]">
         <div className="flex items-center justify-between gap-3 max-w-md mx-auto">
-          <div className="min-w-0">
-            <span className="block text-[11px] uppercase tracking-wider text-stone-500 font-medium">
+          <div className="min-w-0 flex-1">
+            <span className="block text-[10px] uppercase tracking-wider text-stone-500 font-semibold leading-tight">
               {paymentMethod === "COD" ? "COD Total" : "Payable"}
             </span>
-            <span className="block text-lg font-bold text-slate-950 truncate">
+            <span className="block text-base font-bold text-slate-950 truncate">
               {quote ? formatPrice(quote.pricing.total, quote.pricing.currency) : "—"}
             </span>
           </div>
@@ -1100,7 +1100,7 @@ export function CheckoutReview() {
               void handlePlaceOrder();
             }}
             disabled={isAuthLoading || isQuoting || isPlacingOrder || !quote}
-            className="flex-1 max-w-[210px] flex h-11 items-center justify-center rounded-full bg-[#d6f088] text-xs font-semibold text-slate-950 shadow-sm transition hover:bg-[#c9e874] active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex-[1.4] max-w-[210px] flex h-11 items-center justify-center rounded-full bg-[#d6f088] px-4 text-xs font-bold text-slate-950 shadow-sm transition hover:bg-[#c9e874] active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isPlacingOrder ? (
               <div className="flex items-center gap-1.5">
