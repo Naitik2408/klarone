@@ -259,14 +259,20 @@ export function SelectAdvisorChat() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.25 }}
-                className={`flex ${msg.sender === "user" ? "justify-end" : "justify-start"}`}
+                className={`flex w-full ${msg.sender === "user" ? "justify-end" : "justify-start"}`}
               >
-                <div className={`min-w-0 ${msg.sender === "user" ? "flex flex-col items-end max-w-[85%] sm:max-w-xl" : "w-full max-w-2xl items-start"}`}>
+                <div
+                  className={`flex flex-col ${
+                    msg.sender === "user"
+                      ? "items-end max-w-[85%] sm:max-w-md ml-auto"
+                      : "items-start w-full max-w-2xl min-w-0 mr-auto"
+                  }`}
+                >
                   {/* Speech Bubble */}
                   <div
                     className={`rounded-[22px] px-5 py-3.5 text-sm leading-relaxed ${
                       msg.sender === "user"
-                        ? "inline-block w-fit bg-[#0b241b] text-white shadow-xs rounded-tr-xs"
+                        ? "self-end bg-[#0b241b] text-white shadow-xs rounded-tr-xs"
                         : "w-full bg-[#f0f2ee] text-slate-900 shadow-2xs rounded-tl-xs"
                     }`}
                   >
