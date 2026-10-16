@@ -650,7 +650,8 @@ export function StorefrontHeader() {
                   <button
                     type="button"
                     onClick={() => setMobileSection("shop")}
-                    className="flex w-full items-center justify-between text-left font-sans text-[18px] sm:text-[19px] font-medium tracking-tight text-slate-900 transition-colors hover:text-emerald-900 active:opacity-70"
+                    className="flex w-full items-center justify-between text-left text-[18px] font-medium tracking-tight text-slate-900 transition-colors hover:text-emerald-900 active:opacity-70"
+                    style={{ fontFamily: "var(--font-sans), system-ui, sans-serif" }}
                   >
                     <span>Shop</span>
                     <svg className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2">
@@ -658,15 +659,16 @@ export function StorefrontHeader() {
                     </svg>
                   </button>
 
-                  {/* AI Advisor */}
+                  {/* AI Advisor - green dot after AI Advisor text for mobile */}
                   <Link
                     href="/select"
                     onClick={() => setMobileDrawerOpen(false)}
-                    className="flex w-full items-center justify-between text-left font-sans text-[18px] sm:text-[19px] font-medium tracking-tight text-slate-900 transition-colors hover:text-emerald-900 active:opacity-70"
+                    className="flex w-full items-center justify-between text-left text-[18px] font-medium tracking-tight text-slate-900 transition-colors hover:text-emerald-900 active:opacity-70"
+                    style={{ fontFamily: "var(--font-sans), system-ui, sans-serif" }}
                   >
-                    <span className="flex items-center gap-2.5">
-                      <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                    <span className="flex items-center gap-2">
                       <span>AI Advisor</span>
+                      <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
                     </span>
                     <svg className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
@@ -677,7 +679,8 @@ export function StorefrontHeader() {
                   <Link
                     href="/laptops"
                     onClick={() => setMobileDrawerOpen(false)}
-                    className="flex w-full items-center justify-between text-left font-sans text-[18px] sm:text-[19px] font-medium tracking-tight text-slate-900 transition-colors hover:text-emerald-900 active:opacity-70"
+                    className="flex w-full items-center justify-between text-left text-[18px] font-medium tracking-tight text-slate-900 transition-colors hover:text-emerald-900 active:opacity-70"
+                    style={{ fontFamily: "var(--font-sans), system-ui, sans-serif" }}
                   >
                     <span>All Laptops</span>
                     <svg className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2">
@@ -689,7 +692,8 @@ export function StorefrontHeader() {
                   <Link
                     href="/cart"
                     onClick={() => setMobileDrawerOpen(false)}
-                    className="flex w-full items-center justify-between text-left font-sans text-[18px] sm:text-[19px] font-medium tracking-tight text-slate-900 transition-colors hover:text-emerald-900 active:opacity-70"
+                    className="flex w-full items-center justify-between text-left text-[18px] font-medium tracking-tight text-slate-900 transition-colors hover:text-emerald-900 active:opacity-70"
+                    style={{ fontFamily: "var(--font-sans), system-ui, sans-serif" }}
                   >
                     <span>Cart ({itemCount})</span>
                     <svg className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2">
