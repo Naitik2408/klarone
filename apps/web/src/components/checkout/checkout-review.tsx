@@ -679,7 +679,7 @@ export function CheckoutReview() {
     );
 
   return (
-    <div className="py-2 sm:py-4 pb-20 sm:pb-0">
+    <div className="w-full min-w-0 py-2 sm:py-4 pb-24 sm:pb-0">
       {/* Header matching Cart page style */}
       <div className="border-b border-stone-200/80 pb-4 sm:pb-6 mb-5 sm:mb-8">
         <h1
@@ -690,9 +690,9 @@ export function CheckoutReview() {
         </h1>
       </div>
 
-      <div className="grid gap-6 md:gap-8 lg:grid-cols-[1fr_380px] xl:grid-cols-[1fr_420px] items-start">
+      <div className="grid grid-cols-12 gap-6 md:gap-8 lg:gap-14 items-start w-full min-w-0">
         {/* Left column: Cart Items & Delivery verification */}
-        <section className="space-y-4 sm:space-y-6">
+        <section className="col-span-12 lg:col-span-7 xl:col-span-8 space-y-4 sm:space-y-6 min-w-0">
           {error ? (
             <div className="flex items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50/80 p-3.5 sm:p-4 text-sm text-rose-800">
               <svg className="h-5 w-5 shrink-0 text-rose-500 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
@@ -927,7 +927,7 @@ export function CheckoutReview() {
         </section>
 
         {/* Right column: Sticky Order summary & payment choices */}
-        <aside className="h-fit space-y-4 sm:space-y-6 lg:sticky lg:top-28">
+        <aside className="col-span-12 lg:col-span-5 xl:col-span-4 h-fit space-y-4 sm:space-y-6 lg:sticky lg:top-28 min-w-0">
           <div className="rounded-2xl bg-[#f0f2ee] p-4 sm:p-6 space-y-4 sm:space-y-5 shadow-2xs">
             <h2 className="text-sm sm:text-base font-semibold tracking-tight text-slate-900">
               Order Payment Summary

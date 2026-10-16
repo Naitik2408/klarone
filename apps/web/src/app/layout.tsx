@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans, Instrument_Serif } from "next/font/google";
 import "./globals.css";
 import { CartProvider } from "../components/cart/cart-provider";
@@ -16,6 +16,12 @@ const serifFont = Instrument_Serif({
     weight: ["400"],
     style: ["normal", "italic"],
 });
+
+export const viewport: Viewport = {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 5,
+};
 
 export const metadata: Metadata = {
     title: {
