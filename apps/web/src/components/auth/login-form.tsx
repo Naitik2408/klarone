@@ -12,7 +12,7 @@ const AUTH_NOTICE_STORAGE_KEY = "klarone-auth-notice";
 
 function getSafeReturnPath(): string {
   if (typeof window === "undefined") {
-    return "/account";
+    return "/";
   }
 
   const next = new URLSearchParams(window.location.search).get("next");
@@ -20,7 +20,7 @@ function getSafeReturnPath(): string {
     return next;
   }
 
-  return "/account";
+  return "/";
 }
 
 export function LoginForm() {
@@ -117,7 +117,8 @@ export function LoginForm() {
     }
 
     const combined = newDigits.join("");
-    if ((combined.length === 6 || (combined.length === 4 && combined === "1234")) && !isVerifyingRef.current) {
+    // Auto-verify only when all 6 digits are provided
+    if (combined.length === 6 && !isVerifyingRef.current) {
       void verifyCode(combined);
     }
   };
@@ -142,7 +143,7 @@ export function LoginForm() {
     const targetIndex = Math.min(pasted.length, 5);
     inputRefs.current[targetIndex]?.focus();
 
-    if (pasted.length >= 4 && !isVerifyingRef.current) {
+    if (pasted.length === 6 && !isVerifyingRef.current) {
       void verifyCode(pasted);
     }
   };

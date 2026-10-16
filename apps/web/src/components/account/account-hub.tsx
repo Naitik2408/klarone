@@ -7,7 +7,7 @@ import { OrdersList } from "@/components/orders/orders-list";
 
 export function AccountHub() {
   const { customer, logout } = useCustomerAuth();
-  const [activeTab, setActiveTab] = useState<"orders" | "profile">("orders");
+  const [activeTab, setActiveTab] = useState<"profile" | "orders">("profile");
 
   const person = customer?.person;
   const displayName = [person?.firstName, person?.lastName].filter(Boolean).join(" ") || "Valued Customer";
@@ -39,23 +39,8 @@ export function AccountHub() {
         </button>
       </div>
 
-      {/* 2. Navigation Tabs (Orders / Profile Details) */}
+      {/* 2. Navigation Tabs (Profile Details first, then Orders) */}
       <div className="flex items-center gap-3 border-b border-stone-200 pb-px">
-        <button
-          type="button"
-          onClick={() => setActiveTab("orders")}
-          className={`pb-3 text-sm font-semibold transition-all relative ${
-            activeTab === "orders"
-              ? "text-slate-950"
-              : "text-stone-400 hover:text-slate-700"
-          }`}
-        >
-          <span>Orders & History</span>
-          {activeTab === "orders" && (
-            <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-slate-950" />
-          )}
-        </button>
-
         <button
           type="button"
           onClick={() => setActiveTab("profile")}
@@ -67,6 +52,21 @@ export function AccountHub() {
         >
           <span>Profile & Details</span>
           {activeTab === "profile" && (
+            <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-slate-950" />
+          )}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("orders")}
+          className={`pb-3 text-sm font-semibold transition-all relative ${
+            activeTab === "orders"
+              ? "text-slate-950"
+              : "text-stone-400 hover:text-slate-700"
+          }`}
+        >
+          <span>Orders & History</span>
+          {activeTab === "orders" && (
             <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-slate-950" />
           )}
         </button>

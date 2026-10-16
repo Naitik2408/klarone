@@ -241,7 +241,7 @@ export function SelectAdvisorChat() {
                 transition={{ duration: 0.25 }}
                 className={`flex ${msg.sender === "user" ? "justify-end" : "justify-start"}`}
               >
-                <div className={`max-w-2xl ${msg.sender === "user" ? "items-end" : "items-start"}`}>
+                <div className={`w-full min-w-0 max-w-2xl ${msg.sender === "user" ? "items-end" : "items-start"}`}>
                   {/* Speech Bubble */}
                   <div
                     className={`rounded-[22px] px-5 py-3.5 text-sm leading-relaxed ${
@@ -251,9 +251,11 @@ export function SelectAdvisorChat() {
                     }`}
                   >
                     {msg.sender === "user" ? (
-                      <p className="whitespace-pre-wrap">{msg.text}</p>
+                      <p className="whitespace-pre-wrap break-words">{msg.text}</p>
                     ) : (
-                      <FormattedAdvisorMessage text={msg.text} />
+                      <div className="w-full min-w-0 overflow-hidden">
+                        <FormattedAdvisorMessage text={msg.text} />
+                      </div>
                     )}
                   </div>
 
@@ -283,103 +285,103 @@ export function SelectAdvisorChat() {
                     </div>
                   )}
 
-                  {/* Recommended Products Minimalist Scannable Stack */}
+                  {/* Recommended Products: Horizontally scrollable on mobile, matching shop cards */}
                   {msg.recommendations && msg.recommendations.length > 0 && (
-                    <div className="mt-4 space-y-2.5">
-                      <div className="flex items-center justify-between px-1 text-xs font-semibold uppercase tracking-wider text-stone-500">
+                    <div className="mt-4 w-full min-w-0">
+                      <div className="mb-2.5 flex items-center justify-between px-1 text-xs font-semibold uppercase tracking-wider text-stone-500">
                         <span>Top Store Matches</span>
                         <span>{msg.recommendations.length} Options</span>
                       </div>
 
-                      {msg.recommendations.slice(0, 3).map((rec) => {
-                        const price = Number(rec.variant.sellingPrice);
-                        const formattedPrice = new Intl.NumberFormat("en-IN", {
-                          style: "currency",
-                          currency: "INR",
-                          maximumFractionDigits: 0,
-                        }).format(price);
+                      <div className="flex gap-3 overflow-x-auto pb-3 pt-1 -mx-2 px-2 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-2 md:grid-cols-3 sm:overflow-visible">
+                        {msg.recommendations.slice(0, 4).map((rec) => {
+                          const price = Number(rec.variant.sellingPrice);
+                          const formattedPrice = new Intl.NumberFormat("en-IN", {
+                            style: "currency",
+                            currency: "INR",
+                            maximumFractionDigits: 0,
+                          }).format(price);
 
-                        // Normalize overallScore to realistic 0-100% percentage
-                        const scoreNum = rec.overallScore ? Number(rec.overallScore) : 85;
-                        const displayScore = Math.min(99, Math.round(scoreNum > 1 ? scoreNum : scoreNum * 100));
+                          const scoreNum = rec.overallScore ? Number(rec.overallScore) : 85;
+                          const displayScore = Math.min(99, Math.round(scoreNum > 1 ? scoreNum : scoreNum * 100));
 
-                        return (
-                          <div
-                            key={rec.rank}
-                            className="group relative flex flex-col justify-between rounded-xl border border-stone-200/80 bg-white p-3.5 shadow-xs transition duration-200 hover:border-slate-800 hover:shadow-sm sm:flex-row sm:items-center sm:gap-4"
-                          >
-                            {/* Left: Thumbnail & Brand Details */}
-                            <div className="flex items-center gap-3.5">
-                              <div className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-[#f0f2ee] p-1.5">
-                                {rec.product.imageUrl ? (
-                                  <Image
-                                    src={rec.product.imageUrl}
-                                    alt={rec.product.imageAlt ?? rec.product.name}
-                                    width={48}
-                                    height={48}
-                                    className="object-contain"
-                                  />
-                                ) : (
-                                  <span className="text-xl">💻</span>
-                                )}
-                                <span className="absolute -top-1.5 -left-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-slate-950 text-[10px] font-bold text-white shadow-xs">
-                                  #{rec.rank}
-                                </span>
-                              </div>
+                          return (
+                            <article
+                              key={rec.rank}
+                              className="group relative flex w-[220px] shrink-0 sm:w-auto flex-col justify-between rounded-[20px] sm:rounded-[24px] bg-[#f0f2ee] p-2.5 sm:p-4 transition-transform duration-200"
+                            >
+                              <Link
+                                href={`/laptops/${rec.product.slug}`}
+                                className="block w-full"
+                              >
+                                {/* Unified Product Stage matching aspect ratio */}
+                                <div className="relative flex aspect-[4/4.4] min-h-[140px] sm:min-h-[160px] w-full items-center justify-center overflow-hidden rounded-[14px] sm:rounded-[18px] bg-white/60">
+                                  {rec.product.imageUrl ? (
+                                    <img
+                                      src={rec.product.imageUrl}
+                                      alt={rec.product.imageAlt ?? rec.product.name}
+                                      className="h-full w-full object-contain p-2.5 sm:p-3 transition-transform duration-200 group-hover:scale-105"
+                                    />
+                                  ) : (
+                                    <div className="flex h-full w-full items-center justify-center text-3xl sm:text-4xl text-stone-400 select-none">
+                                      💻
+                                    </div>
+                                  )}
 
-                              <div className="min-w-0 flex-1">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-[11px] font-semibold tracking-wide text-stone-500 uppercase">
-                                    {rec.product.brand.name}
-                                  </span>
-                                  <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
-                                    {displayScore}% Fit
-                                  </span>
+                                  {/* Rank & Fit Pill */}
+                                  <div className="absolute top-2 left-2 flex items-center gap-1 z-10">
+                                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-950 text-[10px] font-bold text-white shadow-xs">
+                                      #{rec.rank}
+                                    </span>
+                                    <span className="rounded-full bg-emerald-50/90 backdrop-blur-xs px-1.5 py-0.5 text-[9px] font-bold text-emerald-800 border border-emerald-200/50">
+                                      {displayScore}% Fit
+                                    </span>
+                                  </div>
                                 </div>
 
-                                <h3 className="font-semibold text-slate-950 text-sm truncate">
-                                  {rec.product.name}
-                                </h3>
+                                {/* Card Meta & Bottom Row */}
+                                <div className="mt-2.5 sm:mt-3 flex flex-col justify-between px-0.5 pb-0.5">
+                                  <div className="flex flex-col min-w-0">
+                                    <span className="text-[10px] sm:text-[11px] font-medium text-stone-500 uppercase tracking-wide truncate">
+                                      {rec.product.brand?.name ?? rec.product.category?.name ?? "Laptop"}
+                                    </span>
 
-                                <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-stone-600">
-                                  {rec.variant.ramGb && (
-                                    <span className="rounded bg-stone-100 px-1.5 py-0.5 font-medium text-stone-700">
-                                      {rec.variant.ramGb}GB RAM
-                                    </span>
-                                  )}
-                                  {rec.variant.storageGb && (
-                                    <span className="rounded bg-stone-100 px-1.5 py-0.5 font-medium text-stone-700">
-                                      {rec.variant.storageGb}GB SSD
-                                    </span>
-                                  )}
-                                  {rec.variant.variantName && (
-                                    <span className="truncate max-w-[180px] text-stone-500">
-                                      {rec.variant.variantName}
-                                    </span>
-                                  )}
+                                    <h3 className="mt-0.5 text-xs sm:text-sm font-semibold tracking-tight text-slate-900 group-hover:text-emerald-950 line-clamp-1">
+                                      {rec.product.name}
+                                    </h3>
+
+                                    <div className="mt-1 flex flex-wrap items-center gap-1 text-[10px] sm:text-[11px] text-stone-600">
+                                      {rec.variant.ramGb && (
+                                        <span className="rounded bg-white/70 px-1.5 py-0.5 font-medium text-stone-700">
+                                          {rec.variant.ramGb}GB
+                                        </span>
+                                      )}
+                                      {rec.variant.storageGb && (
+                                        <span className="rounded bg-white/70 px-1.5 py-0.5 font-medium text-stone-700">
+                                          {rec.variant.storageGb}GB
+                                        </span>
+                                      )}
+                                    </div>
+
+                                    <div className="mt-2 flex items-center justify-between">
+                                      <span className="text-xs sm:text-sm font-bold text-slate-900">
+                                        {formattedPrice}
+                                      </span>
+
+                                      <span className="inline-flex items-center gap-1 text-[10px] sm:text-xs font-semibold text-[#0b241b] group-hover:underline">
+                                        View
+                                        <svg className="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                                        </svg>
+                                      </span>
+                                    </div>
+                                  </div>
                                 </div>
-                              </div>
-                            </div>
-
-                              {/* Right: Price & Direct Link */}
-                              <div className="mt-3 flex items-center justify-between border-t border-stone-100 pt-2.5 sm:mt-0 sm:flex-col sm:items-end sm:justify-center sm:border-t-0 sm:pt-0 shrink-0 gap-1.5">
-                                <span className="text-base font-bold text-slate-950">
-                                  {formattedPrice}
-                                </span>
-                                <Link
-                                  href={`/laptops/${rec.product.slug}`}
-                                  className="inline-flex items-center gap-1.5 rounded-full bg-[#0b241b] px-3.5 py-1.5 text-xs font-semibold text-[#ffffff] shadow-sm transition hover:bg-[#163a2d] active:scale-95"
-                                  style={{ color: "#ffffff" }}
-                                >
-                                  <span>View Specs</span>
-                                  <svg className="h-3 w-3 stroke-[#ffffff]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                                  </svg>
-                                </Link>
-                              </div>
-                          </div>
-                        );
-                      })}
+                              </Link>
+                            </article>
+                          );
+                        })}
+                      </div>
                     </div>
                   )}
 
@@ -454,9 +456,6 @@ export function SelectAdvisorChat() {
               </svg>
             </button>
           </div>
-          <p className="mt-1.5 text-center text-[10px] sm:text-[11px] text-stone-500">
-            Press <kbd className="rounded border border-stone-300 bg-white px-1 py-0.5 text-[9px] text-stone-600">Enter</kbd> to send, <kbd className="rounded border border-stone-300 bg-white px-1 py-0.5 text-[9px] text-stone-600">Shift + Enter</kbd> for new line
-          </p>
         </div>
       </div>
     </div>
