@@ -166,6 +166,25 @@ export function CheckoutReview() {
   const [error, setError] =
     useState<string | null>(null);
 
+  // Per-field validation errors for inline red highlighting and messages
+  const [fieldErrors, setFieldErrors] = useState<{
+    recipientName?: string;
+    phone?: string;
+    addressLine1?: string;
+    city?: string;
+    stateName?: string;
+    postalCode?: string;
+  }>({});
+
+  const clearFieldError = (field: keyof typeof fieldErrors) => {
+    setFieldErrors((prev) => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  };
+
   // Delivery & Customer Form State
   const [recipientName, setRecipientName] = useState("");
   const [phone, setPhone] = useState("");
@@ -292,23 +311,41 @@ export function CheckoutReview() {
     let pendingOrderNumber: string | null =
       null;
 
+    const errors: typeof fieldErrors = {};
+
     if (!recipientName.trim()) {
-      setError("Please enter the recipient's full name for delivery.");
+      errors.recipientName = "Recipient full name is required.";
+    }
+
+    const cleanPhone = phone.trim().replace(/\D/g, "");
+    if (!cleanPhone || cleanPhone.length < 10) {
+      errors.phone = "Enter a valid 10-digit mobile number.";
+    }
+
+    if (!addressLine1.trim()) {
+      errors.addressLine1 = "Street address is required.";
+    }
+
+    if (!city.trim()) {
+      errors.city = "City is required.";
+    }
+
+    if (!stateName.trim()) {
+      errors.stateName = "State is required.";
+    }
+
+    const cleanPin = postalCode.trim().replace(/\D/g, "");
+    if (!cleanPin || cleanPin.length !== 6) {
+      errors.postalCode = "Enter a valid 6-digit PIN code.";
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
       setIsPlacingOrder(false);
       return;
     }
 
-    if (!phone.trim() || phone.trim().replace(/\D/g, "").length < 10) {
-      setError("Please enter a valid 10-digit mobile number for delivery verification & OTP.");
-      setIsPlacingOrder(false);
-      return;
-    }
-
-    if (!addressLine1.trim() || !city.trim() || !postalCode.trim() || postalCode.trim().length < 6) {
-      setError("Please enter your complete delivery street address, city, and a valid 6-digit PIN code.");
-      setIsPlacingOrder(false);
-      return;
-    }
+    setFieldErrors({});
 
     try {
       /*
@@ -757,11 +794,23 @@ export function CheckoutReview() {
                 <input
                   type="text"
                   value={recipientName}
-                  onChange={(e) => setRecipientName(e.target.value)}
+                  onChange={(e) => {
+                    setRecipientName(e.target.value);
+                    clearFieldError("recipientName");
+                  }}
                   placeholder="e.g. Rahul Sharma"
-                  className="w-full rounded-xl border border-stone-300 bg-white px-3.5 py-2.5 text-xs sm:text-sm text-slate-900 placeholder:text-stone-400 focus:border-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900"
+                  className={`w-full rounded-xl border bg-white px-3.5 py-2.5 text-xs sm:text-sm text-slate-900 placeholder:text-stone-400 focus:outline-none focus:ring-1 ${
+                    fieldErrors.recipientName
+                      ? "border-rose-500 focus:border-rose-600 focus:ring-rose-500 ring-1 ring-rose-500/50"
+                      : "border-stone-300 focus:border-slate-900 focus:ring-slate-900"
+                  }`}
                   required
                 />
+                {fieldErrors.recipientName && (
+                  <p className="mt-1 text-[11px] font-medium text-rose-600">
+                    {fieldErrors.recipientName}
+                  </p>
+                )}
               </div>
 
               <div>
@@ -771,11 +820,23 @@ export function CheckoutReview() {
                 <input
                   type="tel"
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
+                  onChange={(e) => {
+                    setPhone(e.target.value);
+                    clearFieldError("phone");
+                  }}
                   placeholder="+91 98765 43210"
-                  className="w-full rounded-xl border border-stone-300 bg-white px-3.5 py-2.5 text-xs sm:text-sm text-slate-900 placeholder:text-stone-400 focus:border-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900"
+                  className={`w-full rounded-xl border bg-white px-3.5 py-2.5 text-xs sm:text-sm text-slate-900 placeholder:text-stone-400 focus:outline-none focus:ring-1 ${
+                    fieldErrors.phone
+                      ? "border-rose-500 focus:border-rose-600 focus:ring-rose-500 ring-1 ring-rose-500/50"
+                      : "border-stone-300 focus:border-slate-900 focus:ring-slate-900"
+                  }`}
                   required
                 />
+                {fieldErrors.phone && (
+                  <p className="mt-1 text-[11px] font-medium text-rose-600">
+                    {fieldErrors.phone}
+                  </p>
+                )}
               </div>
 
               <div className="sm:col-span-2">
@@ -785,11 +846,23 @@ export function CheckoutReview() {
                 <input
                   type="text"
                   value={addressLine1}
-                  onChange={(e) => setAddressLine1(e.target.value)}
+                  onChange={(e) => {
+                    setAddressLine1(e.target.value);
+                    clearFieldError("addressLine1");
+                  }}
                   placeholder="e.g. Flat 4B, Tower 2, Green View Apartments, Salt Lake Sector V"
-                  className="w-full rounded-xl border border-stone-300 bg-white px-3.5 py-2.5 text-xs sm:text-sm text-slate-900 placeholder:text-stone-400 focus:border-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900"
+                  className={`w-full rounded-xl border bg-white px-3.5 py-2.5 text-xs sm:text-sm text-slate-900 placeholder:text-stone-400 focus:outline-none focus:ring-1 ${
+                    fieldErrors.addressLine1
+                      ? "border-rose-500 focus:border-rose-600 focus:ring-rose-500 ring-1 ring-rose-500/50"
+                      : "border-stone-300 focus:border-slate-900 focus:ring-slate-900"
+                  }`}
                   required
                 />
+                {fieldErrors.addressLine1 && (
+                  <p className="mt-1 text-[11px] font-medium text-rose-600">
+                    {fieldErrors.addressLine1}
+                  </p>
+                )}
               </div>
 
               <div className="sm:col-span-2">
@@ -812,11 +885,23 @@ export function CheckoutReview() {
                 <input
                   type="text"
                   value={city}
-                  onChange={(e) => setCity(e.target.value)}
+                  onChange={(e) => {
+                    setCity(e.target.value);
+                    clearFieldError("city");
+                  }}
                   placeholder="Kolkata"
-                  className="w-full rounded-xl border border-stone-300 bg-white px-3.5 py-2.5 text-xs sm:text-sm text-slate-900 placeholder:text-stone-400 focus:border-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900"
+                  className={`w-full rounded-xl border bg-white px-3.5 py-2.5 text-xs sm:text-sm text-slate-900 placeholder:text-stone-400 focus:outline-none focus:ring-1 ${
+                    fieldErrors.city
+                      ? "border-rose-500 focus:border-rose-600 focus:ring-rose-500 ring-1 ring-rose-500/50"
+                      : "border-stone-300 focus:border-slate-900 focus:ring-slate-900"
+                  }`}
                   required
                 />
+                {fieldErrors.city && (
+                  <p className="mt-1 text-[11px] font-medium text-rose-600">
+                    {fieldErrors.city}
+                  </p>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -827,11 +912,23 @@ export function CheckoutReview() {
                   <input
                     type="text"
                     value={stateName}
-                    onChange={(e) => setStateName(e.target.value)}
+                    onChange={(e) => {
+                      setStateName(e.target.value);
+                      clearFieldError("stateName");
+                    }}
                     placeholder="West Bengal"
-                    className="w-full rounded-xl border border-stone-300 bg-white px-3.5 py-2.5 text-xs sm:text-sm text-slate-900 placeholder:text-stone-400 focus:border-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900"
+                    className={`w-full rounded-xl border bg-white px-3.5 py-2.5 text-xs sm:text-sm text-slate-900 placeholder:text-stone-400 focus:outline-none focus:ring-1 ${
+                      fieldErrors.stateName
+                        ? "border-rose-500 focus:border-rose-600 focus:ring-rose-500 ring-1 ring-rose-500/50"
+                        : "border-stone-300 focus:border-slate-900 focus:ring-slate-900"
+                    }`}
                     required
                   />
+                  {fieldErrors.stateName && (
+                    <p className="mt-1 text-[11px] font-medium text-rose-600">
+                      {fieldErrors.stateName}
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -841,12 +938,24 @@ export function CheckoutReview() {
                   <input
                     type="text"
                     value={postalCode}
-                    onChange={(e) => setPostalCode(e.target.value)}
+                    onChange={(e) => {
+                      setPostalCode(e.target.value);
+                      clearFieldError("postalCode");
+                    }}
                     placeholder="700091"
                     maxLength={6}
-                    className="w-full rounded-xl border border-stone-300 bg-white px-3.5 py-2.5 text-xs sm:text-sm text-slate-900 placeholder:text-stone-400 focus:border-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900"
+                    className={`w-full rounded-xl border bg-white px-3.5 py-2.5 text-xs sm:text-sm text-slate-900 placeholder:text-stone-400 focus:outline-none focus:ring-1 ${
+                      fieldErrors.postalCode
+                        ? "border-rose-500 focus:border-rose-600 focus:ring-rose-500 ring-1 ring-rose-500/50"
+                        : "border-stone-300 focus:border-slate-900 focus:ring-slate-900"
+                    }`}
                     required
                   />
+                  {fieldErrors.postalCode && (
+                    <p className="mt-1 text-[11px] font-medium text-rose-600">
+                      {fieldErrors.postalCode}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
