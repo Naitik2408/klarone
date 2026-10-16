@@ -71,7 +71,7 @@ export function CatalogueListingLayout({
   return (
     <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
       {/* 1. BREADCRUMBS */}
-      <nav className="mb-4 sm:mb-5 flex items-center gap-2 text-xs sm:text-[14px] font-medium text-stone-500">
+      <nav className="mb-4 sm:mb-6 flex items-center gap-2 text-xs sm:text-[14px] font-medium text-stone-500">
         {breadcrumbs.map((crumb, idx) => (
           <span key={idx} className="flex items-center gap-2">
             {crumb.href ? (
@@ -86,27 +86,7 @@ export function CatalogueListingLayout({
         ))}
       </nav>
 
-      {/* 2. EDITORIAL HERO TITLE / BANNER */}
-      <div className="relative mb-6 sm:mb-8 overflow-hidden rounded-2xl sm:rounded-3xl bg-[#0b241b] text-white p-6 sm:p-10 shadow-sm">
-        <div className="relative z-10 max-w-xl">
-          <span className="inline-block text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-emerald-400 mb-1 sm:mb-2">
-            Curated Catalogue
-          </span>
-          <h1
-            style={{ fontFamily: "var(--font-serif), 'Instrument Serif', Georgia, serif" }}
-            className="text-3xl font-normal tracking-tight text-white sm:text-5xl"
-          >
-            {title}
-          </h1>
-          <p className="mt-2 text-xs sm:text-sm text-stone-300 leading-relaxed font-light">
-            Engineered workstations, ultrabooks, and gaming powerhouses tuned for extreme performance.
-          </p>
-        </div>
-        {/* Subtle decorative glow */}
-        <div className="pointer-events-none absolute -right-10 -bottom-10 h-44 w-44 rounded-full bg-emerald-500/20 blur-3xl" />
-      </div>
-
-      {/* 3. TOOLBAR (FILTERS BUTTON, COUNT, SORT BY, VIEW AS TOGGLE) */}
+      {/* 2. TOOLBAR (FILTERS BUTTON, COUNT, SORT BY, VIEW AS TOGGLE) */}
       <div className="mb-6 sm:mb-8">
         <CatalogueToolbar
           total={total}
@@ -124,7 +104,7 @@ export function CatalogueListingLayout({
         />
       </div>
 
-      {/* 4. MAIN CONTENT (LEFT ACCORDION SIDEBAR ON DESKTOP + RIGHT 2-COL / 3-COL GRID) */}
+      {/* 3. MAIN CONTENT (LEFT ACCORDION SIDEBAR ON DESKTOP + RIGHT 2-COL / 3-COL GRID) */}
       <div className="grid grid-cols-12 gap-6 lg:gap-10">
         {/* Desktop Left Filters Accordion Sidebar */}
         {showFilters && (
@@ -165,14 +145,14 @@ export function CatalogueListingLayout({
               </p>
               <Link
                 href="/laptops"
-                className="mt-6 inline-flex rounded-full bg-slate-950 px-6 py-2.5 text-xs font-semibold text-white transition hover:bg-stone-800"
+                className="mt-6 inline-flex rounded-full bg-slate-950 px-6 py-2.5 text-xs font-semibold !text-white transition hover:bg-stone-800"
               >
                 Reset All Filters
               </Link>
             </div>
           )}
 
-          {/* 5. NUMBERED PILL PAGINATION */}
+          {/* 4. NUMBERED PILL PAGINATION */}
           {totalPages > 1 && (
             <nav className="mt-10 sm:mt-14 flex items-center justify-center gap-1.5 sm:gap-2">
               {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => {
@@ -183,11 +163,12 @@ export function CatalogueListingLayout({
                     href={getPageUrl(p)}
                     className={`flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full text-xs font-semibold transition-all ${
                       isCurrent
-                        ? "bg-slate-950 text-white shadow-sm"
+                        ? "bg-slate-950 !text-white shadow-sm"
                         : "bg-stone-100 text-stone-700 hover:bg-stone-200"
                     }`}
+                    style={isCurrent ? { color: "#ffffff", backgroundColor: "#020617" } : undefined}
                   >
-                    {p}
+                    <span style={isCurrent ? { color: "#ffffff" } : undefined}>{p}</span>
                   </Link>
                 );
               })}
@@ -206,7 +187,7 @@ export function CatalogueListingLayout({
         </div>
       </div>
 
-      {/* 6. MOBILE FILTER & SORT SLIDE-OUT DRAWER */}
+      {/* 5. MOBILE FILTER & SORT SLIDE-OUT DRAWER (FULL WIDTH ON MOBILE) */}
       {isMobileDrawerOpen && (
         <div className="fixed inset-0 z-50 flex md:hidden">
           {/* Backdrop */}
@@ -215,8 +196,8 @@ export function CatalogueListingLayout({
             onClick={() => setIsMobileDrawerOpen(false)}
           />
 
-          {/* Drawer content sliding from right */}
-          <div className="relative ml-auto flex h-full w-[88vw] max-w-md flex-col bg-white shadow-2xl animate-in slide-in-from-right duration-300">
+          {/* Drawer content: full width on mobile screen (w-full max-w-full) */}
+          <div className="relative ml-auto flex h-full w-full flex-col bg-white shadow-2xl animate-in slide-in-from-right duration-300">
             {/* Drawer Header */}
             <div className="flex items-center justify-between border-b border-stone-200 px-5 py-4">
               <h2

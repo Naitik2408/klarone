@@ -63,13 +63,6 @@ export function ProductCard({
 
   return (
     <article className="group relative flex flex-col justify-between rounded-[20px] sm:rounded-[24px] bg-[#f0f2ee] p-2.5 sm:p-4 transition-transform duration-200">
-      {/* Brand Badge matching reference Month's Top Product card */}
-      <div className="absolute left-2.5 top-2.5 sm:left-4 sm:top-4 z-20">
-        <span className="inline-block rounded-full px-2 sm:px-3.5 py-0.5 sm:py-1.5 text-[10px] sm:text-[12px] font-medium tracking-wide text-white shadow-2xs bg-[#6c8868]">
-          {product.brand.name}
-        </span>
-      </div>
-
       <Link
         href={`/laptops/${product.slug}`}
         className="block w-full"
