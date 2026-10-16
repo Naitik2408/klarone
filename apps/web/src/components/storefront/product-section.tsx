@@ -320,15 +320,11 @@ export function StorefrontProductSection({ initialProducts = [] }: StorefrontPro
                   /* Sized so 4 full cards occupy the width on desktop, and user can scroll smoothly via touch on mobile */
                   className="group relative flex flex-col justify-between shrink-0 flex-[0_0_84%] sm:flex-[0_0_45%] lg:flex-[0_0_22.8%] snap-start rounded-[24px] bg-[#f0f2ee] p-4 transition-transform duration-200"
                 >
-                  {/* Badge (Sale / Best Sellers) - larger with soft, lighter organic background colors */}
-                  {(isSale || isBestSeller) && (
+                  {/* Badge (Best Sellers) - soft, lighter organic background color */}
+                  {isBestSeller && (
                     <div className="absolute left-4 top-4 z-20 pointer-events-none">
-                      <span
-                        className={`inline-block rounded-full px-3.5 py-1.5 text-[12px] font-medium tracking-wide text-white shadow-2xs ${
-                          isSale ? "bg-[#c64f3d]" : "bg-[#6c8868]"
-                        }`}
-                      >
-                        {isSale ? "Sale" : "Best Sellers"}
+                      <span className="inline-block rounded-full px-3.5 py-1.5 text-[12px] font-medium tracking-wide text-white shadow-2xs bg-[#6c8868]">
+                        Best Sellers
                       </span>
                     </div>
                   )}

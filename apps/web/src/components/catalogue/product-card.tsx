@@ -63,14 +63,10 @@ export function ProductCard({
 
   return (
     <article className="group relative flex flex-col justify-between rounded-[24px] bg-[#f0f2ee] p-4 transition-transform duration-200">
-      {/* Badge (Sale / Brand) matching reference Month's Top Product card */}
+      {/* Brand Badge matching reference Month's Top Product card */}
       <div className="absolute left-4 top-4 z-20">
-        <span
-          className={`inline-block rounded-full px-3.5 py-1.5 text-[12px] font-medium tracking-wide text-white shadow-2xs ${
-            isSale ? "bg-[#c64f3d]" : "bg-[#6c8868]"
-          }`}
-        >
-          {isSale ? "Sale" : product.brand.name}
+        <span className="inline-block rounded-full px-3.5 py-1.5 text-[12px] font-medium tracking-wide text-white shadow-2xs bg-[#6c8868]">
+          {product.brand.name}
         </span>
       </div>
 
