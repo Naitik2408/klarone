@@ -292,15 +292,25 @@ export function CheckoutReview() {
     let pendingOrderNumber: string | null =
       null;
 
-    try {
-      /*
-       * The server creates the order from the
-      if (!addressLine1.trim() || !city.trim() || !postalCode.trim()) {
-        setError("Please enter your complete delivery street address, city, and pincode.");
-        setIsPlacingOrder(false);
-        return;
-      }
+    if (!recipientName.trim()) {
+      setError("Please enter the recipient's full name for delivery.");
+      setIsPlacingOrder(false);
+      return;
+    }
 
+    if (!phone.trim() || phone.trim().replace(/\D/g, "").length < 10) {
+      setError("Please enter a valid 10-digit mobile number for delivery verification & OTP.");
+      setIsPlacingOrder(false);
+      return;
+    }
+
+    if (!addressLine1.trim() || !city.trim() || !postalCode.trim() || postalCode.trim().length < 6) {
+      setError("Please enter your complete delivery street address, city, and a valid 6-digit PIN code.");
+      setIsPlacingOrder(false);
+      return;
+    }
+
+    try {
       /*
        * The server creates the order from the
        * authoritative PostgreSQL cart.

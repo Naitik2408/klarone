@@ -17,15 +17,15 @@ export function AccountHub() {
   return (
     <div className="space-y-8">
       {/* 1. Account Header Banner */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between border-b border-stone-200/80 pb-6">
+      <div className="flex flex-col gap-3.5 sm:flex-row sm:items-end sm:justify-between border-b border-stone-200/80 pb-5 sm:pb-6">
         <div>
           <h1
             style={{ fontFamily: "var(--font-serif), 'Instrument Serif', Georgia, serif" }}
-            className="text-4xl font-normal tracking-tight text-slate-950 sm:text-5xl"
+            className="text-3xl font-normal tracking-tight text-slate-950 sm:text-4xl md:text-5xl"
           >
             My Account
           </h1>
-          <p className="mt-2 text-sm text-stone-500">
+          <p className="mt-1.5 text-xs sm:text-sm text-stone-500">
             Welcome back, <span className="font-semibold text-slate-900">{displayName}</span>
           </p>
         </div>
@@ -33,7 +33,7 @@ export function AccountHub() {
         <button
           type="button"
           onClick={logout}
-          className="self-start sm:self-auto rounded-full border border-stone-300 px-5 py-2 text-xs font-semibold text-slate-900 transition hover:bg-stone-100 hover:border-slate-900 active:scale-95"
+          className="self-start sm:self-auto rounded-full border border-stone-300 px-4 sm:px-5 py-1.5 sm:py-2 text-xs font-semibold text-slate-900 transition hover:bg-stone-100 hover:border-slate-900 active:scale-95"
         >
           Sign Out
         </button>

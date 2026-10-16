@@ -146,49 +146,49 @@ export function OrdersList() {
             <Link
               key={order.id}
               href={`/account/orders/${encodeURIComponent(order.orderNumber)}`}
-              className="group block rounded-2xl bg-[#f0f2ee] p-6 transition duration-200 hover:shadow-md"
+              className="group block rounded-2xl bg-[#f0f2ee] p-4 sm:p-6 transition duration-200 hover:shadow-md border border-stone-200/50"
             >
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-base font-semibold text-slate-950 group-hover:text-emerald-950">
+              <div className="flex flex-col gap-2.5 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                    <span className="text-sm sm:text-base font-semibold text-slate-950 group-hover:text-emerald-950 truncate">
                       {order.orderNumber}
                     </span>
                     <span
-                      className={`rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${getStatusBadge(
+                      className={`rounded-full border px-2 sm:px-2.5 py-0.5 text-[10px] sm:text-[11px] font-medium ${getStatusBadge(
                         order.status,
                       )}`}
                     >
                       {order.status}
                     </span>
                   </div>
-                  <p className="mt-1 text-xs text-stone-500">Placed on {formatDate(order.createdAt)}</p>
+                  <p className="mt-1 text-[11px] sm:text-xs text-stone-500">Placed on {formatDate(order.createdAt)}</p>
                 </div>
 
-                <div className="sm:text-right">
-                  <p className="text-xs text-stone-400 font-medium">Total</p>
-                  <p className="text-base font-bold text-slate-950">
+                <div className="flex sm:flex-col items-baseline sm:items-end justify-between sm:justify-start pt-1 sm:pt-0 border-t border-stone-200/60 sm:border-t-0">
+                  <p className="text-[11px] text-stone-400 font-medium">Total</p>
+                  <p className="text-sm sm:text-base font-bold text-slate-950">
                     {formatCurrency(order.totalAmount, order.currency)}
                   </p>
                 </div>
               </div>
 
               {/* Items summary */}
-              <div className="mt-4 border-t border-stone-200/80 pt-4 space-y-2">
+              <div className="mt-3 sm:mt-4 border-t border-stone-200/80 pt-3 sm:pt-4 space-y-2">
                 {order.items.map((item) => (
-                  <div key={item.id} className="flex justify-between text-xs text-stone-700">
-                    <span className="truncate pr-4">
+                  <div key={item.id} className="flex justify-between items-center text-xs text-stone-700">
+                    <span className="truncate pr-4 text-slate-900">
                       {item.quantity}× {item.productName}
                     </span>
-                    <span className="font-medium shrink-0">
+                    <span className="font-medium shrink-0 text-stone-600">
                       {formatCurrency(item.totalAmount, order.currency)}
                     </span>
                   </div>
                 ))}
               </div>
 
-              <div className="mt-4 flex items-center justify-between pt-2 text-xs font-semibold text-slate-900 group-hover:text-emerald-900">
-                <span>View Details & Tracking</span>
+              <div className="mt-3 sm:mt-4 flex items-center justify-between pt-2 text-xs font-semibold text-slate-900 group-hover:text-emerald-900">
+                <span>View Details &amp; Tracking</span>
                 <span className="transition-transform group-hover:translate-x-1">→</span>
               </div>
             </Link>
