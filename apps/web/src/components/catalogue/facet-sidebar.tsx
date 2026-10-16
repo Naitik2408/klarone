@@ -7,9 +7,11 @@ import type { CatalogueFacets } from "../../types/catalogue";
 interface FacetSidebarProps {
   facets: CatalogueFacets;
   highestPrice: number;
+  onApply?: () => void;
+  isMobileDrawer?: boolean;
 }
 
-export function FacetSidebar({ facets, highestPrice }: FacetSidebarProps) {
+export function FacetSidebar({ facets, highestPrice, onApply, isMobileDrawer }: FacetSidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();

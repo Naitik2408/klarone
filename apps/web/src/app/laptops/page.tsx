@@ -118,12 +118,12 @@ export default async function LaptopsPage({
   ];
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white overflow-x-hidden">
       {/* 1. Floating Storefront Header */}
       <StorefrontHeader />
 
       {/* Top spacing to account for floating header */}
-      <div className="pt-28 md:pt-36">
+      <main className="pt-20 sm:pt-28 md:pt-36 overflow-x-hidden">
         <CatalogueListingLayout
           products={productsResponse.items}
           facets={facets}
@@ -135,7 +135,7 @@ export default async function LaptopsPage({
           breadcrumbs={breadcrumbs}
           activeCategorySlug={categorySlug}
         />
-      </div>
+      </main>
 
       {/* Footer */}
       <StorefrontFooter />

@@ -62,10 +62,10 @@ export function ProductCard({
   }
 
   return (
-    <article className="group relative flex flex-col justify-between rounded-[24px] bg-[#f0f2ee] p-4 transition-transform duration-200">
+    <article className="group relative flex flex-col justify-between rounded-[20px] sm:rounded-[24px] bg-[#f0f2ee] p-2.5 sm:p-4 transition-transform duration-200">
       {/* Brand Badge matching reference Month's Top Product card */}
-      <div className="absolute left-4 top-4 z-20">
-        <span className="inline-block rounded-full px-3.5 py-1.5 text-[12px] font-medium tracking-wide text-white shadow-2xs bg-[#6c8868]">
+      <div className="absolute left-2.5 top-2.5 sm:left-4 sm:top-4 z-20">
+        <span className="inline-block rounded-full px-2 sm:px-3.5 py-0.5 sm:py-1.5 text-[10px] sm:text-[12px] font-medium tracking-wide text-white shadow-2xs bg-[#6c8868]">
           {product.brand.name}
         </span>
       </div>
@@ -74,34 +74,63 @@ export function ProductCard({
         href={`/laptops/${product.slug}`}
         className="block w-full"
       >
-        {/* Clean Unified Product Stage matching homepage aspect-[4/4.4] */}
-        <div className="relative flex aspect-[4/4.4] min-h-[200px] w-full items-center justify-center overflow-hidden rounded-[18px] bg-white/40">
+        {/* Clean Unified Product Stage matching aspect ratio */}
+        <div className="relative flex aspect-[4/4.4] min-h-[120px] sm:min-h-[200px] w-full items-center justify-center overflow-hidden rounded-[14px] sm:rounded-[18px] bg-white/40">
           {primaryMedia?.url ? (
             <img
               src={primaryMedia.url}
               alt={primaryMedia.altText ?? product.name}
-              className="h-full w-full object-contain p-4 transition-transform duration-200 group-hover:scale-105"
+              className="h-full w-full object-contain p-2.5 sm:p-4 transition-transform duration-200 group-hover:scale-105"
             />
           ) : (
-            <div className="flex h-full w-full items-center justify-center text-4xl text-stone-400 select-none">
+            <div className="flex h-full w-full items-center justify-center text-2xl sm:text-4xl text-stone-400 select-none">
               💻
             </div>
           )}
+
+          {/* Floating Cart Button placed directly on the bottom right of the image stage on mobile like user reference image */}
+          <button
+            type="button"
+            onClick={handleAddToCart}
+            disabled={isAdding}
+            aria-label={`Add ${product.name} to cart`}
+            className="absolute bottom-2 right-2 flex sm:hidden h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-950 text-white shadow-md transition-all active:scale-90 disabled:opacity-50 z-20 cursor-pointer"
+          >
+            {isAdding ? (
+              <div className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" />
+            ) : justAdded ? (
+              <span className="text-[10px] font-bold text-lime-300">✓</span>
+            ) : (
+              <svg
+                className="h-3.5 w-3.5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth="2.2"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
+                />
+              </svg>
+            )}
+          </button>
         </div>
 
         {/* Card Meta & Bottom Row */}
-        <div className="mt-4 flex items-end justify-between px-1 pb-1">
-          <div className="flex flex-col">
-            <span className="text-xs font-normal text-stone-500">
+        <div className="mt-2.5 sm:mt-4 flex items-end justify-between px-0.5 sm:px-1 pb-0.5 sm:pb-1">
+          <div className="flex flex-col min-w-0 flex-1">
+            <span className="text-[11px] sm:text-xs font-normal text-stone-500 truncate">
               {product.category.name}
             </span>
 
-            <h3 className="mt-1 text-[16px] font-semibold tracking-tight text-slate-900 group-hover:text-emerald-950 line-clamp-1">
+            <h3 className="mt-0.5 sm:mt-1 text-xs sm:text-[16px] font-semibold tracking-tight text-slate-900 group-hover:text-emerald-950 line-clamp-1">
               {product.name}
             </h3>
 
-            <div className="mt-1.5 flex items-baseline gap-2">
-              <span className="text-sm font-semibold text-slate-900">
+            <div className="mt-1 sm:mt-1.5 flex flex-wrap items-baseline gap-1 sm:gap-2">
+              <span className="text-xs sm:text-sm font-semibold text-slate-900">
                 {variant
                   ? formatPrice(variant.sellingPrice, variant.currency)
                   : "Check availability"}
@@ -109,20 +138,20 @@ export function ProductCard({
 
               {variant?.compareAtPrice &&
               Number(variant.compareAtPrice) > Number(variant.sellingPrice) ? (
-                <span className="text-xs text-stone-400 line-through">
+                <span className="text-[10px] sm:text-xs text-stone-400 line-through">
                   {formatPrice(variant.compareAtPrice, variant.currency)}
                 </span>
               ) : null}
             </div>
           </div>
 
-          {/* Circular Add to Cart Button (44px / h-11 w-11) */}
+          {/* Desktop Circular Add to Cart Button (44px / h-11 w-11) */}
           <button
             type="button"
             onClick={handleAddToCart}
             disabled={isAdding}
             aria-label={`Add ${product.name} to cart`}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-slate-950 text-white shadow-sm transition-all duration-200 hover:scale-105 hover:bg-slate-800 active:scale-95 disabled:opacity-50 cursor-pointer"
+            className="hidden sm:flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-slate-950 text-white shadow-sm transition-all duration-200 hover:scale-105 hover:bg-slate-800 active:scale-95 disabled:opacity-50 cursor-pointer ml-2"
           >
             {isAdding ? (
               <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
