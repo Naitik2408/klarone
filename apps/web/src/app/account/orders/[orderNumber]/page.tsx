@@ -17,7 +17,7 @@ export default async function OrderDetailPage({
     <div className="min-h-screen bg-white overflow-x-hidden">
       <StorefrontHeader />
 
-      <main className="mx-auto max-w-6xl px-4 pt-14 pb-20 sm:px-6 sm:pt-20 md:pt-24 md:pb-24 lg:px-8 overflow-x-hidden">
+      <main className="mx-auto max-w-6xl px-4 pt-[76px] pb-20 sm:px-6 sm:pt-20 md:pt-24 md:pb-24 lg:px-8 overflow-x-hidden">
         <OrderDetail
           orderNumber={orderNumber}
         />

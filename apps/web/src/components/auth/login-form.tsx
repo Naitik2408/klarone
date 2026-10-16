@@ -279,14 +279,14 @@ export function LoginForm() {
   }
 
   return (
-    <div className="w-full max-w-[480px] px-4 py-8">
+    <div className="w-full max-w-[480px] px-2.5 sm:px-4 py-6 sm:py-8">
       {/* Brand Header */}
-      <div className="mb-14 text-center">
+      <div className="mb-8 sm:mb-14 text-center">
         <Link
           href="/"
-          className="text-xl font-bold tracking-tight text-slate-900 hover:opacity-85 transition"
+          className="text-2xl sm:text-3xl font-serif tracking-tight text-slate-900 hover:opacity-85 transition"
         >
-          Klarone
+          klarone
         </Link>
       </div>
 
@@ -407,7 +407,7 @@ export function LoginForm() {
             </div>
 
             {/* 6 Individual Code Boxes */}
-            <div className="flex items-center justify-between gap-2.5 my-6">
+            <div className="flex items-center justify-between gap-1.5 sm:gap-2.5 my-6">
               {otpDigits.map((digit, idx) => (
                 <input
                   key={idx}
@@ -422,7 +422,7 @@ export function LoginForm() {
                   onChange={(e) => handleDigitChange(idx, e.target.value)}
                   onKeyDown={(e) => handleKeyDown(idx, e)}
                   onPaste={idx === 0 ? handlePaste : undefined}
-                  className={`h-16 w-12 rounded-2xl border text-center text-xl font-semibold text-slate-950 outline-none transition duration-150 disabled:opacity-50 ${
+                  className={`h-13 sm:h-16 w-10 sm:w-12 rounded-xl sm:rounded-2xl border text-center text-lg sm:text-xl font-semibold text-slate-950 outline-none transition duration-150 disabled:opacity-50 ${
                     digit
                       ? "border-slate-950 bg-stone-50"
                       : "border-stone-200 bg-white hover:border-stone-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
