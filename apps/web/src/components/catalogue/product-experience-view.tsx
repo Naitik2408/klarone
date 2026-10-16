@@ -114,18 +114,32 @@ export function ProductExperienceView({ product }: ProductViewProps) {
     setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
-  // Gallery items: combine product media or high-end fallback photography
+  // Gallery items: Prioritize active variant media (color-specific), fall back to product media, or defaults
   const galleryImages = useMemo(() => {
+    // 1. Variant-specific media (e.g. specific to active color)
+    if (activeVariant?.media && activeVariant.media.length > 0) {
+      const variantUrls = activeVariant.media.map((m) => m.url);
+      // Combine with product-level media (if any exist) that are not already in variantUrls
+      if (product.media && product.media.length > 0) {
+        const prodUrls = product.media.map((m) => m.url).filter((u) => !variantUrls.includes(u));
+        return [...variantUrls, ...prodUrls];
+      }
+      return variantUrls;
+    }
+
+    // 2. Product-level media
     if (product.media && product.media.length > 0) {
       return product.media.map((m) => m.url);
     }
+
+    // 3. High-end photography fallback
     return [
       "/media/catalogue/products/macbook-pro-14-m3-space-black/1-hero-studio.jpg",
       "/media/catalogue/products/macbook-pro-14-m3-space-black/4-keyboard-ports.jpg",
       "/media/catalogue/products/macbook-pro-14-m3-space-black/2-size-comparison.jpg",
       "/media/catalogue/products/macbook-pro-14-m3-space-black/5-flagship-usp.jpg",
     ];
-  }, [product.media]);
+  }, [activeVariant?.media, product.media]);
 
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const imageRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -438,7 +452,7 @@ export function ProductExperienceView({ product }: ProductViewProps) {
           <div className="lg:col-span-7 flex flex-col md:flex-row gap-4 lg:sticky lg:top-28 lg:self-start">
             
             {/* Desktop Vertical Thumbnail Strip (hidden on mobile) */}
-            <div className="hidden md:flex flex-col gap-3 shrink-0">
+            <div className="hidden md:flex flex-col gap-3 shrink-0 w-20">
               {galleryImages.map((imgSrc, idx) => {
                 const isSelected = activeImageIndex === idx;
                 return (
@@ -446,18 +460,16 @@ export function ProductExperienceView({ product }: ProductViewProps) {
                     key={idx}
                     type="button"
                     onClick={() => scrollToImage(idx)}
-                    className={`relative h-20 w-20 rounded-xl overflow-hidden border transition-all duration-150 bg-[#f4f5f3] shrink-0 p-0 ${
+                    className={`relative w-20 rounded-xl overflow-hidden border transition-all duration-150 bg-[#f4f5f3] shrink-0 p-0 flex items-center justify-center ${
                       isSelected
                         ? "border-2 border-neutral-900 ring-2 ring-neutral-900/10 shadow-xs"
                         : "border-neutral-200/90 hover:border-neutral-400 opacity-80 hover:opacity-100"
                     }`}
                   >
-                    <Image
+                    <img
                       src={imgSrc}
                       alt={`${product.name} thumbnail ${idx + 1}`}
-                      fill
-                      className="object-cover w-full h-full p-0"
-                      sizes="80px"
+                      className="w-full h-auto object-contain block p-0"
                     />
                   </button>
                 );
@@ -467,21 +479,18 @@ export function ProductExperienceView({ product }: ProductViewProps) {
             {/* Mobile View: Single Featured Hero Image + Horizontal Thumbnails directly below (matching reference) */}
             <div className="flex md:hidden flex-col gap-3 w-full">
               {/* Featured Large Hero Image with Zoom Search Icon */}
-              <div className="relative aspect-[4/3] w-full rounded-2xl bg-[#f8f9fa] overflow-hidden border border-neutral-200/80 p-0 shadow-xs">
-                <Image
+              <div className="relative w-full rounded-2xl bg-[#f8f9fa] overflow-hidden border border-neutral-200/80 p-0 shadow-xs">
+                <img
                   src={galleryImages[activeImageIndex] || galleryImages[0]}
                   alt={`${product.name} active preview`}
-                  fill
-                  priority
-                  className="object-cover w-full h-full p-0"
-                  sizes="100vw"
+                  className="w-full h-auto object-contain block p-0"
                 />
                 
                 {/* Floating Search/Zoom Icon pill in top-right */}
                 <button
                   type="button"
                   aria-label="Zoom image"
-                  className="absolute top-3.5 right-3.5 h-9 w-9 rounded-full bg-white/95 backdrop-blur-xs shadow-md border border-black/5 flex items-center justify-center text-neutral-800 transition active:scale-95"
+                  className="absolute top-3.5 right-3.5 h-9 w-9 rounded-full bg-white/95 backdrop-blur-xs shadow-md border border-black/5 flex items-center justify-center text-neutral-800 transition active:scale-95 z-10"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -498,18 +507,16 @@ export function ProductExperienceView({ product }: ProductViewProps) {
                       key={idx}
                       type="button"
                       onClick={() => setActiveImageIndex(idx)}
-                      className={`relative h-14 w-14 sm:h-16 sm:w-16 rounded-xl overflow-hidden border transition-all duration-150 bg-[#f4f5f3] shrink-0 p-0 ${
+                      className={`relative w-14 sm:w-16 rounded-xl overflow-hidden border transition-all duration-150 bg-[#f4f5f3] shrink-0 p-0 flex items-center justify-center ${
                         isSelected
                           ? "border-2 border-neutral-900 ring-2 ring-neutral-900/10 shadow-xs"
                           : "border-neutral-200/90 hover:border-neutral-400 opacity-80"
                       }`}
                     >
-                      <Image
+                      <img
                         src={imgSrc}
                         alt={`${product.name} mobile thumb ${idx + 1}`}
-                        fill
-                        className="object-cover w-full h-full p-0"
-                        sizes="64px"
+                        className="w-full h-auto object-contain block p-0"
                       />
                     </button>
                   );
@@ -517,7 +524,7 @@ export function ProductExperienceView({ product }: ProductViewProps) {
               </div>
             </div>
 
-            {/* Desktop View: Stacked Large Gallery Images */}
+            {/* Desktop View: Stacked Large Gallery Images with Adaptive Natural Height */}
             <div className="hidden md:flex flex-1 flex-col space-y-4">
               {galleryImages.map((imgSrc, idx) => {
                 return (
@@ -527,17 +534,15 @@ export function ProductExperienceView({ product }: ProductViewProps) {
                       imageRefs.current[idx] = el;
                     }}
                     onClick={() => setActiveImageIndex(idx)}
-                    className={`relative aspect-[4/3] rounded-2xl md:rounded-3xl bg-[#f8f9fa] overflow-hidden border border-neutral-200/80 transition-shadow p-0 ${
+                    className={`relative w-full rounded-2xl md:rounded-3xl bg-[#f8f9fa] overflow-hidden border border-neutral-200/80 transition-shadow p-0 ${
                       activeImageIndex === idx ? "ring-1 ring-neutral-300" : ""
                     }`}
                   >
-                    <Image
+                    <img
                       src={imgSrc}
                       alt={`${product.name} view ${idx + 1}`}
-                      fill
-                      priority={idx === 0}
-                      className="object-cover w-full h-full p-0"
-                      sizes="(max-width: 1024px) 100vw, 55vw"
+                      className="w-full h-auto object-contain block p-0"
+                      loading={idx === 0 ? "eager" : "lazy"}
                     />
                   </div>
                 );

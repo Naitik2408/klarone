@@ -20,6 +20,15 @@ export class AppController {
     }
   }
 
+  @Get(["api/health", "health"])
+  getHealth(): { status: string; message: string; timestamp: string } {
+    return {
+      status: "OK",
+      message: "Your API is running",
+      timestamp: new Date().toISOString(),
+    };
+  }
+
   @Get("health/db")
   async getDatabaseHealth(): Promise<{ database: string }> {
     return this.appService.getDatabaseHealth();

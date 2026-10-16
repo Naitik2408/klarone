@@ -122,6 +122,17 @@ export interface CatalogueProductDetail extends CatalogueProduct {
         productOption: { id: string | number; name: string };
         productOptionValue: { id: string | number; value: string };
       }>;
+      media?: Array<{
+        id: string;
+        mediaType: string;
+        url: string;
+        storageKey: string | null;
+        altText: string | null;
+        width: number | null;
+        height: number | null;
+        displayOrder: number;
+        isPrimary: boolean;
+      }>;
       inventories?: Array<{
         quantityAvailable: number;
       }>;

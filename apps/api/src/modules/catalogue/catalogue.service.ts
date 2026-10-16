@@ -497,8 +497,7 @@ export class CatalogueService {
             select: { id: true, name: true, slug: true },
           },
           media: {
-            where: { isPrimary: true },
-            orderBy: { displayOrder: "asc" },
+            orderBy: [{ isPrimary: "desc" }, { displayOrder: "asc" }],
             take: 1,
             select: {
               id: true,
@@ -2546,6 +2545,20 @@ export class CatalogueService {
             currency: true,
             warrantyMonths: true,
             specification: true,
+            media: {
+              orderBy: { displayOrder: "asc" },
+              select: {
+                id: true,
+                mediaType: true,
+                url: true,
+                storageKey: true,
+                altText: true,
+                width: true,
+                height: true,
+                displayOrder: true,
+                isPrimary: true,
+              },
+            },
             optionValues: {
               select: {
                 productOptionId: true,
