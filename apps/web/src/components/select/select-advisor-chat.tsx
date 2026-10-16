@@ -142,7 +142,7 @@ export function SelectAdvisorChat() {
   }
 
   return (
-    <div className="flex h-[100dvh] w-full flex-col bg-[#f0f2ee] text-slate-900">
+    <div className="fixed inset-0 flex h-dvh w-full flex-col overflow-hidden bg-[#f0f2ee] text-slate-900">
       {/* Sleek Minimal App Bar */}
       <header className="flex h-14 sm:h-16 shrink-0 items-center justify-between border-b border-stone-200/90 bg-[#f0f2ee]/80 px-4 backdrop-blur-md sm:px-6">
         <div className="flex items-center gap-3">
@@ -214,11 +214,11 @@ export function SelectAdvisorChat() {
         </div>
       </header>
 
-      {/* Main Full-Height Chat Stream */}
+      {/* Main Chat Stream Container */}
       <div className="flex-1 overflow-y-auto px-4 py-4 sm:py-6 sm:px-6">
-        <div className="mx-auto max-w-4xl pb-4">
+        <div className={`mx-auto max-w-4xl ${messages.length === 0 ? "h-full flex flex-col justify-center" : "pb-4"}`}>
         {messages.length === 0 ? (
-          <div className="flex min-h-[calc(100dvh-200px)] flex-col items-center justify-center py-6 text-center sm:py-12">
+          <div className="flex flex-col items-center justify-center py-4 text-center my-auto">
             {/* Center Brand Identity */}
             <div className="flex h-14 w-14 sm:h-16 sm:w-16 items-center justify-center rounded-2xl sm:rounded-3xl bg-[#0b241b] text-2xl sm:text-3xl text-[#d6f088] shadow-md">
               ⚡

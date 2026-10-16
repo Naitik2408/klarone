@@ -8,11 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function SelectPage() {
-  return (
-    <div className="flex h-[100dvh] w-full flex-col overflow-hidden bg-[#f0f2ee] font-sans antialiased text-slate-950 selection:bg-[#d6f088] selection:text-slate-950">
-      <main className="flex-1 overflow-hidden">
-        <SelectAdvisorChat />
-      </main>
-    </div>
-  );
+  return <SelectAdvisorChat />;
 }
