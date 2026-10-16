@@ -183,11 +183,11 @@ export function StorefrontHeader() {
             {/* Right Column: Account, Cart */}
             <div className="flex items-center justify-end gap-2.5 sm:gap-4">
 
-              {/* Account Icon on small screens */}
+              {/* Account Icon on mobile and tablet */}
               <Link
                 href={isAuthenticated ? "/account" : "/login"}
                 aria-label="Account"
-                className="hidden h-9 w-9 items-center justify-center rounded-lg text-emerald-100/90 transition hover:text-white active:scale-95 sm:flex"
+                className="flex h-9 w-9 items-center justify-center rounded-lg text-emerald-100/90 transition hover:text-white active:scale-95"
               >
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
                   <path
@@ -645,15 +645,15 @@ export function StorefrontHeader() {
             <div className="flex-1 overflow-y-auto px-6 py-6">
               {mobileSection === "main" ? (
                 /* Primary Navigation List */
-                <div className="flex flex-col space-y-4">
+                <div className="flex flex-col space-y-5">
                   {/* Shop with right chevron leading to sub-view */}
                   <button
                     type="button"
                     onClick={() => setMobileSection("shop")}
-                    className="flex w-full items-center justify-between text-left font-serif text-[20px] font-normal tracking-tight text-slate-900 transition-colors hover:text-emerald-900 active:opacity-70"
+                    className="flex w-full items-center justify-between text-left font-sans text-[18px] sm:text-[19px] font-medium tracking-tight text-slate-900 transition-colors hover:text-emerald-900 active:opacity-70"
                   >
                     <span>Shop</span>
-                    <svg className="h-4 w-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2">
+                    <svg className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                     </svg>
                   </button>
@@ -662,25 +662,25 @@ export function StorefrontHeader() {
                   <Link
                     href="/select"
                     onClick={() => setMobileDrawerOpen(false)}
-                    className="flex w-full items-center justify-between text-left font-serif text-[20px] font-normal tracking-tight text-slate-900 transition-colors hover:text-emerald-900 active:opacity-70"
+                    className="flex w-full items-center justify-between text-left font-sans text-[18px] sm:text-[19px] font-medium tracking-tight text-slate-900 transition-colors hover:text-emerald-900 active:opacity-70"
                   >
                     <span className="flex items-center gap-2.5">
                       <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
                       <span>AI Advisor</span>
                     </span>
-                    <svg className="h-4 w-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2">
+                    <svg className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                     </svg>
                   </Link>
 
-                  {/* Catalogue */}
+                  {/* All Laptops */}
                   <Link
                     href="/laptops"
                     onClick={() => setMobileDrawerOpen(false)}
-                    className="flex w-full items-center justify-between text-left font-serif text-[20px] font-normal tracking-tight text-slate-900 transition-colors hover:text-emerald-900 active:opacity-70"
+                    className="flex w-full items-center justify-between text-left font-sans text-[18px] sm:text-[19px] font-medium tracking-tight text-slate-900 transition-colors hover:text-emerald-900 active:opacity-70"
                   >
                     <span>All Laptops</span>
-                    <svg className="h-4 w-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2">
+                    <svg className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                     </svg>
                   </Link>
@@ -689,10 +689,10 @@ export function StorefrontHeader() {
                   <Link
                     href="/cart"
                     onClick={() => setMobileDrawerOpen(false)}
-                    className="flex w-full items-center justify-between text-left font-serif text-[20px] font-normal tracking-tight text-slate-900 transition-colors hover:text-emerald-900 active:opacity-70"
+                    className="flex w-full items-center justify-between text-left font-sans text-[18px] sm:text-[19px] font-medium tracking-tight text-slate-900 transition-colors hover:text-emerald-900 active:opacity-70"
                   >
                     <span>Cart ({itemCount})</span>
-                    <svg className="h-4 w-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2">
+                    <svg className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                     </svg>
                   </Link>
