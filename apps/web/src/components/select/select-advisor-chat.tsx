@@ -241,13 +241,13 @@ export function SelectAdvisorChat() {
                 transition={{ duration: 0.25 }}
                 className={`flex ${msg.sender === "user" ? "justify-end" : "justify-start"}`}
               >
-                <div className={`w-full min-w-0 max-w-2xl ${msg.sender === "user" ? "items-end" : "items-start"}`}>
+                <div className={`min-w-0 ${msg.sender === "user" ? "flex flex-col items-end max-w-[85%] sm:max-w-xl" : "w-full max-w-2xl items-start"}`}>
                   {/* Speech Bubble */}
                   <div
                     className={`rounded-[22px] px-5 py-3.5 text-sm leading-relaxed ${
                       msg.sender === "user"
-                        ? "bg-[#0b241b] text-white shadow-xs rounded-tr-xs"
-                        : "bg-[#f0f2ee] text-slate-900 shadow-2xs rounded-tl-xs"
+                        ? "inline-block w-fit bg-[#0b241b] text-white shadow-xs rounded-tr-xs"
+                        : "w-full bg-[#f0f2ee] text-slate-900 shadow-2xs rounded-tl-xs"
                     }`}
                   >
                     {msg.sender === "user" ? (
