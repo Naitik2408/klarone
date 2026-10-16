@@ -445,7 +445,7 @@ export function LoginForm() {
             ) : null}
 
             <p className="text-center text-xs text-stone-400 pt-2">
-              Development code: <span className="font-semibold text-stone-700">1234</span>
+              Development code: <span className="font-semibold text-stone-700">123456</span>
             </p>
           </div>
         ) : (

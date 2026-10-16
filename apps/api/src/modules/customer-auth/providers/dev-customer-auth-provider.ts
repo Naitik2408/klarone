@@ -28,7 +28,7 @@ export class DevCustomerAuthProvider
 {
   readonly providerName = "DEV_OTP";
 
-  private readonly demoOtp = "1234";
+  private readonly demoOtp = "123456";
   private readonly challengeLifetimeMs =
     5 * 60 * 1000;
 
@@ -46,10 +46,8 @@ export class DevCustomerAuthProvider
       this.normalizeIdentifier(identifier);
 
     const challengeId = randomUUID();
-    // Generate secure dynamic 6-digit OTP for email, or demo 1234
-    const generatedOtp = isEmail
-      ? Math.floor(100000 + Math.random() * 900000).toString()
-      : this.demoOtp;
+    // Default to 123456 for demo / dev testing
+    const generatedOtp = this.demoOtp;
 
     this.challenges.set(challengeId, {
       challengeId,
@@ -149,7 +147,10 @@ export class DevCustomerAuthProvider
     }
 
     const inputCode = input.code.trim();
-    let isCodeValid = inputCode === challenge.code || inputCode === this.demoOtp;
+    let isCodeValid =
+      inputCode === challenge.code ||
+      inputCode === "123456" ||
+      inputCode === "1234";
 
     // Check if code was generated and saved by Better Auth in verification table
     if (!isCodeValid) {
