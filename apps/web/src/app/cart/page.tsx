@@ -4,8 +4,8 @@ import { StorefrontFooter } from "../../components/storefront/newsletter-and-foo
 import { CartPageContent } from "../../components/cart/cart-page-content";
 
 export const metadata: Metadata = {
-  title: "Your Cart — Klarone",
-  description: "Review your Klarone laptop selections before checkout.",
+  title: "Your Cart — Klarone Buy",
+  description: "Review your chosen authentic laptops, warranty coverage, and setup options before checkout in Kolkata.",
 };
 
 export default function CartPage() {

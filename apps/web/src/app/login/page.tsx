@@ -3,8 +3,8 @@ import { Suspense } from "react";
 import { LoginForm } from "@/components/auth/login-form";
 
 export const metadata: Metadata = {
-  title: "Sign in — Klarone",
-  description: "Sign in or create an account to view your orders and manage your profile.",
+  title: "Sign in — Klarone Account",
+  description: "Sign in to access your laptop orders, warranties, service requests, and profile with Klarone.",
 };
 
 export default function LoginPage() {

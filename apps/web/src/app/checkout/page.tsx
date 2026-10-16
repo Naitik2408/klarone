@@ -4,9 +4,9 @@ import { StorefrontFooter } from "@/components/storefront/newsletter-and-footer"
 import { CheckoutReview } from "@/components/checkout/checkout-review";
 
 export const metadata: Metadata = {
-  title: "Secure Checkout — Klarone",
+  title: "Secure Checkout — Klarone Buy",
   description:
-    "Review your Klarone order and pay securely online with Razorpay or Cash on Delivery.",
+    "Review your order, select delivery across Kolkata, and pay securely with Razorpay or Cash on Delivery with Klarone.",
 };
 
 export default function CheckoutPage() {

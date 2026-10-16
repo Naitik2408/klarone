@@ -4,8 +4,8 @@ import { StorefrontFooter } from "@/components/storefront/newsletter-and-footer"
 import { AccountHub } from "@/components/account/account-hub";
 
 export const metadata: Metadata = {
-  title: "My Account — Klarone",
-  description: "View your profile, track shipments, and review order history.",
+  title: "My Account & Ownership — Klarone",
+  description: "Manage your profile, track authentic laptop deliveries, and review ownership history with Klarone Kolkata.",
 };
 
 export default function AccountPage() {

@@ -25,11 +25,30 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
     title: {
-        default: "Klarone — Laptops, chosen for you",
+        default: "Klarone — Laptop Ownership Ecosystem | Kolkata",
         template: "%s | Klarone",
     },
     description:
-        "Find the right laptop with Klarone. Compare laptops, get AI-assisted recommendations, and access local support in Kolkata.",
+        "Klarone is a laptop ownership ecosystem in Kolkata. Tell Klarone what you need: choose the right laptop with AI guidance, purchase authentic units with local support, setup, upgrades, and lifetime care.",
+    keywords: [
+        "Klarone",
+        "Klarone Select",
+        "laptop Kolkata",
+        "laptop recommendation",
+        "buy laptop Kolkata",
+        "laptop repair Kolkata",
+        "laptop upgrade Kolkata",
+        "Krishna Infotech Solution",
+    ],
+    authors: [{ name: "Klarone / Krishna Infotech Solution" }],
+    openGraph: {
+        title: "Klarone — Laptop Ownership Ecosystem | Kolkata",
+        description:
+            "Tell Klarone what you need. Klarone helps you choose what actually fits, buy authentic hardware, and get lifetime local support and upgrades in Kolkata.",
+        siteName: "Klarone",
+        locale: "en_IN",
+        type: "website",
+    },
 };
 
 export default function RootLayout({

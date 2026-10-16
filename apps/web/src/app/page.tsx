@@ -16,9 +16,14 @@ import { SmoothScrollProvider } from "../components/storefront/smooth-scroll-pro
 import { getProducts, getCollections } from "../lib/api";
 
 export const metadata: Metadata = {
-  title: "Wellina — Whole Body Health Starts in the Gut",
+  title: "Klarone — Laptop Ownership Ecosystem | Choose, Buy, Maintain in Kolkata",
   description:
-    "Clinically formulated wellness supplements engineered for vital balance and pure nourishment.",
+    "Klarone helps you choose, buy, set up, repair, and upgrade the right laptop with AI recommendations and fast local support in Kolkata.",
+  openGraph: {
+    title: "Klarone — Laptop Ownership Ecosystem | Kolkata",
+    description:
+      "Tell Klarone what you need. Klarone helps you choose what actually fits, buy authentic hardware, and get lifetime local support and upgrades in Kolkata.",
+  },
 };
 
 export default async function StorefrontHomePage() {

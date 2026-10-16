@@ -9,8 +9,14 @@ import {
 } from "../../lib/api";
 
 export const metadata: Metadata = {
-  title: "Shop All Laptops — Klarone",
-  description: "Browse our complete catalog of flagship ultrabooks, gaming rigs, and creator workstations.",
+  title: "All Laptops — Klarone Buy | Verified Laptop Lineup in Kolkata",
+  description:
+    "Explore Klarone's verified catalog of authentic laptops with official brand warranties, transparent specs, and local setup and service in Kolkata.",
+  openGraph: {
+    title: "All Laptops — Klarone Buy | Kolkata",
+    description:
+      "Explore Klarone's verified catalog of authentic laptops with official brand warranties, transparent specs, and local setup and service in Kolkata.",
+  },
 };
 
 interface LaptopsPageProps {

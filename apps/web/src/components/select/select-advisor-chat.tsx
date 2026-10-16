@@ -51,12 +51,31 @@ export function SelectAdvisorChat() {
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    // Generate or restore a session token
-    const existing = sessionStorage.getItem("klarone_select_session_token");
-    if (existing) {
-      setSessionToken(existing);
+    // Generate or restore a session token and chat messages
+    const existingToken = sessionStorage.getItem("klarone_select_session_token");
+    if (existingToken) {
+      setSessionToken(existingToken);
+    }
+    const savedMessages = sessionStorage.getItem("klarone_select_messages");
+    if (savedMessages) {
+      try {
+        const parsed = JSON.parse(savedMessages);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setMessages(parsed);
+        }
+      } catch {
+        // Ignore JSON parse errors
+      }
     }
   }, []);
+
+  useEffect(() => {
+    if (messages.length > 0) {
+      sessionStorage.setItem("klarone_select_messages", JSON.stringify(messages));
+    } else {
+      sessionStorage.removeItem("klarone_select_messages");
+    }
+  }, [messages]);
 
   useEffect(() => {
     chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -189,6 +208,7 @@ export function SelectAdvisorChat() {
               onClick={() => {
                 setMessages([]);
                 sessionStorage.removeItem("klarone_select_session_token");
+                sessionStorage.removeItem("klarone_select_messages");
                 setSessionToken(null);
               }}
               title="New Chat"
