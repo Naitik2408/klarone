@@ -19,9 +19,10 @@ export class PrismaService
 
     const pool = new Pool({
       connectionString,
-      max: 15,
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 10000,
+      max: 10,
+      idleTimeoutMillis: 60000,
+      connectionTimeoutMillis: 30000,
+      statement_timeout: 30000,
       keepAlive: true,
       keepAliveInitialDelayMillis: 10000,
     });

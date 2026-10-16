@@ -1,21 +1,24 @@
 import type { Metadata } from "next";
-import { Header } from "../../components/site/header";
-import { CheckoutReview } from "../../components/checkout/checkout-review";
+import { StorefrontHeader } from "@/components/storefront/header";
+import { StorefrontFooter } from "@/components/storefront/newsletter-and-footer";
+import { CheckoutReview } from "@/components/checkout/checkout-review";
 
 export const metadata: Metadata = {
-  title: "Checkout",
+  title: "Secure Checkout — Klarone",
   description:
-    "Review your Klarone order before secure checkout.",
+    "Review your Klarone order and pay securely online with Razorpay or Cash on Delivery.",
 };
 
 export default function CheckoutPage() {
   return (
-    <div className="min-h-screen bg-slate-50">
-      <Header />
+    <div className="min-h-screen bg-[#fafafa]">
+      <StorefrontHeader />
 
-      <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+      <main className="mx-auto max-w-7xl px-4 pt-24 pb-16 sm:px-6 md:pt-32 lg:px-8">
         <CheckoutReview />
       </main>
+
+      <StorefrontFooter />
     </div>
   );
 }

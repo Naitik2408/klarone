@@ -93,12 +93,38 @@ export interface CatalogueProductDetail extends CatalogueProduct {
     isPrimary: boolean;
   }>;
 
+  options?: Array<{
+    id: string | number;
+    name: string;
+    displayOrder: number;
+    values: Array<{
+      id: string | number;
+      value: string;
+      displayOrder: number;
+      metaobjectEntry?: {
+        id: string | number;
+        handle: string;
+        displayName: string;
+        fields?: Record<string, unknown>;
+      } | null;
+    }>;
+  }>;
+
   variants: Array<
     CatalogueVariantSummary & {
       color: string | null;
       basePrice: string;
       warrantyMonths: number | null;
       specification: Record<string, unknown> | null;
+      optionValues?: Array<{
+        productOptionId: string | number;
+        productOptionValueId: string | number;
+        productOption: { id: string | number; name: string };
+        productOptionValue: { id: string | number; value: string };
+      }>;
+      inventories?: Array<{
+        quantityAvailable: number;
+      }>;
 
       ports: Array<Record<string, unknown>>;
 

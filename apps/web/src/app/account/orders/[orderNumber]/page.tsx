@@ -1,4 +1,5 @@
-import { Header } from "@/components/site/header";
+import { StorefrontHeader } from "@/components/storefront/header";
+import { StorefrontFooter } from "@/components/storefront/newsletter-and-footer";
 import { OrderDetail } from "@/components/orders/order-detail";
 
 interface OrderDetailPageProps {
@@ -13,14 +14,16 @@ export default async function OrderDetailPage({
   const { orderNumber } = await params;
 
   return (
-    <>
-      <Header />
+    <div className="min-h-screen bg-white">
+      <StorefrontHeader />
 
-      <main className="min-h-[calc(100vh-73px)] bg-neutral-50 px-4 py-10 sm:py-12">
+      <main className="mx-auto max-w-6xl px-4 pt-28 pb-16 sm:px-6 md:pt-36 lg:px-8">
         <OrderDetail
           orderNumber={orderNumber}
         />
       </main>
-    </>
+
+      <StorefrontFooter />
+    </div>
   );
 }

@@ -160,8 +160,32 @@ export function CheckoutReview() {
   const [isPlacingOrder, setIsPlacingOrder] =
     useState(false);
 
+  const [orderSuccessRedirecting, setOrderSuccessRedirecting] =
+    useState(false);
+
   const [error, setError] =
     useState<string | null>(null);
+
+  // Delivery & Customer Form State
+  const [recipientName, setRecipientName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [addressLine1, setAddressLine1] = useState("");
+  const [addressLine2, setAddressLine2] = useState("");
+  const [city, setCity] = useState("Kolkata");
+  const [stateName, setStateName] = useState("West Bengal");
+  const [postalCode, setPostalCode] = useState("");
+
+  useEffect(() => {
+    if (customer) {
+      if (!recipientName) {
+        const full = `${customer.person?.firstName ?? ""} ${customer.person?.lastName ?? ""}`.trim();
+        if (full) setRecipientName(full);
+      }
+      if (!phone && customer.person?.phone) {
+        setPhone(customer.person.phone);
+      }
+    }
+  }, [customer]);
 
   const quoteItems = useMemo(
     () =>
@@ -171,6 +195,14 @@ export function CheckoutReview() {
       })),
     [items],
   );
+
+  const cartItemMap = useMemo(() => {
+    const map = new Map<string, (typeof items)[0]>();
+    for (const it of items) {
+      map.set(it.variantId, it);
+    }
+    return map;
+  }, [items]);
 
   const quoteKey = JSON.stringify(
     quoteItems,
@@ -263,6 +295,14 @@ export function CheckoutReview() {
     try {
       /*
        * The server creates the order from the
+      if (!addressLine1.trim() || !city.trim() || !postalCode.trim()) {
+        setError("Please enter your complete delivery street address, city, and pincode.");
+        setIsPlacingOrder(false);
+        return;
+      }
+
+      /*
+       * The server creates the order from the
        * authoritative PostgreSQL cart.
        *
        * Prices are never taken from the browser.
@@ -270,6 +310,18 @@ export function CheckoutReview() {
       const orderResponse =
         await createCheckoutOrder(
           accessToken,
+          {
+            shippingAddress: {
+              recipientName: recipientName.trim() || undefined,
+              phone: phone.trim() || undefined,
+              addressLine1: addressLine1.trim(),
+              addressLine2: addressLine2.trim() || undefined,
+              city: city.trim(),
+              state: stateName.trim(),
+              postalCode: postalCode.trim(),
+              country: "India",
+            },
+          },
         );
 
       pendingOrderNumber =
@@ -290,6 +342,12 @@ export function CheckoutReview() {
        * COD is immediately confirmed by Klarone.
        */
       if (paymentMethod === "COD") {
+        setOrderSuccessRedirecting(true);
+
+        const orderDetailUrl = `/account/orders/${encodeURIComponent(
+          paymentResponse.order.orderNumber,
+        )}`;
+
         try {
           await clearCart();
         } catch {
@@ -300,12 +358,7 @@ export function CheckoutReview() {
            */
         }
 
-        router.push(
-          `/account/orders/${encodeURIComponent(
-            paymentResponse.order
-              .orderNumber,
-          )}`,
-        );
+        router.replace(orderDetailUrl);
 
         return;
       }
@@ -423,6 +476,12 @@ export function CheckoutReview() {
                  * Backend has verified the payment.
                  * The cart can now be cleared.
                  */
+                setOrderSuccessRedirecting(true);
+
+                const orderDetailUrl = `/account/orders/${encodeURIComponent(
+                  verification.order.orderNumber,
+                )}`;
+
                 try {
                   await clearCart();
                 } catch {
@@ -433,12 +492,7 @@ export function CheckoutReview() {
                    */
                 }
 
-                router.push(
-                  `/account/orders/${encodeURIComponent(
-                    verification.order
-                      .orderNumber,
-                  )}`,
-                );
+                router.replace(orderDetailUrl);
               } catch (verificationError) {
                 setError(
                   verificationError instanceof
@@ -554,45 +608,62 @@ export function CheckoutReview() {
 
   if (!isHydrated) {
     return (
-      <main className="min-h-[calc(100vh-73px)] bg-slate-50 px-4 py-12">
-        <div className="mx-auto max-w-6xl">
-          <div className="rounded-3xl border border-slate-200 bg-white p-8">
-            <p className="text-sm text-slate-500">
-              Loading your checkout...
-            </p>
-          </div>
+      <div className="flex min-h-[50vh] items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-neutral-900 border-t-transparent" />
+          <p className="text-sm font-medium text-neutral-500">Preparing secure checkout...</p>
         </div>
-      </main>
+      </div>
+    );
+  }
+
+  if (orderSuccessRedirecting) {
+    return (
+      <div className="flex min-h-[50vh] flex-col items-center justify-center py-16 text-center">
+        <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+          <svg className="h-8 w-8 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <h2 className="text-2xl font-bold tracking-tight text-slate-950">
+          Order Confirmed!
+        </h2>
+        <p className="mt-2 text-sm text-stone-500">
+          Taking you to your order summary...
+        </p>
+      </div>
     );
   }
 
   if (items.length === 0) {
     return (
-      <main className="min-h-[calc(100vh-73px)] bg-slate-50 px-4 py-12">
-        <div className="mx-auto max-w-3xl">
-          <div className="rounded-3xl border border-slate-200 bg-white p-8 text-center">
-            <p className="text-sm font-medium text-slate-500">
-              Your cart is empty
-            </p>
-
-            <h1 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">
-              Nothing to check out
-            </h1>
-
-            <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-slate-600">
-              Add a laptop to your cart before
-              continuing to checkout.
-            </p>
-
-            <Link
-              href="/laptops"
-              className="mt-6 inline-flex rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800"
-            >
-              Browse laptops
-            </Link>
-          </div>
+      <div className="mx-auto max-w-2xl py-12 text-center">
+        <div className="relative mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-neutral-100 ring-8 ring-neutral-50">
+          <svg className="h-9 w-9 text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+          </svg>
         </div>
-      </main>
+
+        <h1 className="text-3xl font-semibold tracking-tight text-neutral-900">
+          Your cart is empty
+        </h1>
+
+        <p className="mx-auto mt-3 max-w-md text-sm text-neutral-500 leading-relaxed">
+          Looks like you haven&apos;t added any laptops to your bag yet. Explore our curated selection of verified machines.
+        </p>
+
+        <div className="mt-8 flex justify-center gap-3">
+          <Link
+            href="/laptops"
+            className="inline-flex items-center gap-2 rounded-full bg-neutral-900 px-6 py-3.5 text-sm font-medium text-white shadow-sm transition hover:bg-neutral-800 hover:shadow"
+          >
+            Explore Laptops
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+            </svg>
+          </Link>
+        </div>
+      </div>
     );
   }
 
@@ -608,265 +679,358 @@ export function CheckoutReview() {
     );
 
   return (
-    <main className="min-h-[calc(100vh-73px)] bg-slate-50 px-4 py-12">
-      <div className="mx-auto max-w-6xl">
-        <div className="grid gap-8 lg:grid-cols-[1fr_420px]">
-          <section>
-            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-blue-600">
-              Checkout
-            </p>
+    <div className="py-4">
+      {/* Header matching Cart page style */}
+      <div className="border-b border-stone-200/80 pb-6 mb-8">
+        <h1
+          style={{ fontFamily: "var(--font-serif), 'Instrument Serif', Georgia, serif" }}
+          className="text-4xl font-normal tracking-tight text-slate-950 sm:text-5xl"
+        >
+          Review &amp; Checkout
+        </h1>
+      </div>
 
-            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">
-              Review your order
-            </h1>
-
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
-              Klarone verifies the current
-              product price and available stock
-              before creating your order.
-            </p>
-
-            {error ? (
-              <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-                {error}
+      <div className="grid gap-8 lg:grid-cols-[1fr_400px]">
+        {/* Left column: Cart Items & Delivery verification */}
+        <section className="space-y-6">
+          {error ? (
+            <div className="flex items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50/80 p-4 text-sm text-rose-800">
+              <svg className="h-5 w-5 shrink-0 text-rose-500 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              <div>
+                <p className="font-semibold text-rose-900">Action Needed</p>
+                <p className="mt-0.5 text-xs text-rose-700">{error}</p>
               </div>
-            ) : null}
+            </div>
+          ) : null}
 
-            <div className="mt-8 space-y-4">
-              {quote?.items.map((item) => (
-                <article
-                  key={item.variantId}
-                  className="rounded-3xl border border-slate-200 bg-white p-6"
+          {/* Shipping & Delivery Address Form */}
+          <div className="rounded-2xl border border-stone-200/90 bg-[#f0f2ee]/50 p-6 shadow-2xs">
+            <div className="flex items-center justify-between border-b border-stone-200/60 pb-4 mb-5">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-900 text-white shadow-2xs">
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-base font-semibold text-slate-900">
+                    Shipping &amp; Delivery Destination
+                  </h2>
+                  <p className="text-xs text-stone-500">
+                    Direct hand-delivery in Kolkata &amp; all-India insured dispatch
+                  </p>
+                </div>
+              </div>
+
+              {customer ? (
+                <span className="hidden sm:inline-block rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-medium text-emerald-800 border border-emerald-200/60">
+                  Verified Account
+                </span>
+              ) : (
+                <Link
+                  href="/login?redirect=/checkout"
+                  className="text-xs font-semibold text-slate-900 underline underline-offset-4 hover:text-stone-700"
                 >
-                  <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
-                    <div>
-                      <p className="text-sm font-medium uppercase tracking-wide text-slate-400">
-                        {item.brandName}
-                      </p>
+                  Sign in
+                </Link>
+              )}
+            </div>
 
-                      <h2 className="mt-1 text-xl font-semibold text-slate-950">
-                        {item.productName}
-                      </h2>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <label className="block text-xs font-medium text-stone-700 mb-1.5">
+                  Recipient Full Name *
+                </label>
+                <input
+                  type="text"
+                  value={recipientName}
+                  onChange={(e) => setRecipientName(e.target.value)}
+                  placeholder="e.g. Rahul Sharma"
+                  className="w-full rounded-xl border border-stone-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-stone-400 focus:border-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900"
+                  required
+                />
+              </div>
 
-                      <p className="mt-2 text-sm text-slate-500">
-                        {item.variantName}
-                      </p>
+              <div>
+                <label className="block text-xs font-medium text-stone-700 mb-1.5">
+                  Mobile Number (for delivery SMS &amp; OTP) *
+                </label>
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="+91 98765 43210"
+                  className="w-full rounded-xl border border-stone-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-stone-400 focus:border-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900"
+                  required
+                />
+              </div>
 
-                      <p className="mt-3 text-sm text-slate-600">
-                        Quantity:{" "}
-                        <span className="font-medium text-slate-950">
-                          {item.quantity}
-                        </span>
-                      </p>
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-medium text-stone-700 mb-1.5">
+                  Street Address / House / Flat / Apartment No. *
+                </label>
+                <input
+                  type="text"
+                  value={addressLine1}
+                  onChange={(e) => setAddressLine1(e.target.value)}
+                  placeholder="e.g. Flat 4B, Tower 2, Green View Apartments, Salt Lake Sector V"
+                  className="w-full rounded-xl border border-stone-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-stone-400 focus:border-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900"
+                  required
+                />
+              </div>
 
-                      <p className="mt-1 text-xs text-slate-400">
-                        SKU: {item.sku}
-                      </p>
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-medium text-stone-700 mb-1.5">
+                  Landmark (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={addressLine2}
+                  onChange={(e) => setAddressLine2(e.target.value)}
+                  placeholder="e.g. Near RDB Cinemas / Behind Technopolis"
+                  className="w-full rounded-xl border border-stone-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-stone-400 focus:border-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900"
+                />
+              </div>
 
-                      <p className="mt-3 text-xs text-slate-500">
-                        {item.availableQuantity}{" "}
-                        unit
-                        {item.availableQuantity ===
-                        1
-                          ? ""
-                          : "s"}{" "}
-                        currently available
-                      </p>
-                    </div>
+              <div>
+                <label className="block text-xs font-medium text-stone-700 mb-1.5">
+                  City *
+                </label>
+                <input
+                  type="text"
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  placeholder="Kolkata"
+                  className="w-full rounded-xl border border-stone-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-stone-400 focus:border-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900"
+                  required
+                />
+              </div>
 
-                    <div className="text-left sm:text-right">
-                      <p className="text-2xl font-semibold text-slate-950">
-                        {formatPrice(
-                          item.lineTotal,
-                          item.currency,
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-stone-700 mb-1.5">
+                    State *
+                  </label>
+                  <input
+                    type="text"
+                    value={stateName}
+                    onChange={(e) => setStateName(e.target.value)}
+                    placeholder="West Bengal"
+                    className="w-full rounded-xl border border-stone-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-stone-400 focus:border-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-stone-700 mb-1.5">
+                    PIN Code *
+                  </label>
+                  <input
+                    type="text"
+                    value={postalCode}
+                    onChange={(e) => setPostalCode(e.target.value)}
+                    placeholder="700091"
+                    maxLength={6}
+                    className="w-full rounded-xl border border-stone-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-stone-400 focus:border-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900"
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Items review card */}
+          <div className="rounded-2xl border border-neutral-200/80 bg-white p-6 shadow-xs">
+            <div className="flex items-center justify-between border-b border-neutral-100 pb-4">
+              <h2 className="text-base font-semibold text-neutral-900">
+                Items in your package ({quote?.items?.length || items.length})
+              </h2>
+              <Link
+                href="/cart"
+                className="text-xs font-semibold text-neutral-500 hover:text-neutral-900 transition"
+              >
+                Edit Cart
+              </Link>
+            </div>
+
+            <div className="divide-y divide-neutral-100">
+              {quote?.items.map((item) => {
+                const cartDetails = cartItemMap.get(item.variantId);
+                return (
+                  <article key={item.variantId} className="py-5 first:pt-4 last:pb-0">
+                    <div className="flex gap-4 sm:gap-6 items-start">
+                      {/* Product Thumbnail */}
+                      <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl border border-neutral-200/80 bg-neutral-50 flex items-center justify-center p-1.5">
+                        {cartDetails?.imageUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={cartDetails.imageUrl}
+                            alt={item.productName}
+                            className="h-full w-full object-contain"
+                          />
+                        ) : (
+                          <svg className="h-8 w-8 text-neutral-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                          </svg>
                         )}
-                      </p>
+                      </div>
 
-                      <p className="mt-1 text-sm text-slate-500">
-                        {formatPrice(
-                          item.unitPrice,
-                          item.currency,
-                        )}{" "}
-                        each
-                      </p>
+                      {/* Info & Specs */}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[11px] font-semibold tracking-wider uppercase text-neutral-400">
+                          {item.brandName}
+                        </p>
+                        <h3 className="text-sm font-semibold text-neutral-900 truncate">
+                          {item.productName}
+                        </h3>
+                        <p className="mt-0.5 text-xs text-neutral-500">
+                          {item.variantName}
+                        </p>
+
+                        <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-neutral-500">
+                          <span className="rounded-md bg-neutral-100 px-2 py-0.5 font-medium text-neutral-700">
+                            Qty: {item.quantity}
+                          </span>
+                          <span className="text-neutral-300">•</span>
+                          <span>SKU: {item.sku}</span>
+                          <span className="text-neutral-300">•</span>
+                          <span className="text-emerald-700 font-medium">In Stock</span>
+                        </div>
+                      </div>
+
+                      {/* Pricing */}
+                      <div className="text-right">
+                        <p className="text-base font-semibold text-neutral-900">
+                          {formatPrice(item.lineTotal, item.currency)}
+                        </p>
+                        {item.quantity > 1 ? (
+                          <p className="text-xs text-neutral-400">
+                            {formatPrice(item.unitPrice, item.currency)} each
+                          </p>
+                        ) : null}
+                      </div>
                     </div>
-                  </div>
-                </article>
-              ))}
+                  </article>
+                );
+              })}
 
               {isQuoting ? (
-                <div className="rounded-2xl border border-slate-200 bg-white px-5 py-4 text-sm text-slate-500">
-                  Rechecking current price and
-                  stock...
+                <div className="py-4 text-center text-xs text-neutral-400 animate-pulse">
+                  Verifying current price and real-time inventory...
                 </div>
               ) : null}
             </div>
-          </section>
+          </div>
+        </section>
 
-          <aside className="h-fit rounded-3xl border border-slate-200 bg-white p-7 shadow-sm lg:sticky lg:top-6">
-            <p className="text-sm font-medium uppercase tracking-[0.16em] text-slate-400">
-              Order summary
-            </p>
-
-            <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">
-              Klarone checkout
+        {/* Right column: Sticky Order summary & payment choices */}
+        <aside className="h-fit space-y-6 lg:sticky lg:top-28">
+          <div className="rounded-2xl bg-[#f0f2ee] p-6 space-y-5 shadow-2xs">
+            <h2 className="text-base font-semibold tracking-tight text-slate-900">
+              Order Payment Summary
             </h2>
 
-            <div className="mt-8 space-y-4 text-sm">
-              <div className="flex items-center justify-between gap-4">
-                <span className="text-slate-600">
-                  Subtotal
-                </span>
-
-                <span className="font-medium text-slate-950">
-                  {quote
-                    ? formatPrice(
-                        quote.pricing.subtotal,
-                        quote.pricing.currency,
-                      )
-                    : "—"}
+            <div className="space-y-3 text-sm text-stone-600">
+              <div className="flex items-center justify-between">
+                <span>Items Subtotal</span>
+                <span className="font-medium text-slate-900">
+                  {quote ? formatPrice(quote.pricing.subtotal, quote.pricing.currency) : "—"}
                 </span>
               </div>
 
-              <div className="flex items-center justify-between gap-4">
-                <span className="text-slate-600">
-                  Shipping
-                </span>
-
-                <span className="font-medium text-slate-950">
-                  {quote
-                    ? formatPrice(
-                        quote.pricing.shippingAmount,
-                        quote.pricing.currency,
-                      )
-                    : "—"}
+              <div className="flex items-center justify-between border-b border-stone-200/80 pb-3">
+                <span>Delivery</span>
+                <span className="font-semibold text-emerald-800">
+                  {Number(quote?.pricing.shippingAmount ?? 0) === 0 ? "FREE" : formatPrice(quote!.pricing.shippingAmount, quote!.pricing.currency)}
                 </span>
               </div>
 
-              <div className="flex items-center justify-between gap-4">
-                <span className="text-slate-600">
-                  Tax
-                </span>
-
-                <span className="font-medium text-slate-950">
-                  {quote
-                    ? formatPrice(
-                        quote.pricing.taxAmount,
-                        quote.pricing.currency,
-                      )
-                    : "—"}
-                </span>
-              </div>
-
-              <div className="border-t border-slate-200 pt-5">
-                <div className="flex items-end justify-between gap-4">
-                  <span className="text-base font-semibold text-slate-950">
-                    Current total
-                  </span>
-
-                  <span className="text-2xl font-semibold tracking-tight text-slate-950">
-                    {quote
-                      ? formatPrice(
-                          quote.pricing.total,
-                          quote.pricing.currency,
-                        )
-                      : "—"}
-                  </span>
+              <div className="pt-1">
+                <div className="flex items-baseline justify-between text-xs text-stone-500">
+                  <span className="text-[14px] font-medium text-slate-800">Total Payable</span>
+                  <span>GST &amp; delivery included</span>
+                </div>
+                <div className="mt-2 text-[38px] font-light text-slate-950 tracking-tight leading-none">
+                  {quote ? formatPrice(quote.pricing.total, quote.pricing.currency) : "—"}
                 </div>
               </div>
             </div>
 
-            <div className="mt-7">
-              <p className="text-sm font-semibold text-slate-950">
-                Payment method
+            {/* Select Payment Method */}
+            <div className="border-t border-stone-200/80 pt-4">
+              <p className="text-xs font-semibold uppercase tracking-wider text-stone-500 mb-3">
+                Choose Payment Method
               </p>
 
-              <div className="mt-3 space-y-3">
+              <div className="space-y-2.5">
+                {/* Razorpay Option */}
                 <button
                   type="button"
-                  onClick={() =>
-                    setPaymentMethod(
-                      "COD",
-                    )
-                  }
-                  disabled={
-                    isPlacingOrder
-                  }
-                  className={`w-full rounded-2xl border p-4 text-left transition ${
-                    paymentMethod ===
-                    "COD"
-                      ? "border-slate-950 bg-slate-50"
-                      : "border-slate-200 bg-white hover:border-slate-300"
+                  onClick={() => setPaymentMethod("RAZORPAY")}
+                  disabled={isPlacingOrder}
+                  className={`w-full flex items-center justify-between rounded-xl border p-3.5 text-left transition ${
+                    paymentMethod === "RAZORPAY"
+                      ? "border-slate-950 bg-white ring-1 ring-slate-950 shadow-2xs"
+                      : "border-stone-200 bg-white/70 hover:bg-white hover:border-stone-300"
                   }`}
                 >
-                  <div className="flex items-start gap-3">
+                  <div className="flex items-center gap-3">
                     <div
-                      className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
-                        paymentMethod ===
-                        "COD"
-                          ? "border-slate-950"
-                          : "border-slate-300"
+                      className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${
+                        paymentMethod === "RAZORPAY" ? "border-slate-950" : "border-stone-300"
                       }`}
                     >
-                      {paymentMethod ===
-                      "COD" ? (
-                        <div className="h-2.5 w-2.5 rounded-full bg-slate-950" />
+                      {paymentMethod === "RAZORPAY" ? (
+                        <div className="h-2 w-2 rounded-full bg-slate-950" />
                       ) : null}
                     </div>
 
                     <div>
-                      <p className="font-medium text-slate-950">
-                        Cash on Delivery
+                      <p className="text-xs font-semibold text-slate-900">
+                        Pay Online (UPI, Cards, NetBanking)
                       </p>
-
-                      <p className="mt-1 text-xs leading-5 text-slate-500">
-                        Pay when your Klarone order
-                        is delivered.
+                      <p className="text-[11px] text-stone-500">
+                        Secure instant checkout via Razorpay
                       </p>
                     </div>
                   </div>
+
+                  <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200/50">
+                    UPI
+                  </span>
                 </button>
 
+                {/* COD Option */}
                 <button
                   type="button"
-                  onClick={() =>
-                    setPaymentMethod(
-                      "RAZORPAY",
-                    )
-                  }
-                  disabled={
-                    isPlacingOrder
-                  }
-                  className={`w-full rounded-2xl border p-4 text-left transition ${
-                    paymentMethod ===
-                    "RAZORPAY"
-                      ? "border-slate-950 bg-slate-50"
-                      : "border-slate-200 bg-white hover:border-slate-300"
+                  onClick={() => setPaymentMethod("COD")}
+                  disabled={isPlacingOrder}
+                  className={`w-full flex items-center justify-between rounded-xl border p-3.5 text-left transition ${
+                    paymentMethod === "COD"
+                      ? "border-slate-950 bg-white ring-1 ring-slate-950 shadow-2xs"
+                      : "border-stone-200 bg-white/70 hover:bg-white hover:border-stone-300"
                   }`}
                 >
-                  <div className="flex items-start gap-3">
+                  <div className="flex items-center gap-3">
                     <div
-                      className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
-                        paymentMethod ===
-                        "RAZORPAY"
-                          ? "border-slate-950"
-                          : "border-slate-300"
+                      className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${
+                        paymentMethod === "COD" ? "border-slate-950" : "border-stone-300"
                       }`}
                     >
-                      {paymentMethod ===
-                      "RAZORPAY" ? (
-                        <div className="h-2.5 w-2.5 rounded-full bg-slate-950" />
+                      {paymentMethod === "COD" ? (
+                        <div className="h-2 w-2 rounded-full bg-slate-950" />
                       ) : null}
                     </div>
 
                     <div>
-                      <p className="font-medium text-slate-950">
-                        Online payment
+                      <p className="text-xs font-semibold text-slate-900">
+                        Cash on Delivery
                       </p>
-
-                      <p className="mt-1 text-xs leading-5 text-slate-500">
-                        Pay securely online with
-                        Razorpay.
+                      <p className="text-[11px] text-stone-500">
+                        Pay when your order is delivered &amp; inspected
                       </p>
                     </div>
                   </div>
@@ -874,57 +1038,50 @@ export function CheckoutReview() {
               </div>
             </div>
 
+            {/* Action CTA Button matching Cart page's lime/accent pill */}
             <button
               type="button"
               onClick={() => {
                 void handlePlaceOrder();
               }}
-              disabled={
-                isAuthLoading ||
-                isQuoting ||
-                isPlacingOrder ||
-                !quote
-              }
-              className="mt-7 w-full rounded-2xl bg-slate-950 px-5 py-4 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={isAuthLoading || isQuoting || isPlacingOrder || !quote}
+              className="mt-2 flex h-14 w-full items-center justify-center rounded-full bg-[#d6f088] text-[15px] font-semibold text-slate-950 shadow-sm transition hover:bg-[#c9e874] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {isPlacingOrder
-                ? "Processing..."
-                : isAuthLoading
-                  ? "Checking session..."
-                  : !isAuthenticated
-                    ? "Sign in to continue"
-                    : paymentMethod ===
-                      "COD"
-                      ? "Place COD order"
-                      : "Pay securely with Razorpay"}
+              {isPlacingOrder ? (
+                <div className="flex items-center gap-2">
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-950 border-t-transparent" />
+                  <span>Processing Order...</span>
+                </div>
+              ) : isAuthLoading ? (
+                "Checking session..."
+              ) : !isAuthenticated ? (
+                "Sign In to Complete Order"
+              ) : paymentMethod === "COD" ? (
+                "Confirm Cash on Delivery"
+              ) : (
+                "Pay with Razorpay"
+              )}
             </button>
 
-            <p className="mt-4 text-center text-xs leading-5 text-slate-500">
-              {paymentMethod ===
-              "COD"
-                ? "Your COD order will be confirmed immediately and payment will remain pending until delivery."
-                : "Your payment is verified by Klarone's backend before the order is marked paid."}
+            <p className="text-center text-[11px] text-stone-500">
+              Orders are backed by Klarone&apos;s 7-Day Replacement Guarantee &amp; Brand Warranty.
             </p>
+          </div>
 
+          <div className="text-center">
             <button
               type="button"
               onClick={() => {
                 void handleClearCart();
               }}
-              disabled={
-                isPlacingOrder
-              }
-              className="mt-5 w-full text-sm font-medium text-slate-400 transition hover:text-slate-700 disabled:opacity-50"
+              disabled={isPlacingOrder}
+              className="text-xs text-stone-400 hover:text-slate-900 transition"
             >
-              Clear cart
+              Clear Cart
             </button>
-
-            <p className="mt-4 text-center text-xs text-slate-400">
-              Currency: {currency}
-            </p>
-          </aside>
-        </div>
+          </div>
+        </aside>
       </div>
-    </main>
+    </div>
   );
 }

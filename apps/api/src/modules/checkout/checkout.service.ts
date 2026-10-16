@@ -175,6 +175,7 @@ export class CheckoutService {
 
   async createOrder(
     customer: AuthenticatedCustomer,
+    dto?: import("./dto/create-order.dto").CreateOrderDto,
   ) {
     const customerId =
       this.toBigInt(
@@ -562,6 +563,27 @@ export class CheckoutService {
 
         const zero = 0;
 
+        let shippingAddressId: bigint | null = null;
+        if (dto?.shippingAddress && dto.shippingAddress.addressLine1 && dto.shippingAddress.city) {
+          const addr = await tx.customerAddress.create({
+            data: {
+              customerId,
+              addressType: "SHIPPING",
+              recipientName: dto.shippingAddress.recipientName || null,
+              phone: dto.shippingAddress.phone || null,
+              addressLine1: dto.shippingAddress.addressLine1,
+              addressLine2: dto.shippingAddress.addressLine2 || null,
+              landmark: dto.shippingAddress.landmark || null,
+              city: dto.shippingAddress.city,
+              state: dto.shippingAddress.state,
+              postalCode: dto.shippingAddress.postalCode,
+              country: dto.shippingAddress.country || "India",
+              isDefault: false,
+            },
+          });
+          shippingAddressId = addr.id;
+        }
+
         const orderNumber =
           this.generateOrderNumber();
 
@@ -587,6 +609,7 @@ export class CheckoutService {
               totalAmount:
                 subtotal.toFixed(2),
               currency,
+              shippingAddressId,
               placedAt:
                 null,
             },

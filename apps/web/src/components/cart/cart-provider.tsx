@@ -72,6 +72,14 @@ function redirectAfterSessionExpiry(): void {
 
   clearStoredCustomerAccessToken();
 
+  const isProtectedPage =
+    window.location.pathname.startsWith("/account") ||
+    window.location.pathname.startsWith("/checkout");
+
+  if (!isProtectedPage) {
+    return;
+  }
+
   sessionStorage.setItem(
     AUTH_NOTICE_STORAGE_KEY,
     "Your session expired. Please sign in again.",

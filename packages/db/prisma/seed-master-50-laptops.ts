@@ -21,6 +21,37 @@ const connectionString = requiredEnv("DATABASE_URL");
 const adapter = new PrismaPg({ connectionString });
 const prisma = new PrismaClient({ adapter });
 
+function matchColorToHandle(colorName: string): string | null {
+  const c = colorName.toLowerCase();
+  if (c.includes("black")) return "black";
+  if (c.includes("silver")) return "silver";
+  if (c.includes("white")) return "white";
+  if (c.includes("grey") || c.includes("gray")) return "grey";
+  if (c.includes("blue") || c.includes("navy")) return c.includes("navy") ? "navy" : "blue";
+  if (c.includes("midnight")) return "navy";
+  if (c.includes("starlight")) return "silver";
+  if (c.includes("gold") || c.includes("dune")) return "gold";
+  if (c.includes("red")) return "red";
+  if (c.includes("green")) return "green";
+  return null;
+}
+
+function cleanGpu(gpu: string | undefined | null): string {
+  if (!gpu) return "Integrated Graphics";
+  return gpu
+    .replace(/ Laptop GPU/g, "")
+    .replace(/ GDDR6/g, "")
+    .trim();
+}
+
+function cleanDisplay(v: any): string {
+  const panel = v.specification?.displayPanelType?.trim() || "";
+  const res = v.specification?.displayResolution?.trim() || "";
+  if (panel.includes("OLED")) return res.includes("2.8K") ? "2.8K OLED" : "OLED";
+  if (panel.includes("IPS")) return res.includes("WUXGA") ? "WUXGA IPS" : (res.includes("2.2K") ? "2.2K IPS" : "IPS");
+  return panel || res || "Standard Display";
+}
+
 async function main() {
   console.log("Starting Master 50 Laptops Catalog Seed...");
 
@@ -62,6 +93,16 @@ async function main() {
   // 4. Fetch Collection IDs
   const allCollections = await prisma.collection.findMany();
   const collectionMap = new Map(allCollections.map((c) => [c.slug, c.id]));
+
+  // 4b. Fetch Color Metaobjects for swatches
+  const colorEntries = await prisma.metaobjectEntry.findMany({
+    where: { definition: { type: "color" } },
+    select: { id: true, handle: true },
+  });
+  const colorMap = new Map<string, bigint>();
+  for (const entry of colorEntries) {
+    colorMap.set(entry.handle.toLowerCase(), entry.id);
+  }
 
   // 5. Seed Products and Variants
   const masterList = [
@@ -239,6 +280,131 @@ async function main() {
             version: p.version,
           },
         });
+      }
+    }
+
+    // Link Product Options, Option Values & Variant Option Values for Shopify Matrix UI
+    const dbVariants = await prisma.productVariant.findMany({
+      where: { productId: product.id },
+      include: { specification: true },
+    });
+
+    if (dbVariants.length > 0) {
+      const distinctDisplays = new Set(
+        dbVariants.map((v) => v.specification?.displayPanelType?.trim()).filter(Boolean)
+      );
+      const hasDisplayDiff = distinctDisplays.size > 1;
+
+      type OptionDef = {
+        name: string;
+        displayOrder: number;
+        getValue: (v: any) => string;
+        isColor?: boolean;
+      };
+
+      const optionDefs: OptionDef[] = [
+        {
+          name: "Color",
+          displayOrder: 0,
+          getValue: (v) => v.color?.trim() || "Default",
+          isColor: true,
+        },
+        {
+          name: "Processor family",
+          displayOrder: 1,
+          getValue: (v) => v.specification?.cpuModel?.trim() || "Standard",
+        },
+        {
+          name: "RAM",
+          displayOrder: 2,
+          getValue: (v) => `${v.ramGb}GB`,
+        },
+        {
+          name: "Storage",
+          displayOrder: 3,
+          getValue: (v) => `${v.storageGb >= 1000 ? v.storageGb / 1000 + "TB" : v.storageGb + "GB"} SSD`,
+        },
+        {
+          name: "Graphics",
+          displayOrder: 4,
+          getValue: (v) => cleanGpu(v.specification?.gpuModel),
+        },
+      ];
+
+      if (hasDisplayDiff) {
+        optionDefs.push({
+          name: "Display",
+          displayOrder: 5,
+          getValue: (v) => cleanDisplay(v),
+        });
+      }
+
+      for (const optDef of optionDefs) {
+        const option = await prisma.productOption.upsert({
+          where: {
+            productId_name: {
+              productId: product.id,
+              name: optDef.name,
+            },
+          },
+          update: { displayOrder: optDef.displayOrder },
+          create: {
+            productId: product.id,
+            name: optDef.name,
+            displayOrder: optDef.displayOrder,
+          },
+        });
+
+        const distinctVals = [...new Set(dbVariants.map(optDef.getValue))];
+
+        for (let i = 0; i < distinctVals.length; i++) {
+          const valStr = distinctVals[i];
+          let metaentryId: bigint | null = null;
+          if (optDef.isColor) {
+            const handle = matchColorToHandle(valStr);
+            if (handle && colorMap.has(handle)) {
+              metaentryId = colorMap.get(handle)!;
+            }
+          }
+
+          const optionValue = await prisma.productOptionValue.upsert({
+            where: {
+              productOptionId_value: {
+                productOptionId: option.id,
+                value: valStr,
+              },
+            },
+            update: {
+              displayOrder: i,
+              metaobjectEntryId: metaentryId,
+            },
+            create: {
+              productOptionId: option.id,
+              value: valStr,
+              displayOrder: i,
+              metaobjectEntryId: metaentryId,
+            },
+          });
+
+          for (const variant of dbVariants) {
+            if (optDef.getValue(variant) === valStr) {
+              await prisma.productVariantOptionValue.upsert({
+                where: {
+                  productVariantId_productOptionId: {
+                    productVariantId: variant.id,
+                    productOptionId: option.id,
+                  },
+                },
+                update: { productOptionValueId: optionValue.id },
+                create: {
+                  productVariantId: variant.id,
+                  productOptionId: option.id,
+                  productOptionValueId: optionValue.id,
+                },
+              });
+            }
+          }
+        }
       }
     }
   }

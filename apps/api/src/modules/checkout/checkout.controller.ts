@@ -31,9 +31,11 @@ export class CheckoutController {
   async createOrder(
     @CurrentCustomer()
     customer: AuthenticatedCustomer,
+    @Body() body?: import("./dto/create-order.dto").CreateOrderDto,
   ) {
     return this.checkoutService.createOrder(
       customer,
+      body,
     );
   }
 

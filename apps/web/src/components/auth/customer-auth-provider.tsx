@@ -89,6 +89,16 @@ export function CustomerAuthProvider({
       return;
     }
 
+    // Only redirect to /login if the user is on an authenticated page (e.g. /account, /checkout)
+    // Never hijack or redirect the user away from public browsing routes (/, /laptops, /cart, etc.)
+    const isProtectedPage =
+      window.location.pathname.startsWith("/account") ||
+      window.location.pathname.startsWith("/checkout");
+
+    if (!isProtectedPage) {
+      return;
+    }
+
     const next =
       currentPath && currentPath !== "/"
         ? `?next=${encodeURIComponent(currentPath)}`

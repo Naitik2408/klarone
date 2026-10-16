@@ -1,4 +1,8 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
+import { useCart } from "../cart/cart-provider";
 import type { CatalogueProduct } from "../../types/catalogue";
 
 interface ProductCardProps {
@@ -25,109 +29,127 @@ function formatPrice(
 export function ProductCard({
   product,
 }: ProductCardProps) {
+  const { addItem } = useCart();
+  const [isAdding, setIsAdding] = useState(false);
+  const [justAdded, setJustAdded] = useState(false);
+
   const variant = product.variants[0];
   const primaryMedia = product.media[0];
+  const isSale =
+    variant &&
+    variant.compareAtPrice &&
+    Number(variant.compareAtPrice) > Number(variant.sellingPrice);
+
+  async function handleAddToCart(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!variant || isAdding) return;
+
+    setIsAdding(true);
+    try {
+      await addItem({
+        product: product as any,
+        variantId: variant.id,
+      });
+      setJustAdded(true);
+      setTimeout(() => setJustAdded(false), 1600);
+    } catch {
+      // Cart fallback
+    } finally {
+      setIsAdding(false);
+    }
+  }
 
   return (
-    <article className="group relative flex flex-col justify-between overflow-hidden rounded-[24px] bg-[#f0f2ee] transition-all duration-200 hover:shadow-sm">
-      {/* Badge (Sale / Brand) matching reference image */}
-      <div className="absolute left-3.5 top-3.5 z-20 flex items-center gap-1.5">
-        {variant && Number(variant.compareAtPrice) > Number(variant.sellingPrice) ? (
-          <span className="inline-block rounded-full bg-[#c64f3d] px-3 py-1 text-[11px] font-medium tracking-wide text-white shadow-2xs">
-            Sale
-          </span>
-        ) : (
-          <span className="inline-block rounded-full bg-[#6c8868] px-3 py-1 text-[11px] font-medium tracking-wide text-white shadow-2xs">
-            {product.brand.name}
-          </span>
-        )}
+    <article className="group relative flex flex-col justify-between rounded-[24px] bg-[#f0f2ee] p-4 transition-transform duration-200">
+      {/* Badge (Sale / Brand) matching reference Month's Top Product card */}
+      <div className="absolute left-4 top-4 z-20">
+        <span
+          className={`inline-block rounded-full px-3.5 py-1.5 text-[12px] font-medium tracking-wide text-white shadow-2xs ${
+            isSale ? "bg-[#c64f3d]" : "bg-[#6c8868]"
+          }`}
+        >
+          {isSale ? "Sale" : product.brand.name}
+        </span>
       </div>
 
       <Link
         href={`/laptops/${product.slug}`}
-        className="block flex-1"
+        className="block w-full"
       >
-        {/* Full-bleed Product Image (zero padding top, left, right) */}
-        <div className="relative flex aspect-square w-full items-center justify-center overflow-hidden bg-white/40">
+        {/* Clean Unified Product Stage matching homepage aspect-[4/4.4] */}
+        <div className="relative flex aspect-[4/4.4] min-h-[200px] w-full items-center justify-center overflow-hidden rounded-[18px] bg-white/40">
           {primaryMedia?.url ? (
             <img
               src={primaryMedia.url}
               alt={primaryMedia.altText ?? product.name}
-              className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-[1.02]"
+              className="h-full w-full object-contain p-4 transition-transform duration-200 group-hover:scale-105"
             />
           ) : (
-            <div className="flex h-full w-full items-center justify-center bg-stone-200/50 text-4xl">
+            <div className="flex h-full w-full items-center justify-center text-4xl text-stone-400 select-none">
               💻
             </div>
           )}
         </div>
 
-        {/* Card Content & Details (padded) */}
-        <div className="p-4 pb-2">
-          <span className="text-xs font-normal text-stone-500">
-            {product.category.name}
-          </span>
+        {/* Card Meta & Bottom Row */}
+        <div className="mt-4 flex items-end justify-between px-1 pb-1">
+          <div className="flex flex-col">
+            <span className="text-xs font-normal text-stone-500">
+              {product.category.name}
+            </span>
 
-          <h3 className="mt-1 text-[16px] font-semibold tracking-tight text-slate-900 group-hover:text-emerald-950 line-clamp-1">
-            {product.name}
-          </h3>
+            <h3 className="mt-1 text-[16px] font-semibold tracking-tight text-slate-900 group-hover:text-emerald-950 line-clamp-1">
+              {product.name}
+            </h3>
 
-          {variant ? (
             <div className="mt-1.5 flex items-baseline gap-2">
               <span className="text-sm font-semibold text-slate-900">
-                {formatPrice(variant.sellingPrice, variant.currency)}
+                {variant
+                  ? formatPrice(variant.sellingPrice, variant.currency)
+                  : "Check availability"}
               </span>
-              {variant.compareAtPrice &&
+
+              {variant?.compareAtPrice &&
               Number(variant.compareAtPrice) > Number(variant.sellingPrice) ? (
                 <span className="text-xs text-stone-400 line-through">
                   {formatPrice(variant.compareAtPrice, variant.currency)}
                 </span>
               ) : null}
             </div>
-          ) : (
-            <p className="mt-1 text-xs text-stone-500">Check availability</p>
-          )}
+          </div>
+
+          {/* Circular Add to Cart Button (44px / h-11 w-11) */}
+          <button
+            type="button"
+            onClick={handleAddToCart}
+            disabled={isAdding}
+            aria-label={`Add ${product.name} to cart`}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-slate-950 text-white shadow-sm transition-all duration-200 hover:scale-105 hover:bg-slate-800 active:scale-95 disabled:opacity-50 cursor-pointer"
+          >
+            {isAdding ? (
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+            ) : justAdded ? (
+              <span className="text-xs font-bold text-lime-300">✓</span>
+            ) : (
+              <svg
+                className="h-4 w-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth="2.2"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
+                />
+              </svg>
+            )}
+          </button>
         </div>
       </Link>
-
-      {/* Bottom Specs & 44px Circular Add to Cart Button */}
-      <div className="flex items-center justify-between px-4 pb-4 pt-1">
-        <div className="flex flex-wrap gap-1.5">
-          {variant?.ramGb ? (
-            <span className="rounded-md bg-white/80 px-2 py-0.5 text-[10px] font-medium text-stone-600 shadow-2xs">
-              {variant.ramGb}GB
-            </span>
-          ) : null}
-          {variant?.storageGb ? (
-            <span className="rounded-md bg-white/80 px-2 py-0.5 text-[10px] font-medium text-stone-600 shadow-2xs">
-              {variant.storageGb >= 1024
-                ? `${variant.storageGb / 1024}TB`
-                : `${variant.storageGb}GB`}
-            </span>
-          ) : null}
-        </div>
-
-        {/* 44px Circular Add to Cart Button */}
-        <Link
-          href={`/laptops/${product.slug}`}
-          aria-label={`View ${product.name}`}
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-black text-white shadow-md transition-all duration-200 hover:scale-105 hover:bg-stone-800 active:scale-95"
-        >
-          <svg
-            className="h-5 w-5 text-white fill-none stroke-white"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
-            <line x1="3" y1="6" x2="21" y2="6" />
-            <path d="M16 10a4 4 0 0 1-8 0" />
-          </svg>
-        </Link>
-      </div>
     </article>
   );
 }

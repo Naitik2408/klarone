@@ -311,6 +311,9 @@ export function StorefrontProductSection({ initialProducts = [] }: StorefrontPro
                 ? item.bottleType
                 : (["jar_clear", "tin_green", "bottle_white", "tin_white", "pouch_green", "jar_clear"][idx % 6] as ProductItem["bottleType"]);
 
+              const slug = isCatalogueProduct ? item.slug || item.id : item.id;
+              const productUrl = `/laptops/${slug}`;
+
               return (
                 <div
                   key={id}
@@ -319,7 +322,7 @@ export function StorefrontProductSection({ initialProducts = [] }: StorefrontPro
                 >
                   {/* Badge (Sale / Best Sellers) - larger with soft, lighter organic background colors */}
                   {(isSale || isBestSeller) && (
-                    <div className="absolute left-4 top-4 z-20">
+                    <div className="absolute left-4 top-4 z-20 pointer-events-none">
                       <span
                         className={`inline-block rounded-full px-3.5 py-1.5 text-[12px] font-medium tracking-wide text-white shadow-2xs ${
                           isSale ? "bg-[#c64f3d]" : "bg-[#6c8868]"
@@ -330,84 +333,90 @@ export function StorefrontProductSection({ initialProducts = [] }: StorefrontPro
                     </div>
                   )}
 
-                  {/* Clean Unified Product Stage */}
-                  <div className="relative flex aspect-[4/4.4] min-h-[250px] w-full items-center justify-center overflow-hidden rounded-[18px] bg-white/40">
-                    {isCatalogueProduct ? (
-                      primaryMedia?.url ? (
-                        <img
-                          src={primaryMedia.url}
-                          alt={primaryMedia.altText ?? name}
-                          className="h-full w-full object-contain p-4 transition-transform duration-200 group-hover:scale-105"
-                        />
+                  <Link href={productUrl} className="block w-full">
+                    {/* Clean Unified Product Stage */}
+                    <div className="relative flex aspect-[4/4.4] min-h-[250px] w-full items-center justify-center overflow-hidden rounded-[18px] bg-white/40">
+                      {isCatalogueProduct ? (
+                        primaryMedia?.url ? (
+                          <img
+                            src={primaryMedia.url}
+                            alt={primaryMedia.altText ?? name}
+                            className="h-full w-full object-contain p-4 transition-transform duration-200 group-hover:scale-105"
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-5xl text-stone-400 select-none">
+                            💻
+                          </div>
+                        )
                       ) : (
-                        <div className="flex h-full w-full items-center justify-center text-5xl text-stone-400 select-none">
-                          💻
-                        </div>
-                      )
-                    ) : (
-                      <BottleMockup type={bottleType} />
-                    )}
-                  </div>
+                        <BottleMockup type={bottleType} />
+                      )}
+                    </div>
 
-                  {/* Card Meta & Circular Cart Button (h-11 w-11 / 44px) */}
-                  <div className="mt-4 flex items-end justify-between px-1 pb-1">
-                    <div className="flex flex-col">
-                      <span className="text-xs font-normal text-stone-500">{category}</span>
-                      <h3 className="mt-1 text-[16px] font-semibold tracking-tight text-slate-900 line-clamp-1">
-                        {name}
-                      </h3>
-                      <div className="mt-1.5 flex items-baseline gap-2">
-                        <span className="text-sm font-semibold text-slate-900">
-                          {isCatalogueProduct
-                            ? new Intl.NumberFormat("en-IN", {
-                                style: "currency",
-                                currency: variant?.currency || "INR",
-                                maximumFractionDigits: 0,
-                              }).format(price)
-                            : `$${price.toFixed(2)}`}
-                        </span>
-                        {originalPrice && (
-                          <span className="text-xs text-stone-400 line-through">
+                    {/* Card Meta */}
+                    <div className="mt-4 flex items-end justify-between px-1 pb-1">
+                      <div className="flex flex-col">
+                        <span className="text-xs font-normal text-stone-500">{category}</span>
+                        <h3 className="mt-1 text-[16px] font-semibold tracking-tight text-slate-900 group-hover:text-emerald-950 transition-colors line-clamp-1">
+                          {name}
+                        </h3>
+                        <div className="mt-1.5 flex items-baseline gap-2">
+                          <span className="text-sm font-semibold text-slate-900">
                             {isCatalogueProduct
                               ? new Intl.NumberFormat("en-IN", {
                                   style: "currency",
                                   currency: variant?.currency || "INR",
                                   maximumFractionDigits: 0,
-                                }).format(originalPrice)
-                              : `$${originalPrice.toFixed(2)}`}
+                                }).format(price)
+                              : `$${price.toFixed(2)}`}
                           </span>
-                        )}
+                          {originalPrice && (
+                            <span className="text-xs text-stone-400 line-through">
+                              {isCatalogueProduct
+                                ? new Intl.NumberFormat("en-IN", {
+                                    style: "currency",
+                                    currency: variant?.currency || "INR",
+                                    maximumFractionDigits: 0,
+                                  }).format(originalPrice)
+                                : `$${originalPrice.toFixed(2)}`}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    </div>
 
-                    {/* Circular Add to Cart Button (44px) with original Shopping Bag Icon */}
-                    <motion.button
-                      whileTap={{ scale: 0.9 }}
-                      type="button"
-                      onClick={() => handleAddToCart(item)}
-                      disabled={addingId === id}
-                      aria-label={`Add ${name} to cart`}
-                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-slate-950 text-white shadow-sm transition-all duration-200 hover:scale-105 hover:bg-slate-800 disabled:opacity-50 cursor-pointer"
-                    >
-                      {addingId === id ? (
-                        <span className="text-xs font-bold text-lime-300">✓</span>
-                      ) : (
-                        <svg
-                          className="h-4 w-4"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                          strokeWidth="2.2"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
-                          />
-                        </svg>
-                      )}
-                    </motion.button>
-                  </div>
+                      {/* Circular Add to Cart Button (44px) with original Shopping Bag Icon */}
+                      <motion.button
+                        whileTap={{ scale: 0.9 }}
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          void handleAddToCart(item);
+                        }}
+                        disabled={addingId === id}
+                        aria-label={`Add ${name} to cart`}
+                        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-slate-950 text-white shadow-sm transition-all duration-200 hover:scale-105 hover:bg-slate-800 disabled:opacity-50 cursor-pointer"
+                      >
+                        {addingId === id ? (
+                          <span className="text-xs font-bold text-lime-300">✓</span>
+                        ) : (
+                          <svg
+                            className="h-4 w-4"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth="2.2"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
+                            />
+                          </svg>
+                        )}
+                      </motion.button>
+                    </div>
+                  </Link>
                 </div>
               );
             })}

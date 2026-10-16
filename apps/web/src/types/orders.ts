@@ -83,6 +83,20 @@ export interface OrdersListResponse {
   orders: OrderListItem[];
 }
 
+export interface OrderAddress {
+  id: string;
+  addressType: string;
+  recipientName: string | null;
+  phone: string | null;
+  addressLine1: string;
+  addressLine2: string | null;
+  landmark: string | null;
+  city: string;
+  state: string;
+  postalCode: string;
+  country: string;
+}
+
 export interface OrderDetail {
   id: string;
   orderNumber: string;
@@ -97,6 +111,8 @@ export interface OrderDetail {
   currency: string;
   billingAddressId: string | null;
   shippingAddressId: string | null;
+  shippingAddress?: OrderAddress | null;
+  billingAddress?: OrderAddress | null;
   recommendationSessionId: string | null;
   placedAt: string | null;
   createdAt: string;

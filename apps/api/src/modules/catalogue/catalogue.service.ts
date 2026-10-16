@@ -2505,6 +2505,30 @@ export class CatalogueService {
             isPrimary: true,
           },
         },
+        options: {
+          orderBy: { displayOrder: "asc" },
+          select: {
+            id: true,
+            name: true,
+            displayOrder: true,
+            values: {
+              orderBy: { displayOrder: "asc" },
+              select: {
+                id: true,
+                value: true,
+                displayOrder: true,
+                metaobjectEntry: {
+                  select: {
+                    id: true,
+                    handle: true,
+                    displayName: true,
+                    fields: true,
+                  },
+                },
+              },
+            },
+          },
+        },
         variants: {
           where: { status: "ACTIVE" },
           orderBy: { sellingPrice: "asc" },
@@ -2522,6 +2546,23 @@ export class CatalogueService {
             currency: true,
             warrantyMonths: true,
             specification: true,
+            optionValues: {
+              select: {
+                productOptionId: true,
+                productOptionValueId: true,
+                productOption: {
+                  select: { id: true, name: true },
+                },
+                productOptionValue: {
+                  select: { id: true, value: true },
+                },
+              },
+            },
+            inventories: {
+              select: {
+                quantityAvailable: true,
+              },
+            },
             ports: {
               orderBy: { portType: "asc" },
               select: {

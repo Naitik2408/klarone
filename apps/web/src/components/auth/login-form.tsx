@@ -349,21 +349,32 @@ export function LoginForm() {
                   aria-label="Submit"
                   className="absolute right-1.5 flex h-9 w-9 items-center justify-center rounded-lg text-slate-700 transition hover:bg-stone-100 hover:text-slate-950 disabled:opacity-30 disabled:hover:bg-transparent"
                 >
-                  <svg
-                    className="h-4 w-4"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth="2.2"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M14 5l7 7m0 0l-7 7m7-7H3"
-                    />
-                  </svg>
+                  {isSubmitting ? (
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-900 border-t-transparent" />
+                  ) : (
+                    <svg
+                      className="h-4 w-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth="2.2"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M14 5l7 7m0 0l-7 7m7-7H3"
+                      />
+                    </svg>
+                  )}
                 </button>
               </div>
+
+              {isSubmitting ? (
+                <div className="flex items-center gap-2 text-xs text-stone-500 pt-1">
+                  <div className="h-3 w-3 animate-spin rounded-full border-2 border-stone-600 border-t-transparent" />
+                  <span>Connecting to Klarone authentication...</span>
+                </div>
+              ) : null}
 
               {error ? (
                 <p className="rounded-xl bg-red-50 px-3.5 py-2.5 text-xs text-red-600">
@@ -383,11 +394,12 @@ export function LoginForm() {
                 <span>Sent to {identifier}</span>
                 <button
                   type="button"
+                  disabled={isSubmitting}
                   onClick={() => {
                     setStep("IDENTIFIER");
                     setError(null);
                   }}
-                  className="text-blue-600 hover:underline font-medium"
+                  className="text-blue-600 hover:underline font-medium disabled:opacity-50"
                 >
                   Change
                 </button>
@@ -406,10 +418,11 @@ export function LoginForm() {
                   inputMode="numeric"
                   maxLength={1}
                   value={digit}
+                  disabled={isSubmitting}
                   onChange={(e) => handleDigitChange(idx, e.target.value)}
                   onKeyDown={(e) => handleKeyDown(idx, e)}
                   onPaste={idx === 0 ? handlePaste : undefined}
-                  className={`h-16 w-12 rounded-2xl border text-center text-xl font-semibold text-slate-950 outline-none transition duration-150 ${
+                  className={`h-16 w-12 rounded-2xl border text-center text-xl font-semibold text-slate-950 outline-none transition duration-150 disabled:opacity-50 ${
                     digit
                       ? "border-slate-950 bg-stone-50"
                       : "border-stone-200 bg-white hover:border-stone-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
@@ -417,6 +430,13 @@ export function LoginForm() {
                 />
               ))}
             </div>
+
+            {isSubmitting ? (
+              <div className="mb-4 flex items-center justify-center gap-2 rounded-xl bg-stone-100 py-3 text-xs font-medium text-slate-700">
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-900 border-t-transparent" />
+                <span>Verifying code and signing you in...</span>
+              </div>
+            ) : null}
 
             {error ? (
               <p className="rounded-xl bg-red-50 px-3.5 py-2.5 text-xs text-red-600 mb-4">

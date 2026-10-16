@@ -143,11 +143,37 @@ export function OrderDetail({
 
   if (isAuthLoading || isLoading) {
     return (
-      <section className="mx-auto w-full max-w-5xl">
-        <div className="rounded-3xl border border-neutral-200 bg-white p-8">
-          <p className="text-sm text-neutral-500">
-            Loading order details...
+      <section className="mx-auto w-full max-w-5xl space-y-6">
+        <div className="flex items-center gap-3">
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-900 border-t-transparent" />
+          <p className="text-sm font-medium text-stone-500">
+            Retrieving order {orderNumber}...
           </p>
+        </div>
+
+        {/* Skeleton cards */}
+        <div className="rounded-3xl border border-stone-200/80 bg-white p-6 md:p-8 animate-pulse space-y-6">
+          <div className="flex items-center justify-between border-b border-stone-100 pb-5">
+            <div className="space-y-2">
+              <div className="h-6 w-48 rounded-lg bg-stone-200" />
+              <div className="h-4 w-32 rounded bg-stone-100" />
+            </div>
+            <div className="h-8 w-24 rounded-full bg-stone-200" />
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="h-20 rounded-2xl bg-stone-50 p-4 space-y-2">
+                <div className="h-3 w-16 rounded bg-stone-200" />
+                <div className="h-5 w-24 rounded bg-stone-200" />
+              </div>
+            ))}
+          </div>
+
+          <div className="space-y-4 pt-4">
+            <div className="h-24 rounded-2xl bg-stone-50" />
+            <div className="h-24 rounded-2xl bg-stone-50" />
+          </div>
         </div>
       </section>
     );
@@ -197,383 +223,254 @@ export function OrderDetail({
   }
 
   return (
-    <section className="mx-auto w-full max-w-5xl">
-      <div className="mb-6">
+    <div className="mx-auto w-full max-w-5xl">
+      {/* Top back navigation */}
+      <div className="mb-6 flex items-center justify-between">
         <Link
           href="/account/orders"
-          className="text-sm font-medium text-neutral-600 hover:text-neutral-950"
+          className="inline-flex items-center gap-1.5 text-xs font-medium text-stone-600 hover:text-slate-950 transition-colors"
         >
-          ← Back to orders
+          <span>←</span> Back to all orders
         </Link>
+        <span className="text-xs text-stone-400">Order ID: #{order.id}</span>
       </div>
 
-      <div className="space-y-5">
-        <section className="rounded-3xl border border-neutral-200 bg-white p-6 sm:p-8">
-          <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+      <div className="space-y-6">
+        {/* Order Header Card */}
+        <section className="rounded-3xl border border-stone-200/90 bg-[#f0f2ee]/60 p-6 sm:p-8 shadow-2xs">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <p className="text-sm font-medium text-neutral-500">
-                Order
-              </p>
-
-              <h1 className="mt-1 text-2xl font-semibold tracking-tight text-neutral-950 sm:text-3xl">
+              <span className="text-xs font-semibold tracking-wider uppercase text-stone-500">
+                Order Reference
+              </span>
+              <h1
+                style={{ fontFamily: "var(--font-serif), 'Instrument Serif', Georgia, serif" }}
+                className="mt-1 text-3xl font-normal tracking-tight text-slate-950 sm:text-4xl"
+              >
                 {order.orderNumber}
               </h1>
-
-              <p className="mt-2 text-sm text-neutral-500">
-                Created{" "}
-                {formatDate(
-                  order.createdAt,
-                )}
+              <p className="mt-2 text-xs text-stone-500">
+                Placed on {formatDate(order.createdAt)}
               </p>
             </div>
 
-            <span
-              className={`self-start rounded-full px-3 py-1.5 text-sm font-medium ${getStatusClasses(
-                order.status,
-              )}`}
-            >
-              {order.status}
-            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              <span
+                className={`rounded-full px-3.5 py-1 text-xs font-semibold tracking-wide uppercase ${getStatusClasses(
+                  order.status,
+                )}`}
+              >
+                {order.status}
+              </span>
+              <span className="rounded-full bg-stone-200/80 px-3 py-1 text-xs font-medium text-stone-700">
+                {order.paymentStatus === "PAID" ? "✓ Paid" : order.paymentStatus}
+              </span>
+            </div>
           </div>
 
-          <div className="mt-6 grid gap-3 sm:grid-cols-3">
-            <div className="rounded-2xl bg-neutral-50 p-4">
-              <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
-                Payment
-              </p>
+          <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4 border-t border-stone-200/70 pt-5">
+            <div className="rounded-2xl bg-white/80 p-3.5 border border-stone-200/60">
+              <p className="text-[11px] font-medium uppercase tracking-wide text-stone-400">Payment Status</p>
+              <p className="mt-1 text-xs font-semibold text-slate-900">{order.paymentStatus}</p>
+            </div>
 
-              <p className="mt-1 text-sm font-semibold text-neutral-950">
-                {order.paymentStatus}
+            <div className="rounded-2xl bg-white/80 p-3.5 border border-stone-200/60">
+              <p className="text-[11px] font-medium uppercase tracking-wide text-stone-400">Fulfillment</p>
+              <p className="mt-1 text-xs font-semibold text-slate-900">{order.fulfillmentStatus}</p>
+            </div>
+
+            <div className="rounded-2xl bg-white/80 p-3.5 border border-stone-200/60">
+              <p className="text-[11px] font-medium uppercase tracking-wide text-stone-400">Items Count</p>
+              <p className="mt-1 text-xs font-semibold text-slate-900">
+                {order.items.reduce((acc, it) => acc + it.quantity, 0)} Units
               </p>
             </div>
 
-            <div className="rounded-2xl bg-neutral-50 p-4">
-              <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
-                Fulfillment
-              </p>
-
-              <p className="mt-1 text-sm font-semibold text-neutral-950">
-                {order.fulfillmentStatus}
-              </p>
-            </div>
-
-            <div className="rounded-2xl bg-neutral-50 p-4">
-              <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
-                Total
-              </p>
-
-              <p className="mt-1 text-sm font-semibold text-neutral-950">
-                {formatCurrency(
-                  order.totalAmount,
-                  order.currency,
-                )}
+            <div className="rounded-2xl bg-white/80 p-3.5 border border-stone-200/60">
+              <p className="text-[11px] font-medium uppercase tracking-wide text-stone-400">Total Charged</p>
+              <p className="mt-1 text-xs font-bold text-slate-900">
+                {formatCurrency(order.totalAmount, order.currency)}
               </p>
             </div>
           </div>
         </section>
 
-        <section className="rounded-3xl border border-neutral-200 bg-white p-6 sm:p-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-neutral-500">
-                Items
-              </p>
-
-              <h2 className="mt-1 text-xl font-semibold text-neutral-950">
-                Order summary
-              </h2>
-            </div>
-
-            <span className="text-sm text-neutral-500">
-              {order.items.reduce(
-                (total, item) =>
-                  total + item.quantity,
-                0,
-              )}{" "}
-              {order.items.reduce(
-                (total, item) =>
-                  total + item.quantity,
-                0,
-              ) === 1
-                ? "item"
-                : "items"}
-            </span>
-          </div>
-
-          <div className="mt-6 divide-y divide-neutral-100">
-            {order.items.map(
-              (item) => (
-                <div
-                  key={item.id}
-                  className="flex gap-4 py-5 first:pt-0 last:pb-0"
-                >
-                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-neutral-100 text-xs font-semibold text-neutral-500">
-                    LAP
-                  </div>
-
-                  <div className="min-w-0 flex-1">
-                    <h3 className="font-medium text-neutral-950">
-                      {item.productName}
-                    </h3>
-
-                    <p className="mt-1 text-sm text-neutral-500">
-                      SKU: {item.sku}
-                    </p>
-
-                    {item.productVariant ? (
-                      <p className="mt-1 text-sm text-neutral-500">
-                        {item.productVariant
-                          .variantName ??
-                          "Standard configuration"}
-                        {" · "}
-                        {item.productVariant
-                          .ramGb
-                          ? `${item.productVariant.ramGb}GB RAM`
-                          : ""}
-                        {item.productVariant
-                          .storageGb
-                          ? ` · ${item.productVariant.storageGb}GB storage`
-                          : ""}
-                      </p>
-                    ) : null}
-
-                    <p className="mt-2 text-sm text-neutral-600">
-                      {item.quantity} ×{" "}
-                      {formatCurrency(
-                        item.unitPrice,
-                        order.currency,
-                      )}
-                    </p>
-                  </div>
-
-                  <div className="shrink-0 text-right">
-                    <p className="font-semibold text-neutral-950">
-                      {formatCurrency(
-                        item.totalAmount,
-                        order.currency,
-                      )}
-                    </p>
-                  </div>
-                </div>
-              ),
-            )}
-          </div>
-        </section>
-
-        <section className="rounded-3xl border border-neutral-200 bg-white p-6 sm:p-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-neutral-500">
-                Amount
-              </p>
-
-              <h2 className="mt-1 text-xl font-semibold text-neutral-950">
-                Payment summary
-              </h2>
-            </div>
-          </div>
-
-          <div className="mt-6 space-y-3 text-sm">
-            <div className="flex justify-between gap-4">
-              <span className="text-neutral-600">
-                Subtotal
-              </span>
-
-              <span className="font-medium text-neutral-950">
-                {formatCurrency(
-                  order.subtotal,
-                  order.currency,
-                )}
-              </span>
-            </div>
-
-            <div className="flex justify-between gap-4">
-              <span className="text-neutral-600">
-                Discount
-              </span>
-
-              <span className="font-medium text-neutral-950">
-                {formatCurrency(
-                  order.discountAmount,
-                  order.currency,
-                )}
-              </span>
-            </div>
-
-            <div className="flex justify-between gap-4">
-              <span className="text-neutral-600">
-                Shipping
-              </span>
-
-              <span className="font-medium text-neutral-950">
-                {formatCurrency(
-                  order.shippingAmount,
-                  order.currency,
-                )}
-              </span>
-            </div>
-
-            <div className="flex justify-between gap-4">
-              <span className="text-neutral-600">
-                Tax
-              </span>
-
-              <span className="font-medium text-neutral-950">
-                {formatCurrency(
-                  order.taxAmount,
-                  order.currency,
-                )}
-              </span>
-            </div>
-
-            <div className="border-t border-neutral-100 pt-4">
-              <div className="flex justify-between gap-4">
-                <span className="text-base font-semibold text-neutral-950">
-                  Total
-                </span>
-
-                <span className="text-base font-semibold text-neutral-950">
-                  {formatCurrency(
-                    order.totalAmount,
-                    order.currency,
-                  )}
-                </span>
+        {/* 2-column layout: Items on Left, Address & Timeline on Right */}
+        <div className="grid grid-cols-12 gap-6 items-start">
+          {/* Left Column: Products List */}
+          <div className="col-span-12 lg:col-span-7 space-y-6">
+            <section className="rounded-3xl border border-stone-200/90 bg-white p-6 shadow-2xs">
+              <div className="border-b border-stone-100 pb-4 mb-4">
+                <h2 className="text-base font-semibold text-slate-900">
+                  Ordered Laptops &amp; Items ({order.items.length})
+                </h2>
               </div>
-            </div>
-          </div>
-        </section>
 
-        <section className="rounded-3xl border border-neutral-200 bg-white p-6 sm:p-8">
-          <p className="text-sm font-medium text-neutral-500">
-            Order timeline
-          </p>
+              <div className="divide-y divide-stone-100">
+                {order.items.map((item) => (
+                  <article key={item.id} className="py-4 first:pt-0 last:pb-0">
+                    <div className="flex gap-4 items-start">
+                      <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-[#f0f2ee] p-2 text-2xl">
+                        💻
+                      </div>
 
-          <h2 className="mt-1 text-xl font-semibold text-neutral-950">
-            Status history
-          </h2>
-
-          {order.statusHistory.length ===
-          0 ? (
-            <p className="mt-5 text-sm text-neutral-500">
-              No status history is available
-              yet.
-            </p>
-          ) : (
-            <div className="mt-6 space-y-5">
-              {order.statusHistory.map(
-                (entry, index) => (
-                  <div
-                    key={entry.id}
-                    className="flex gap-4"
-                  >
-                    <div className="flex flex-col items-center">
-                      <div
-                        className={`mt-1 h-3 w-3 rounded-full ${
-                          index ===
-                          order.statusHistory
-                            .length -
-                            1
-                            ? "bg-neutral-950"
-                            : "bg-neutral-300"
-                        }`}
-                      />
-
-                      {index <
-                      order.statusHistory
-                        .length -
-                        1 ? (
-                        <div className="mt-2 h-full w-px bg-neutral-200" />
-                      ) : null}
-                    </div>
-
-                    <div className="pb-1">
-                      <p className="font-medium text-neutral-950">
-                        {entry.newStatus}
-                      </p>
-
-                      <p className="mt-1 text-sm text-neutral-500">
-                        {formatDate(
-                          entry.createdAt,
+                      <div className="min-w-0 flex-1">
+                        {item.productVariant?.product ? (
+                          <Link
+                            href={`/laptops/${item.productVariant.product.slug}`}
+                            className="block font-semibold text-sm text-slate-900 hover:text-emerald-900 transition-colors line-clamp-1"
+                          >
+                            {item.productName}
+                          </Link>
+                        ) : (
+                          <h3 className="font-semibold text-sm text-slate-900">{item.productName}</h3>
                         )}
-                      </p>
 
-                      {entry.notes ? (
-                        <p className="mt-2 text-sm leading-6 text-neutral-600">
-                          {entry.notes}
+                        <p className="mt-1 text-xs text-stone-500">
+                          {[
+                            item.productVariant?.ramGb ? `${item.productVariant.ramGb}GB RAM` : null,
+                            item.productVariant?.storageGb ? `${item.productVariant.storageGb}GB SSD` : null,
+                            item.productVariant?.variantName ?? null,
+                          ]
+                            .filter(Boolean)
+                            .join(" · ") || `SKU: ${item.sku}`}
                         </p>
-                      ) : null}
+
+                        <div className="mt-2 flex items-center gap-3 text-xs text-stone-600">
+                          <span className="rounded bg-stone-100 px-2 py-0.5 font-medium text-slate-700">
+                            Qty: {item.quantity}
+                          </span>
+                          <span>{formatCurrency(item.unitPrice, order.currency)} each</span>
+                        </div>
+                      </div>
+
+                      <div className="text-right shrink-0">
+                        <p className="text-sm font-semibold text-slate-900">
+                          {formatCurrency(item.totalAmount, order.currency)}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                ),
+                  </article>
+                ))}
+              </div>
+            </section>
+
+            {/* Financial summary */}
+            <section className="rounded-3xl border border-stone-200/90 bg-[#f0f2ee]/50 p-6 shadow-2xs">
+              <h2 className="text-sm font-semibold text-slate-900 mb-4">Payment Breakdown</h2>
+              <div className="space-y-3 text-xs text-stone-600">
+                <div className="flex justify-between">
+                  <span>Subtotal</span>
+                  <span className="font-medium text-slate-900">{formatCurrency(order.subtotal, order.currency)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Delivery Charges</span>
+                  <span className="font-medium text-emerald-800">
+                    {Number(order.shippingAmount) === 0 ? "FREE (Priority Delivery)" : formatCurrency(order.shippingAmount, order.currency)}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Taxes &amp; GST</span>
+                  <span className="font-medium text-slate-900">{formatCurrency(order.taxAmount, order.currency)}</span>
+                </div>
+                <div className="border-t border-stone-200/80 pt-3 flex justify-between items-baseline">
+                  <span className="text-sm font-semibold text-slate-900">Final Total</span>
+                  <span className="text-2xl font-bold text-slate-950 tracking-tight">
+                    {formatCurrency(order.totalAmount, order.currency)}
+                  </span>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          {/* Right Column: Delivery Address & Status Timeline */}
+          <div className="col-span-12 lg:col-span-5 space-y-6">
+            {/* Delivery Destination */}
+            <section className="rounded-3xl border border-stone-200/90 bg-white p-6 shadow-2xs">
+              <div className="flex items-center gap-2.5 mb-4 border-b border-stone-100 pb-3">
+                <svg className="h-4 w-4 text-stone-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                <h2 className="text-sm font-semibold text-slate-900">Delivery Destination</h2>
+              </div>
+
+              {order.shippingAddress ? (
+                <div className="space-y-1.5 text-xs text-stone-600 leading-relaxed">
+                  <p className="font-semibold text-sm text-slate-900">
+                    {order.shippingAddress.recipientName || "Valued Customer"}
+                  </p>
+                  {order.shippingAddress.phone ? (
+                    <p className="text-stone-500 font-medium">{order.shippingAddress.phone}</p>
+                  ) : null}
+                  <p className="pt-1">{order.shippingAddress.addressLine1}</p>
+                  {order.shippingAddress.addressLine2 ? (
+                    <p>{order.shippingAddress.addressLine2}</p>
+                  ) : null}
+                  <p>
+                    {order.shippingAddress.city}, {order.shippingAddress.state} - {order.shippingAddress.postalCode}
+                  </p>
+                  <p className="font-medium text-stone-400">{order.shippingAddress.country}</p>
+                </div>
+              ) : (
+                <div className="text-xs text-stone-500 leading-relaxed">
+                  <p className="font-medium text-slate-900">Klarone Direct Delivery</p>
+                  <p className="mt-1">Hand-delivered in Kolkata or priority express all-India dispatch.</p>
+                </div>
               )}
-            </div>
-          )}
-        </section>
+            </section>
 
-        {order.payments.length > 0 ? (
-          <section className="rounded-3xl border border-neutral-200 bg-white p-6 sm:p-8">
-            <p className="text-sm font-medium text-neutral-500">
-              Payments
-            </p>
+            {/* Timeline */}
+            <section className="rounded-3xl border border-stone-200/90 bg-white p-6 shadow-2xs">
+              <h2 className="text-sm font-semibold text-slate-900 mb-4 border-b border-stone-100 pb-3">
+                Order Activity &amp; Updates
+              </h2>
 
-            <h2 className="mt-1 text-xl font-semibold text-neutral-950">
-              Payment records
-            </h2>
-
-            <div className="mt-6 space-y-3">
-              {order.payments.map(
-                (payment) => (
-                  <div
-                    key={payment.id}
-                    className="flex flex-col gap-2 rounded-2xl bg-neutral-50 p-4 sm:flex-row sm:items-center sm:justify-between"
-                  >
-                    <div>
-                      <p className="font-medium text-neutral-950">
-                        {payment.provider}
-                      </p>
-
-                      <p className="mt-1 text-xs text-neutral-500">
-                        {formatDate(
-                          payment.createdAt,
-                        )}
-                      </p>
+              {order.statusHistory.length === 0 ? (
+                <p className="text-xs text-stone-400">Order confirmed. Updates will appear as dispatch commences.</p>
+              ) : (
+                <div className="space-y-4">
+                  {order.statusHistory.map((entry, index) => (
+                    <div key={entry.id} className="flex gap-3">
+                      <div className="flex flex-col items-center">
+                        <div
+                          className={`mt-1 h-2.5 w-2.5 rounded-full ${
+                            index === order.statusHistory.length - 1 ? "bg-slate-950" : "bg-stone-300"
+                          }`}
+                        />
+                        {index < order.statusHistory.length - 1 ? (
+                          <div className="mt-1 h-full w-px bg-stone-200" />
+                        ) : null}
+                      </div>
+                      <div className="pb-1">
+                        <p className="text-xs font-semibold text-slate-900">{entry.newStatus}</p>
+                        <p className="text-[11px] text-stone-400">{formatDate(entry.createdAt)}</p>
+                        {entry.notes ? <p className="mt-1 text-xs text-stone-600">{entry.notes}</p> : null}
+                      </div>
                     </div>
-
-                    <div className="sm:text-right">
-                      <p className="font-medium text-neutral-950">
-                        {formatCurrency(
-                          payment.amount,
-                          payment.currency,
-                        )}
-                      </p>
-
-                      <p className="mt-1 text-xs text-neutral-500">
-                        {payment.status}
-                      </p>
-                    </div>
-                  </div>
-                ),
+                  ))}
+                </div>
               )}
-            </div>
-          </section>
-        ) : null}
+            </section>
+          </div>
+        </div>
 
-        <div className="flex flex-wrap gap-3">
+        {/* Action navigation */}
+        <div className="pt-4 flex flex-wrap gap-3">
           <Link
             href="/account/orders"
-            className="rounded-2xl border border-neutral-300 px-5 py-3 text-sm font-medium text-neutral-800 transition hover:bg-white"
+            className="rounded-full border border-stone-300 bg-white px-5 py-3 text-xs font-semibold text-slate-900 transition hover:bg-stone-50"
           >
-            Back to orders
+            ← Back to orders list
           </Link>
-
           <Link
             href="/laptops"
-            className="rounded-2xl bg-neutral-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-neutral-800"
+            className="rounded-full bg-[#d6f088] px-6 py-3 text-xs font-semibold text-slate-950 transition hover:bg-[#c9e874]"
           >
-            Continue shopping
+            Browse More Laptops
           </Link>
         </div>
       </div>
-    </section>
+    </div>
   );
 }

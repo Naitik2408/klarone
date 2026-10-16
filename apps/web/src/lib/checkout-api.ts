@@ -60,8 +60,24 @@ export async function getCheckoutQuote(
   );
 }
 
+export interface CreateOrderPayload {
+  shippingAddress?: {
+    recipientName?: string;
+    phone?: string;
+    addressLine1: string;
+    addressLine2?: string;
+    landmark?: string;
+    city: string;
+    state: string;
+    postalCode: string;
+    country?: string;
+  };
+  notes?: string;
+}
+
 export async function createCheckoutOrder(
   accessToken: string,
+  payload?: CreateOrderPayload,
 ): Promise<CreateCheckoutOrderResponse> {
   const response = await fetch(
     `${API_BASE_URL}/checkout/order`,
@@ -69,7 +85,9 @@ export async function createCheckoutOrder(
       method: "POST",
       headers: {
         Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
       },
+      body: payload ? JSON.stringify(payload) : undefined,
       cache: "no-store",
     },
   );
