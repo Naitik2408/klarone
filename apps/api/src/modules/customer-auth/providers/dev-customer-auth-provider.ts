@@ -65,22 +65,21 @@ export class DevCustomerAuthProvider
     console.log(`[Customer Auth OTP] Sent to: ${normalized} | Code: ${generatedOtp}`);
     console.log("=================================================");
 
-    // Dispatch real email via SMTP if email identifier (fire-and-forget in background so UI responds instantly)
-    if (isEmail && process.env.SMTP_USER && process.env.SMTP_PASS) {
+    // Dispatch real email via Resend if email identifier (fire-and-forget in background so UI responds instantly)
+    if (isEmail) {
       void (async () => {
         try {
-          const nodemailer = await import("nodemailer");
-          const transporter = nodemailer.createTransport({
-            host: process.env.SMTP_HOST || "smtp.gmail.com",
-            port: Number(process.env.SMTP_PORT || 587),
-            secure: false,
-            auth: {
-              user: process.env.SMTP_USER,
-              pass: process.env.SMTP_PASS,
-            },
-          });
-          await transporter.sendMail({
-            from: `"Klarone" <${process.env.SMTP_USER}>`,
+          const resendApiKey = process.env.RESEND_API_KEY;
+          if (!resendApiKey) {
+            console.log(`[Resend Dev] No RESEND_API_KEY set. Development OTP is ${generatedOtp}`);
+            return;
+          }
+          const { Resend } = await import("resend");
+          const resend = new Resend(resendApiKey);
+          const fromEmail = process.env.RESEND_FROM_EMAIL || "Klarone <onboarding@resend.dev>";
+
+          const res = await resend.emails.send({
+            from: fromEmail,
             to: normalized,
             subject: `${generatedOtp} is your Klarone verification code`,
             html: `
@@ -94,9 +93,13 @@ export class DevCustomerAuthProvider
               </div>
             `,
           });
-          console.log(`[SMTP Live] Verification code ${generatedOtp} successfully delivered to ${normalized}`);
+          if (res.error) {
+            console.error("[Resend Error] Failed to send email OTP:", res.error);
+          } else {
+            console.log(`[Resend Live] Verification code ${generatedOtp} successfully delivered to ${normalized}. ID: ${res.data?.id}`);
+          }
         } catch (mailErr) {
-          console.error("[SMTP Error] Failed to send email OTP:", mailErr);
+          console.error("[Resend Error] Exception sending email OTP:", mailErr);
         }
       })();
     }

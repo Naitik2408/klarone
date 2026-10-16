@@ -309,7 +309,7 @@ export function LoginForm() {
               </div>
             ) : null}
 
-            {/* Continue with Google Action */}
+            {/* Temporarily commented out Continue with Google option
             <button
               type="button"
               onClick={handleGoogleAuth}
@@ -324,13 +324,13 @@ export function LoginForm() {
               <span>Continue with Google</span>
             </button>
 
-            {/* Divider: or */}
             <div className="relative my-6 flex items-center justify-center">
               <div className="w-full border-t border-stone-200" />
               <span className="absolute bg-white px-3 text-xs text-stone-400">
                 or
               </span>
             </div>
+            */}
 
             {/* Smart Phone / Email Input Form */}
             <form onSubmit={handleRequestOtp} className="space-y-4">
