@@ -14,7 +14,7 @@ export default function CheckoutPage() {
     <div className="min-h-screen bg-[#fafafa]">
       <StorefrontHeader />
 
-      <main className="mx-auto max-w-7xl px-4 pt-24 pb-16 sm:px-6 md:pt-32 lg:px-8">
+      <main className="mx-auto max-w-7xl px-4 pt-24 pb-24 sm:px-6 sm:pt-28 md:pt-36 md:pb-20 lg:px-8">
         <CheckoutReview />
       </main>
 
