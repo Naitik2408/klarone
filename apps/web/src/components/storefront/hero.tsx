@@ -135,8 +135,8 @@ export function StorefrontHero() {
           </motion.div>
         </AnimatePresence>
 
-        {/* Bottom Pagination & Interactive Controls */}
-        <div className="mt-auto mb-3 sm:mb-0 pb-4 sm:pb-0 flex w-full max-w-xs items-center justify-between text-white/95 sm:mt-12 sm:w-auto sm:gap-6 z-20">
+        {/* Bottom Pagination & Interactive Controls (lifted ~1.5cm / 56px on mobile screens) */}
+        <div className="mt-auto mb-14 sm:mb-0 pb-2 sm:pb-0 flex w-full max-w-xs items-center justify-between text-white/95 sm:mt-12 sm:w-auto sm:gap-6 z-20">
           {/* Slide Indicator */}
           <span className="min-w-[36px] text-xs font-medium tracking-widest sm:text-sm">
             {currentSlideIndex + 1} / {SLIDES.length}

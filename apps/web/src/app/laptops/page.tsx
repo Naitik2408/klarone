@@ -77,8 +77,15 @@ export default async function LaptopsPage({
   const page = getPageNumber(params.page);
 
   const [categories, facets, productsResponse] = await Promise.all([
-    getCategories(),
-    getFacets({ categorySlug, collectionSlug }),
+    getCategories().catch(() => []),
+    getFacets({ categorySlug, collectionSlug }).catch(() => ({
+      brands: [],
+      collections: [],
+      priceRange: { min: 0, max: 350000 },
+      ramOptions: [],
+      storageOptions: [],
+      availability: { inStockCount: 0, outOfStockCount: 0 },
+    })),
     getProducts({
       search,
       brandSlug,
@@ -93,7 +100,15 @@ export default async function LaptopsPage({
       sortBy,
       page,
       pageSize: 12,
-    }),
+    }).catch(() => ({
+      items: [],
+      pagination: {
+        page: 1,
+        pageSize: 12,
+        total: 0,
+        totalPages: 0,
+      },
+    })),
   ]);
 
   // Clean categories for horizontal carousel (ignore root laptops)
