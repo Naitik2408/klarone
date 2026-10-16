@@ -122,8 +122,8 @@ export default async function LaptopsPage({
       {/* 1. Floating Storefront Header */}
       <StorefrontHeader />
 
-      {/* Top spacing to account for floating header */}
-      <main className="pt-14 sm:pt-20 md:pt-24 overflow-x-hidden">
+      {/* Top spacing to account for floating header (64px mobile header + 12px breathing space) */}
+      <main className="pt-[76px] sm:pt-20 md:pt-24 overflow-x-hidden">
         <CatalogueListingLayout
           products={productsResponse.items}
           facets={facets}

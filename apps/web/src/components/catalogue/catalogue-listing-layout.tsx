@@ -69,7 +69,7 @@ export function CatalogueListingLayout({
   };
 
   return (
-    <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8 pt-1 sm:pt-3 pb-8">
+    <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8 pt-3 sm:pt-4 pb-8">
       {/* 1. BREADCRUMBS */}
       <nav className="mb-4 sm:mb-6 flex items-center gap-2 text-xs sm:text-[14px] font-medium text-stone-500">
         {breadcrumbs.map((crumb, idx) => (

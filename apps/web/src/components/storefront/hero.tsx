@@ -136,7 +136,7 @@ export function StorefrontHero() {
         </AnimatePresence>
 
         {/* Bottom Pagination & Interactive Controls */}
-        <div className="mt-auto flex w-full max-w-xs items-center justify-between text-white/95 sm:mt-12 sm:w-auto sm:gap-6">
+        <div className="mt-auto mb-3 sm:mb-0 pb-4 sm:pb-0 flex w-full max-w-xs items-center justify-between text-white/95 sm:mt-12 sm:w-auto sm:gap-6 z-20">
           {/* Slide Indicator */}
           <span className="min-w-[36px] text-xs font-medium tracking-widest sm:text-sm">
             {currentSlideIndex + 1} / {SLIDES.length}
@@ -152,14 +152,14 @@ export function StorefrontHero() {
           </div>
 
           {/* Navigation Arrows */}
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2 relative z-30">
             <button
               type="button"
               onClick={prevSlide}
               aria-label="Previous slide"
-              className="flex h-8 w-8 items-center justify-center rounded-full text-white/80 transition-colors duration-150 hover:bg-white/15 hover:text-white active:scale-90"
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-white/20 text-white shadow-xs backdrop-blur-xs transition-all duration-150 hover:bg-white/30 active:scale-90"
             >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+              <svg className="h-4 w-4 stroke-[3px]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
               </svg>
             </button>
@@ -167,9 +167,9 @@ export function StorefrontHero() {
               type="button"
               onClick={nextSlide}
               aria-label="Next slide"
-              className="flex h-8 w-8 items-center justify-center rounded-full text-white/80 transition-colors duration-150 hover:bg-white/15 hover:text-white active:scale-90"
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-white/20 text-white shadow-xs backdrop-blur-xs transition-all duration-150 hover:bg-white/30 active:scale-90"
             >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+              <svg className="h-4 w-4 stroke-[3px]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
               </svg>
             </button>
