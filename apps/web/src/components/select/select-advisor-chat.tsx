@@ -218,40 +218,18 @@ export function SelectAdvisorChat() {
       <div className="flex-1 overflow-y-auto px-4 py-4 sm:py-6 sm:px-6">
         <div className="mx-auto max-w-4xl pb-4">
         {messages.length === 0 ? (
-          <div className="flex min-h-[calc(100dvh-200px)] flex-col items-center justify-center py-4 text-center sm:py-8">
+          <div className="flex min-h-[calc(100dvh-200px)] flex-col items-center justify-center py-6 text-center sm:py-12">
             {/* Center Brand Identity */}
-            <div className="flex h-12 w-12 sm:h-16 sm:w-16 items-center justify-center rounded-2xl sm:rounded-3xl bg-[#0b241b] text-xl sm:text-2xl text-[#d6f088] shadow-md">
+            <div className="flex h-14 w-14 sm:h-16 sm:w-16 items-center justify-center rounded-2xl sm:rounded-3xl bg-[#0b241b] text-2xl sm:text-3xl text-[#d6f088] shadow-md">
               ⚡
             </div>
 
-            <h2 className="mt-4 font-serif text-2xl font-normal tracking-tight text-slate-900 sm:text-4xl">
+            <h2 className="mt-5 font-serif text-3xl font-normal tracking-tight text-slate-900 sm:text-5xl">
               Meet Klarone Select
             </h2>
-            <p className="mt-2 max-w-md px-2 text-xs leading-relaxed text-stone-600 sm:max-w-lg sm:text-base">
-              Unlike generic search, Klarone Select analyzes your exact software, display needs, portability, and budget to find genuine OEM machines with transparent match reasons.
+            <p className="mt-3 max-w-md px-4 text-xs sm:text-sm leading-relaxed text-stone-600 sm:max-w-lg">
+              Describe your workload, favorite software, battery needs, and budget. Our AI matches verified laptops with transparent specification fit analysis.
             </p>
-
-            {/* Quick Starters Grid */}
-            <div className="mt-6 grid w-full max-w-2xl grid-cols-1 gap-2.5 text-left sm:mt-8 sm:grid-cols-2 sm:gap-3">
-              {INITIAL_SUGGESTIONS.map((item, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  onClick={() => handleSubmit(item.prompt)}
-                  className="group flex flex-col justify-between rounded-xl sm:rounded-2xl border border-stone-200 bg-[#f9faf7] p-3 sm:p-4 text-left transition duration-200 hover:-translate-y-0.5 hover:border-[#8b9c75] hover:bg-white hover:shadow-md active:scale-[0.99]"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg sm:text-xl">{item.icon}</span>
-                    <span className="text-xs sm:text-sm font-semibold text-slate-900">
-                      {item.title}
-                    </span>
-                  </div>
-                  <p className="mt-1.5 text-[11px] sm:text-xs leading-relaxed text-stone-500 line-clamp-2">
-                    {item.prompt}
-                  </p>
-                </button>
-              ))}
-            </div>
           </div>
         ) : (
           <div className="space-y-6">
@@ -261,14 +239,8 @@ export function SelectAdvisorChat() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.25 }}
-                className={`flex gap-3.5 ${msg.sender === "user" ? "justify-end" : "justify-start"}`}
+                className={`flex ${msg.sender === "user" ? "justify-end" : "justify-start"}`}
               >
-                {msg.sender === "advisor" && (
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-[#0b241b] text-xs font-bold text-[#d6f088] shadow-xs">
-                    KS
-                  </div>
-                )}
-
                 <div className={`max-w-2xl ${msg.sender === "user" ? "items-end" : "items-start"}`}>
                   {/* Speech Bubble */}
                   <div
@@ -422,16 +394,13 @@ export function SelectAdvisorChat() {
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="flex items-center gap-3.5 text-stone-500"
+                className="flex items-center text-stone-500"
               >
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-[#0b241b] text-xs font-bold text-[#d6f088]">
-                  KS
-                </div>
-                <div className="flex items-center gap-1.5 rounded-full bg-[#f0f2ee] px-4 py-2.5">
-                  <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-stone-600 [animation-delay:-0.3s]" />
-                  <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-stone-600 [animation-delay:-0.15s]" />
-                  <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-stone-600" />
-                  <span className="ml-2 text-xs font-medium text-stone-600">
+                <div className="flex items-center gap-2 rounded-full bg-white border border-stone-200/80 px-4 py-2.5 shadow-xs">
+                  <span className="h-2 w-2 animate-bounce rounded-full bg-[#0b241b] [animation-delay:-0.3s]" />
+                  <span className="h-2 w-2 animate-bounce rounded-full bg-[#0b241b] [animation-delay:-0.15s]" />
+                  <span className="h-2 w-2 animate-bounce rounded-full bg-[#0b241b]" />
+                  <span className="ml-1 text-xs font-medium text-stone-700">
                     Evaluating laptop specs and thermal profiles...
                   </span>
                 </div>
@@ -444,19 +413,23 @@ export function SelectAdvisorChat() {
         </div>
       </div>
 
-      {/* Sleek Floating Prompt Input Bar */}
-      <div className="shrink-0 border-t border-stone-200/70 bg-[#f0f2ee]/95 px-3 py-2 sm:px-6 sm:py-3.5 backdrop-blur-md">
+      {/* Modern, Highly Refined Floating Prompt Input Bar */}
+      <div className="shrink-0 border-t border-stone-200/80 bg-[#f0f2ee]/90 px-3 py-3 sm:px-6 sm:py-4 backdrop-blur-md">
         <div className="mx-auto max-w-3xl">
-          <div className="relative flex items-center rounded-full border border-stone-300/90 bg-white p-1.5 shadow-sm transition-all focus-within:border-slate-800 focus-within:shadow-md sm:p-2 sm:rounded-[26px]">
+          <div className="group relative flex items-end rounded-2xl sm:rounded-3xl border border-stone-300 bg-white p-1.5 sm:p-2 shadow-sm transition-all duration-200 focus-within:border-slate-900 focus-within:ring-2 focus-within:ring-slate-900/10 focus-within:shadow-md hover:border-stone-400">
             <textarea
               ref={inputRef}
               rows={1}
               value={inputPrompt}
-              onChange={(e) => setInputPrompt(e.target.value)}
+              onChange={(e) => {
+                setInputPrompt(e.target.value);
+                e.target.style.height = "auto";
+                e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
+              }}
               onKeyDown={handleKeyDown}
-              placeholder="Describe your needs, budget, preferred brands..."
+              placeholder="Ask anything..."
               disabled={isLoading}
-              className="max-h-28 min-h-[38px] sm:min-h-[44px] w-full resize-none bg-transparent px-3.5 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm text-slate-900 placeholder:text-stone-400 placeholder:text-[11px] sm:placeholder:text-sm focus:outline-none"
+              className="max-h-32 min-h-[40px] sm:min-h-[44px] w-full resize-none bg-transparent px-3 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-[14px] leading-relaxed text-slate-900 placeholder:text-stone-400 focus:outline-none"
             />
 
             <button
@@ -464,10 +437,10 @@ export function SelectAdvisorChat() {
               onClick={() => handleSubmit()}
               disabled={!inputPrompt.trim() || isLoading}
               aria-label="Send query"
-              className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-full bg-slate-950 text-white shadow-sm transition hover:bg-slate-800 active:scale-95 disabled:cursor-not-allowed disabled:bg-stone-300"
+              className="flex h-10 w-10 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-xl sm:rounded-2xl bg-[#0b241b] text-white shadow-xs transition duration-150 hover:bg-slate-800 active:scale-95 disabled:cursor-not-allowed disabled:bg-stone-200 disabled:text-stone-400"
             >
               <svg
-                className="h-3.5 w-3.5 sm:h-4 sm:w-4"
+                className="h-4 w-4 sm:h-4.5 sm:w-4.5"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -481,6 +454,9 @@ export function SelectAdvisorChat() {
               </svg>
             </button>
           </div>
+          <p className="mt-1.5 text-center text-[10px] sm:text-[11px] text-stone-500">
+            Press <kbd className="rounded border border-stone-300 bg-white px-1 py-0.5 text-[9px] text-stone-600">Enter</kbd> to send, <kbd className="rounded border border-stone-300 bg-white px-1 py-0.5 text-[9px] text-stone-600">Shift + Enter</kbd> for new line
+          </p>
         </div>
       </div>
     </div>
