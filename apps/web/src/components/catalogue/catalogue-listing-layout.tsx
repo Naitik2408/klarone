@@ -128,8 +128,12 @@ export function CatalogueListingLayout({
                   : "grid-cols-2 md:grid-cols-3 lg:grid-cols-3"
               }`}
             >
-              {products.map((product) => (
-                <ProductCard key={product.id} product={product} />
+              {products.map((product, idx) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  priority={idx < 4}
+                />
               ))}
             </div>
           ) : (

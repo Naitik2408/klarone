@@ -2,11 +2,13 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useCart } from "../cart/cart-provider";
 import type { CatalogueProduct } from "../../types/catalogue";
 
 interface ProductCardProps {
   product: CatalogueProduct;
+  priority?: boolean;
 }
 
 function formatPrice(
@@ -28,6 +30,7 @@ function formatPrice(
 
 export function ProductCard({
   product,
+  priority = false,
 }: ProductCardProps) {
   const { addItem } = useCart();
   const [isAdding, setIsAdding] = useState(false);
@@ -70,10 +73,13 @@ export function ProductCard({
         {/* Clean Unified Product Stage matching aspect ratio */}
         <div className="relative flex aspect-[4/4.4] min-h-[120px] sm:min-h-[200px] w-full items-center justify-center overflow-hidden rounded-[14px] sm:rounded-[18px] bg-white/40">
           {primaryMedia?.url ? (
-            <img
+            <Image
               src={primaryMedia.url}
               alt={primaryMedia.altText ?? product.name}
-              className="h-full w-full object-contain p-2.5 sm:p-4 transition-transform duration-200 group-hover:scale-105"
+              fill
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+              priority={priority}
+              className="object-contain p-2.5 sm:p-4 transition-transform duration-200 group-hover:scale-105"
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center text-2xl sm:text-4xl text-stone-400 select-none">
@@ -99,75 +105,83 @@ export function ProductCard({
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
-                strokeWidth="2.2"
+                strokeWidth="2.5"
               >
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
+                  d="M12 4.5v15m7.5-7.5h-15"
                 />
               </svg>
             )}
           </button>
         </div>
 
-        {/* Card Meta & Bottom Row */}
-        <div className="mt-2.5 sm:mt-4 flex items-end justify-between px-0.5 sm:px-1 pb-0.5 sm:pb-1">
-          <div className="flex flex-col min-w-0 flex-1">
-            <span className="text-[11px] sm:text-xs font-normal text-stone-500 truncate">
-              {product.category.name}
-            </span>
-
-            <h3 className="mt-0.5 sm:mt-1 text-xs sm:text-[16px] font-semibold tracking-tight text-slate-900 group-hover:text-emerald-950 line-clamp-1">
+        {/* Product Details Header */}
+        <div className="mt-2.5 sm:mt-3 flex items-start justify-between gap-1">
+          <div className="min-w-0 pr-1">
+            <p className="text-[10px] sm:text-[11px] font-medium tracking-wide uppercase text-stone-500 truncate">
+              {product.brand?.name ?? "Klarone"}
+            </p>
+            <h3 className="font-serif text-[13px] sm:text-[15px] font-normal leading-snug text-slate-900 group-hover:text-slate-700 transition-colors line-clamp-2">
               {product.name}
             </h3>
-
-            <div className="mt-1 sm:mt-1.5 flex flex-wrap items-baseline gap-1 sm:gap-2">
-              <span className="text-xs sm:text-sm font-semibold text-slate-900">
-                {variant
-                  ? formatPrice(variant.sellingPrice, variant.currency)
-                  : "Check availability"}
-              </span>
-
-              {variant?.compareAtPrice &&
-              Number(variant.compareAtPrice) > Number(variant.sellingPrice) ? (
-                <span className="text-[10px] sm:text-xs text-stone-400 line-through">
-                  {formatPrice(variant.compareAtPrice, variant.currency)}
-                </span>
-              ) : null}
-            </div>
           </div>
-
-          {/* Desktop Circular Add to Cart Button (44px / h-11 w-11) */}
-          <button
-            type="button"
-            onClick={handleAddToCart}
-            disabled={isAdding}
-            aria-label={`Add ${product.name} to cart`}
-            className="hidden sm:flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-slate-950 text-white shadow-sm transition-all duration-200 hover:scale-105 hover:bg-slate-800 active:scale-95 disabled:opacity-50 cursor-pointer ml-2"
-          >
-            {isAdding ? (
-              <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-            ) : justAdded ? (
-              <span className="text-xs font-bold text-lime-300">✓</span>
-            ) : (
-              <svg
-                className="h-4 w-4"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth="2.2"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
-                />
-              </svg>
-            )}
-          </button>
         </div>
       </Link>
+
+      {/* Specifications pills */}
+      <div className="mt-2 flex flex-wrap gap-1">
+        {variant?.ramGb && (
+          <span className="rounded bg-stone-200/60 px-1.5 py-0.5 text-[9px] sm:text-[10px] font-medium text-stone-700">
+            {variant.ramGb}GB RAM
+          </span>
+        )}
+        {variant?.storageGb && (
+          <span className="rounded bg-stone-200/60 px-1.5 py-0.5 text-[9px] sm:text-[10px] font-medium text-stone-700">
+            {variant.storageGb >= 1024
+              ? `${variant.storageGb / 1024}TB`
+              : `${variant.storageGb}GB`}{" "}
+            SSD
+          </span>
+        )}
+      </div>
+
+      {/* Pricing & Desktop Add to Cart Button */}
+      <div className="mt-2.5 sm:mt-3 flex items-center justify-between pt-2 border-t border-stone-200/50">
+        <div>
+          {variant ? (
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-[13px] sm:text-[14px] font-semibold text-slate-900">
+                {formatPrice(variant.sellingPrice, variant.currency)}
+              </span>
+              {isSale && variant.compareAtPrice && (
+                <span className="text-[10px] sm:text-[11px] text-stone-600 line-through">
+                  {formatPrice(variant.compareAtPrice, variant.currency)}
+                </span>
+              )}
+            </div>
+          ) : (
+            <span className="text-[12px] text-stone-500">Contact for price</span>
+          )}
+        </div>
+
+        {/* Desktop Add to Cart Pill button */}
+        <button
+          type="button"
+          onClick={handleAddToCart}
+          disabled={isAdding}
+          className="hidden sm:inline-flex items-center gap-1 rounded-full bg-slate-900 hover:bg-slate-800 text-white px-3 py-1 text-[11px] font-medium transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
+        >
+          {isAdding ? (
+            <div className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" />
+          ) : justAdded ? (
+            <span className="text-lime-300">Added</span>
+          ) : (
+            <span>Add</span>
+          )}
+        </button>
+      </div>
     </article>
   );
 }

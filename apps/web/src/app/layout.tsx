@@ -8,6 +8,7 @@ const sansFont = Plus_Jakarta_Sans({
     variable: "--font-sans",
     subsets: ["latin"],
     weight: ["400", "500", "600", "700"],
+    display: "swap",
 });
 
 const serifFont = Instrument_Serif({
@@ -15,6 +16,7 @@ const serifFont = Instrument_Serif({
     subsets: ["latin"],
     weight: ["400"],
     style: ["normal", "italic"],
+    display: "swap",
 });
 
 export const viewport: Viewport = {
@@ -62,14 +64,9 @@ export default function RootLayout({
             className={`${sansFont.variable} ${serifFont.variable}`}
             suppressHydrationWarning
         >
-            <body
-                className="min-h-screen bg-white font-sans text-slate-950 antialiased"
-                suppressHydrationWarning
-            >
+            <body className="antialiased">
                 <CustomerAuthProvider>
-                    <CartProvider>
-                        {children}
-                    </CartProvider>
+                    <CartProvider>{children}</CartProvider>
                 </CustomerAuthProvider>
             </body>
         </html>
