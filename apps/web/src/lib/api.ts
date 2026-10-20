@@ -1,3 +1,4 @@
+import { cache } from "react";
 import type {
   CatalogueBrand,
   CatalogueCategory,
@@ -35,19 +36,19 @@ async function apiFetch<T>(
   return response.json() as Promise<T>;
 }
 
-export async function getBrands(): Promise<CatalogueBrand[]> {
+export const getBrands = cache(async function getBrands(): Promise<CatalogueBrand[]> {
   return apiFetch<CatalogueBrand[]>("/catalogue/brands");
-}
+});
 
-export async function getCategories(): Promise<CatalogueCategory[]> {
+export const getCategories = cache(async function getCategories(): Promise<CatalogueCategory[]> {
   return apiFetch<CatalogueCategory[]>("/catalogue/categories");
-}
+});
 
-export async function getCollections(): Promise<CatalogueCollection[]> {
+export const getCollections = cache(async function getCollections(): Promise<CatalogueCollection[]> {
   return apiFetch<CatalogueCollection[]>("/catalogue/collections");
-}
+});
 
-export async function getFacets(params?: {
+export const getFacets = cache(async function getFacets(params?: {
   categorySlug?: string;
   collectionSlug?: string;
 }): Promise<CatalogueFacets> {
@@ -56,7 +57,7 @@ export async function getFacets(params?: {
   if (params?.collectionSlug) searchParams.set("collectionSlug", params.collectionSlug);
   const query = searchParams.toString();
   return apiFetch<CatalogueFacets>(`/catalogue/facets${query ? `?${query}` : ""}`);
-}
+});
 
 export async function getProducts(params?: {
   search?: string;
@@ -102,13 +103,13 @@ export async function getProducts(params?: {
   );
 }
 
-export async function getProduct(
+export const getProduct = cache(async function getProduct(
   slug: string,
 ): Promise<CatalogueProductDetail> {
   return apiFetch<CatalogueProductDetail>(
     `/catalogue/products/${encodeURIComponent(slug)}`,
   );
-}
+});
 
 export async function startRecommendation(params: {
   message: string;

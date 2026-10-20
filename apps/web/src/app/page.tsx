@@ -4,13 +4,7 @@ import { StorefrontHero } from "../components/storefront/hero";
 import { StorefrontProductSection } from "../components/storefront/product-section";
 import { StorefrontFormulationsSection } from "../components/storefront/formulations-section";
 import { StorefrontGutHealthSection } from "../components/storefront/gut-health-section";
-import { StorefrontTestimonialSection } from "../components/storefront/testimonial-section";
-import { StorefrontSkinHealthSection } from "../components/storefront/skin-health-section";
-import { StorefrontCollectionsShowcase } from "../components/storefront/collections-showcase";
-import {
-  StorefrontNewsletterSection,
-  StorefrontFooter,
-} from "../components/storefront/newsletter-and-footer";
+import { StorefrontFooter } from "../components/storefront/newsletter-and-footer";
 import { SmoothScrollProvider } from "../components/storefront/smooth-scroll-provider";
 
 import { getProducts, getCollections } from "../lib/api";
@@ -56,23 +50,9 @@ export default async function StorefrontHomePage() {
 
           {/* 5. Services Section: 4 Core Klarone Services (Select, Setup, Care, Upgrade) */}
           <StorefrontGutHealthSection />
-
-          {/* 
-            Sections commented out for later use:
-            - Testimonial Section
-            - Skin Health Section
-            - Collections Showcase (Ticker + Stats + Interactive Tabs)
-            - Newsletter Section
-          */}
-          {/*
-          <StorefrontTestimonialSection />
-          <StorefrontSkinHealthSection />
-          <StorefrontCollectionsShowcase />
-          <StorefrontNewsletterSection />
-          */}
         </main>
 
-        {/* 10. Storefront Luxury Editorial Footer */}
+        {/* Storefront Luxury Editorial Footer */}
         <StorefrontFooter />
       </div>
     </SmoothScrollProvider>
