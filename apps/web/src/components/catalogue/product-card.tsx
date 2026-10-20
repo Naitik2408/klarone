@@ -93,7 +93,7 @@ export function ProductCard({
             onClick={handleAddToCart}
             disabled={isAdding}
             aria-label={`Add ${product.name} to cart`}
-            className="absolute bottom-2 right-2 flex sm:hidden h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-950 text-white shadow-md transition-all active:scale-90 disabled:opacity-50 z-20 cursor-pointer"
+            className="absolute bottom-2 right-2 flex sm:hidden h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-950 text-white shadow-md transition-all active:scale-90 disabled:opacity-50 z-20 cursor-pointer touch-manipulation"
           >
             {isAdding ? (
               <div className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" />
