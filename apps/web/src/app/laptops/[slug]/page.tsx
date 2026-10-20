@@ -3,7 +3,26 @@ import { notFound } from "next/navigation";
 import { StorefrontHeader } from "@/components/storefront/header";
 import { StorefrontFooter } from "@/components/storefront/newsletter-and-footer";
 import { ProductExperienceView } from "@/components/catalogue/product-experience-view";
-import { getProduct } from "@/lib/api";
+import { getProduct, getProducts } from "@/lib/api";
+
+export const dynamicParams = true;
+
+/**
+ * Pre-render top popular laptop models at build time for instant CDN / Edge delivery.
+ * Uncached / newer laptops continue to be rendered on demand via dynamicParams = true.
+ */
+export async function generateStaticParams() {
+  try {
+    const res = await getProducts({ pageSize: 12 });
+    if (!res || !res.items) return [];
+    return res.items.map((p) => ({
+      slug: p.slug,
+    }));
+  } catch {
+    // If backend is unavailable during build step, fallback gracefully to dynamic rendering
+    return [];
+  }
+}
 
 interface ProductPageProps {
   params: Promise<{
