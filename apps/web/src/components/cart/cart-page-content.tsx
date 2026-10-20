@@ -283,8 +283,33 @@ export function CartPageContent() {
             href="/checkout"
             className="hidden sm:flex h-12 sm:h-14 w-full items-center justify-center rounded-full bg-[#d6f088] text-sm sm:text-[15px] font-semibold text-slate-950 shadow-sm transition hover:bg-[#c9e874] active:scale-[0.99]"
           >
-            Check Out
+            Proceed to Secure Checkout
           </Link>
+
+          {/* CRO Reassurance & Trust Signals Box */}
+          <div className="rounded-2xl border border-stone-200/70 bg-white/60 p-4 space-y-3 backdrop-blur-xs text-xs text-stone-600">
+            <div className="flex items-start gap-2.5">
+              <span className="text-emerald-700 text-sm">🛡️</span>
+              <div>
+                <p className="font-semibold text-slate-900">100% Authentic Brand Warranty</p>
+                <p className="text-[11px] text-stone-500">Official manufacturer warranty supported across authorized brand service centers in India.</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-2.5 pt-2 border-t border-stone-200/50">
+              <span className="text-blue-700 text-sm">⚡</span>
+              <div>
+                <p className="font-semibold text-slate-900">Kolkata Express Insured Transit</p>
+                <p className="text-[11px] text-stone-500">Carefully packaged with serial tracking and local handoff in Kolkata.</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-2.5 pt-2 border-t border-stone-200/50">
+              <span className="text-stone-700 text-sm">🔒</span>
+              <div>
+                <p className="font-semibold text-slate-900">Bank-Grade 256-Bit SSL Checkout</p>
+                <p className="text-[11px] text-stone-500">Powered by Razorpay: UPI, major Credit/Debit cards, Net Banking & flexible EMI.</p>
+              </div>
+            </div>
+          </div>
         </aside>
       </div>
 
@@ -292,7 +317,10 @@ export function CartPageContent() {
       <div className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-stone-200 px-4 py-3 shadow-[0_-4px_16px_rgba(0,0,0,0.06)] pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
         <div className="flex items-center justify-between gap-3 max-w-md mx-auto">
           <div className="min-w-0">
-            <span className="block text-[11px] uppercase tracking-wider text-stone-500 font-medium">Total</span>
+            <div className="flex items-center gap-1 text-[10px] text-emerald-800 font-medium">
+              <span>🛡️</span>
+              <span>Official Warranty</span>
+            </div>
             <span className="block text-lg font-bold text-slate-950 truncate">
               {formatPrice(subtotal, items[0]?.currency ?? "INR")}
             </span>
