@@ -24,6 +24,8 @@
 
 html {
   overflow-x: clip;
+  scrollbar-color: #334155 #07090e;
+  scrollbar-width: thin;
 }
 
 body {
@@ -32,6 +34,26 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
+}
+
+/* Custom Themed Scrollbar for Chromium and Safari */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #07090e;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 9999px;
+  border: 2px solid #07090e;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #334155;
 }
 
 a {
@@ -50,7 +72,18 @@ button {
   cursor: pointer;
 }
 
+input,
+textarea {
+  caret-color: #d6f088;
+}
+
+/* Focus Visible Accessible Ring Floor */
+:focus-visible {
+  outline: 2px solid #d6f088;
+  outline-offset: 2px;
+}
+
 ::selection {
-  background: #dbeafe;
-  color: #0f172a;
+  background: #d6f088;
+  color: #050b07;
 }

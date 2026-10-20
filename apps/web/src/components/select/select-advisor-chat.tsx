@@ -425,9 +425,9 @@ export function SelectAdvisorChat() {
                 className="flex items-center text-stone-500"
               >
                 <div className="flex items-center gap-2 rounded-full bg-white border border-stone-200/80 px-4 py-2.5 shadow-xs">
-                  <span className="h-2 w-2 animate-bounce rounded-full bg-[#0b241b] [animation-delay:-0.3s]" />
-                  <span className="h-2 w-2 animate-bounce rounded-full bg-[#0b241b] [animation-delay:-0.15s]" />
-                  <span className="h-2 w-2 animate-bounce rounded-full bg-[#0b241b]" />
+                  <span className="h-2 w-2 rounded-full bg-[#0b241b] animate-pulse [animation-duration:1.2s]" />
+                  <span className="h-2 w-2 rounded-full bg-[#0b241b] animate-pulse [animation-duration:1.2s] [animation-delay:200ms]" />
+                  <span className="h-2 w-2 rounded-full bg-[#0b241b] animate-pulse [animation-duration:1.2s] [animation-delay:400ms]" />
                   <span className="ml-1 text-xs font-medium text-stone-700">
                     Evaluating laptop specs and thermal profiles...
                   </span>
