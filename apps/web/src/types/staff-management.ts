@@ -75,3 +75,16 @@ export interface UpdateStaffInput {
   status?: string;
   password?: string;
 }
+
+export interface CreateRoleInput {
+  name: string;
+  description?: string;
+  permissionIds: number[];
+}
+
+export interface UpdateRoleInput {
+  name?: string;
+  description?: string;
+  permissionIds?: number[];
+  status?: string;
+}

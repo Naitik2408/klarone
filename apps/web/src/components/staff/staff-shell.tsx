@@ -155,7 +155,16 @@ const navigation: NavItem[] = [
     ],
   },
   { label: "Customers", href: "/staff/customers", icon: <CustomersIcon />, permission: "customers.read" },
-  { label: "Staff", href: "/staff/users", icon: <StaffIcon />, permission: "users.read" },
+  {
+    label: "Staff",
+    href: "/staff/users",
+    icon: <StaffIcon />,
+    permission: "users.read",
+    children: [
+      { label: "Staff Members", href: "/staff/users", permission: "users.read" },
+      { label: "Roles & Permissions", href: "/staff/roles", permission: "roles.read" },
+    ],
+  },
   { label: "Analytics", href: "/staff/analytics", icon: <AnalyticsIcon />, permission: "platform.settings.read" },
 ];
 

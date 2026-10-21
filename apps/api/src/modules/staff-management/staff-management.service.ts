@@ -9,8 +9,10 @@ import { PrismaService } from "../../database/prisma.service";
 import { toJsonSafe } from "../../common/serialization/json-safe";
 import { AuditService } from "../audit/audit.service";
 import type {
+  CreateRoleDto,
   CreateStaffMemberDto,
   ListStaffQueryDto,
+  UpdateRoleDto,
   UpdateStaffMemberDto,
 } from "./dto/staff-member.dto";
 
@@ -79,6 +81,239 @@ export class StaffManagementService {
       permissions,
       grouped,
     });
+  }
+
+  async getRole(roleId: number) {
+    const role = await this.prisma.role.findUnique({
+      where: { id: roleId },
+      include: {
+        permissions: {
+          include: {
+            permission: true,
+          },
+        },
+        _count: {
+          select: {
+            users: true,
+          },
+        },
+      },
+    });
+
+    if (!role) {
+      throw new NotFoundException(`Role with ID ${roleId} not found.`);
+    }
+
+    return toJsonSafe({
+      id: role.id,
+      name: role.name,
+      description: role.description,
+      isSystemRole: role.isSystemRole,
+      status: role.status,
+      userCount: role._count.users,
+      permissions: role.permissions.map((rp) => ({
+        id: rp.permission.id,
+        code: rp.permission.code,
+        module: rp.permission.module,
+        action: rp.permission.action,
+        description: rp.permission.description,
+      })),
+      createdAt: role.createdAt,
+      updatedAt: role.updatedAt,
+    });
+  }
+
+  async createRole(dto: CreateRoleDto, actorUserId?: bigint) {
+    const formattedName = dto.name.trim().toUpperCase().replace(/\s+/g, "_");
+    if (!formattedName) {
+      throw new BadRequestException("Role name is required.");
+    }
+
+    const existing = await this.prisma.role.findUnique({
+      where: { name: formattedName },
+    });
+    if (existing) {
+      throw new ConflictException(`Role with name "${formattedName}" already exists.`);
+    }
+
+    // Auto-resolve interlinked permissions:
+    // e.g. If you grant "catalogue.update" or "catalogue.create", you MUST also have "catalogue.read".
+    const resolvedPermissionIds = await this.resolveInterlinkedPermissions(dto.permissionIds || []);
+
+    const role = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.role.create({
+        data: {
+          name: formattedName,
+          description: dto.description?.trim() || null,
+          isSystemRole: false,
+          status: "ACTIVE",
+        },
+      });
+
+      for (const pId of resolvedPermissionIds) {
+        await tx.rolePermission.create({
+          data: {
+            roleId: created.id,
+            permissionId: pId,
+          },
+        });
+      }
+
+      return created;
+    });
+
+    await this.auditService.log({
+      userAccountId: actorUserId,
+      action: "role.create",
+      module: "roles",
+      entityType: "Role",
+      entityId: role.id.toString(),
+      description: `Created custom role ${role.name} with ${resolvedPermissionIds.length} permissions`,
+      newData: { name: role.name, permissions: resolvedPermissionIds },
+    });
+
+    return this.getRole(role.id);
+  }
+
+  async updateRole(roleId: number, dto: UpdateRoleDto, actorUserId?: bigint) {
+    const existing = await this.prisma.role.findUnique({
+      where: { id: roleId },
+      include: { permissions: true },
+    });
+
+    if (!existing) {
+      throw new NotFoundException(`Role with ID ${roleId} not found.`);
+    }
+
+    if (existing.isSystemRole && dto.name && dto.name !== existing.name) {
+      throw new BadRequestException("System predefined role names cannot be renamed.");
+    }
+
+    let resolvedPermissionIds = existing.permissions.map((p) => p.permissionId);
+    if (Array.isArray(dto.permissionIds)) {
+      resolvedPermissionIds = await this.resolveInterlinkedPermissions(dto.permissionIds);
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      if (dto.name || dto.description !== undefined || dto.status) {
+        await tx.role.update({
+          where: { id: roleId },
+          data: {
+            name: !existing.isSystemRole && dto.name ? dto.name.trim().toUpperCase().replace(/\s+/g, "_") : existing.name,
+            description: dto.description !== undefined ? dto.description.trim() || null : existing.description,
+            status: dto.status ?? existing.status,
+          },
+        });
+      }
+
+      if (Array.isArray(dto.permissionIds)) {
+        await tx.rolePermission.deleteMany({
+          where: { roleId },
+        });
+        for (const pId of resolvedPermissionIds) {
+          await tx.rolePermission.create({
+            data: {
+              roleId,
+              permissionId: pId,
+            },
+          });
+        }
+      }
+    });
+
+    await this.auditService.log({
+      userAccountId: actorUserId,
+      action: "role.update",
+      module: "roles",
+      entityType: "Role",
+      entityId: roleId.toString(),
+      description: `Updated role ${existing.name}`,
+      newData: { name: dto.name, permissions: resolvedPermissionIds },
+    });
+
+    return this.getRole(roleId);
+  }
+
+  async deleteRole(roleId: number, actorUserId?: bigint) {
+    const existing = await this.prisma.role.findUnique({
+      where: { id: roleId },
+      include: {
+        _count: { select: { users: true } },
+      },
+    });
+
+    if (!existing) {
+      throw new NotFoundException(`Role with ID ${roleId} not found.`);
+    }
+
+    if (existing.isSystemRole) {
+      throw new BadRequestException("System predefined roles cannot be deleted.");
+    }
+
+    if (existing._count.users > 0) {
+      throw new BadRequestException(
+        `Cannot delete role "${existing.name}" because it is currently assigned to ${existing._count.users} staff member(s). Reassign them first.`,
+      );
+    }
+
+    await this.prisma.role.delete({
+      where: { id: roleId },
+    });
+
+    await this.auditService.log({
+      userAccountId: actorUserId,
+      action: "role.delete",
+      module: "roles",
+      entityType: "Role",
+      entityId: roleId.toString(),
+      description: `Deleted custom role ${existing.name}`,
+    });
+
+    return toJsonSafe({ success: true, message: `Role ${existing.name} deleted successfully.` });
+  }
+
+  /**
+   * Automatically resolves interlinked permissions.
+   * Rules:
+   * 1. If any write/create/update/delete action in a module is selected, automatically include `<module>.read`.
+   * 2. If 'orders.drafts.manage' is selected, automatically include 'orders.read' and 'orders.create'.
+   * 3. If 'roles.assign' or 'roles.update' is selected, include 'roles.read'.
+   */
+  private async resolveInterlinkedPermissions(selectedIds: number[]): Promise<number[]> {
+    const all = await this.prisma.permission.findMany();
+    const idMap = new Map(all.map((p) => [p.id, p]));
+    const codeMap = new Map(all.map((p) => [p.code, p]));
+
+    const resultSet = new Set<number>(selectedIds);
+
+    for (const id of selectedIds) {
+      const p = idMap.get(id);
+      if (!p) continue;
+
+      // Module read prerequisite rule
+      if (p.action !== "read") {
+        const readPerm = codeMap.get(`${p.module}.read`);
+        if (readPerm) {
+          resultSet.add(readPerm.id);
+        }
+      }
+
+      // Order drafts prerequisite
+      if (p.code === "orders.drafts.manage") {
+        const oRead = codeMap.get("orders.read");
+        const oCreate = codeMap.get("orders.create");
+        if (oRead) resultSet.add(oRead.id);
+        if (oCreate) resultSet.add(oCreate.id);
+      }
+
+      // Roles assign prerequisite
+      if (p.code === "roles.assign") {
+        const rRead = codeMap.get("roles.read");
+        if (rRead) resultSet.add(rRead.id);
+      }
+    }
+
+    return Array.from(resultSet);
   }
 
   async listStaff(query: ListStaffQueryDto) {

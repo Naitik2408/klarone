@@ -31,3 +31,16 @@ export interface ListStaffQueryDto {
   page?: number;
   pageSize?: number;
 }
+
+export interface CreateRoleDto {
+  name: string;
+  description?: string;
+  permissionIds: number[];
+}
+
+export interface UpdateRoleDto {
+  name?: string;
+  description?: string;
+  permissionIds?: number[];
+  status?: string;
+}

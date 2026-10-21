@@ -132,6 +132,47 @@ export async function getStaffRoles(
   return request<{ roles: StaffRole[] }>("/staff/users/roles", token);
 }
 
+export async function getStaffRole(
+  token: string,
+  id: number,
+): Promise<StaffRole> {
+  return request<StaffRole>(`/staff/users/roles/${id}`, token);
+}
+
+export async function createStaffRole(
+  token: string,
+  input: import("../types/staff-management").CreateRoleInput,
+): Promise<StaffRole> {
+  return request<StaffRole>("/staff/users/roles", token, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function updateStaffRole(
+  token: string,
+  id: number,
+  input: import("../types/staff-management").UpdateRoleInput,
+): Promise<StaffRole> {
+  return request<StaffRole>(`/staff/users/roles/${id}`, token, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function deleteStaffRole(
+  token: string,
+  id: number,
+): Promise<{ success: boolean; message: string }> {
+  return request<{ success: boolean; message: string }>(
+    `/staff/users/roles/${id}`,
+    token,
+    {
+      method: "DELETE",
+    },
+  );
+}
+
 export async function getStaffPermissions(
   token: string,
 ): Promise<{

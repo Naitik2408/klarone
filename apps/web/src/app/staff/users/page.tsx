@@ -19,7 +19,7 @@ import type {
   StaffRole,
 } from "../../../types/staff-management";
 
-const STATUS_FILTERS = [
+const STATUS_OPTIONS = [
   { value: "ALL", label: "All Status" },
   { value: "ACTIVE", label: "Active" },
   { value: "DISABLED", label: "Disabled" },
@@ -33,8 +33,10 @@ export default function StaffUsersListPage() {
   const [roles, setRoles] = useState<StaffRole[]>([]);
 
   const [search, setSearch] = useState("");
-  const [selectedRole, setSelectedRole] = useState<string>("ALL");
-  const [selectedStatus, setSelectedStatus] = useState<string>("ALL");
+  const [status, setStatus] = useState("ALL");
+  const [statusMenuOpen, setStatusMenuOpen] = useState(false);
+  const [selectedRole, setSelectedRole] = useState("ALL");
+  const [roleMenuOpen, setRoleMenuOpen] = useState(false);
 
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -57,7 +59,22 @@ export default function StaffUsersListPage() {
       .then((res) => setRoles(res.roles))
       .catch(() => {});
 
-    loadStaff(activeToken, 1, search, selectedRole, selectedStatus);
+    loadStaff(activeToken, 1, search, selectedRole, status);
+  }, []);
+
+  // Close menus on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      const target = e.target as HTMLElement;
+      if (!target.closest("[data-status-filter]")) {
+        setStatusMenuOpen(false);
+      }
+      if (!target.closest("[data-role-filter]")) {
+        setRoleMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
   async function loadStaff(
@@ -96,9 +113,22 @@ export default function StaffUsersListPage() {
     }
   }
 
-  function handleFilterApply() {
-    if (!token) return;
-    loadStaff(token, 1, search, selectedRole, selectedStatus);
+  function handleSearchKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Enter" && token) {
+      loadStaff(token, 1, search, selectedRole, status);
+    }
+  }
+
+  function selectStatus(nextStatus: string) {
+    setStatusMenuOpen(false);
+    setStatus(nextStatus);
+    if (token) loadStaff(token, 1, search, selectedRole, nextStatus);
+  }
+
+  function selectRole(nextRole: string) {
+    setRoleMenuOpen(false);
+    setSelectedRole(nextRole);
+    if (token) loadStaff(token, 1, search, nextRole, status);
   }
 
   async function handleDisableConfirm() {
@@ -107,7 +137,7 @@ export default function StaffUsersListPage() {
     try {
       await deleteStaffMember(token, memberToDisable.id);
       setMemberToDisable(null);
-      await loadStaff(token, page, search, selectedRole, selectedStatus);
+      await loadStaff(token, page, search, selectedRole, status);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to disable staff account.");
     } finally {
@@ -115,217 +145,337 @@ export default function StaffUsersListPage() {
     }
   }
 
+  const activeStatusLabel =
+    STATUS_OPTIONS.find((s) => s.value === status)?.label ?? "All Status";
+
+  const activeRoleLabel =
+    selectedRole === "ALL"
+      ? "All Roles"
+      : roles.find((r) => String(r.id) === selectedRole)?.name.replace(/_/g, " ") ?? "All Roles";
+
   return (
-    <div className="min-h-screen bg-[#f1f1f1] text-[#303030]">
-      {/* Top Banner / Breadcrumb Bar */}
-      <div className="border-b border-[#e1e3e5] bg-white px-6 py-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="flex items-center gap-2 text-xs text-[#616161]">
-              <Link href="/staff" className="hover:underline">Home</Link>
-              <span>/</span>
-              <span className="font-medium text-[#303030]">Staff Management</span>
-            </div>
-            <h1 className="mt-1 text-xl font-bold tracking-tight text-[#1a1a1a]">
-              Staff & Team Members
+    <div className="min-h-screen bg-white text-[13px] text-[#303030]">
+      <div className="mx-auto max-w-[1300px] px-6 pt-5 pb-4">
+        {/* -------------------- Top Bar / Header -------------------- */}
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <div className="flex items-center gap-2">
+            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white border border-[#e3e3e3] text-[#303030] shadow-xs">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 20 20"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.6"
+              >
+                <path d="M13.5 17c.5-2 2.2-3.5 4.5-3.5M2 17c.7-3 3.3-5 6.5-5s5.8 2 6.5 5" strokeLinecap="round" />
+                <circle cx="8.5" cy="7" r="3" />
+                <circle cx="15.5" cy="8" r="2" />
+              </svg>
+            </span>
+            <h1 className="text-[20px] font-semibold text-[#1a1a1a]">
+              Staff Members
             </h1>
-            <p className="mt-0.5 text-xs text-[#616161]">
-              Manage internal team access, department assignments, and security roles.
-            </p>
           </div>
 
           <div className="flex items-center gap-2">
             <Link
-              href="/staff/users/new"
-              className="inline-flex items-center gap-1.5 rounded-lg bg-[#008060] px-3.5 py-1.5 text-xs font-semibold text-white shadow-xs transition hover:bg-[#006e52] active:scale-95"
+              href="/staff/roles"
+              className="inline-flex h-8 items-center justify-center rounded-lg border border-[#d4d4d4] bg-white px-3 text-[13px] font-medium text-[#303030] shadow-xs hover:bg-[#f7f7f7]"
             >
-              <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <path d="M10 4v12M4 10h12" strokeLinecap="round" />
-              </svg>
-              Add Staff Member
+              Roles & Permissions
             </Link>
-          </div>
-        </div>
-      </div>
 
-      {/* Main Content Area */}
-      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
-        {error && (
-          <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-4 text-xs font-medium text-red-800">
-            {error}
-          </div>
-        )}
-
-        {/* Roles Metric / Overview Cards */}
-        <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-          <div className="rounded-xl border border-[#e1e3e5] bg-white p-4 shadow-2xs">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-[#616161]">Total Staff</span>
-            <p className="mt-1 text-2xl font-bold text-[#1a1a1a]">{total}</p>
-          </div>
-          <div className="rounded-xl border border-[#e1e3e5] bg-white p-4 shadow-2xs">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-[#616161]">Pre-built Roles</span>
-            <p className="mt-1 text-2xl font-bold text-[#1a1a1a]">{roles.length}</p>
-          </div>
-          <div className="rounded-xl border border-[#e1e3e5] bg-white p-4 shadow-2xs">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-[#616161]">Super Admins</span>
-            <p className="mt-1 text-2xl font-bold text-[#008060]">
-              {roles.find((r) => r.name === "SUPER_ADMIN")?.userCount ?? 1}
-            </p>
-          </div>
-          <div className="rounded-xl border border-[#e1e3e5] bg-white p-4 shadow-2xs">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-[#616161]">Specialists</span>
-            <p className="mt-1 text-2xl font-bold text-indigo-600">
-              {roles.filter((r) => r.name !== "SUPER_ADMIN").reduce((acc, r) => acc + (r.userCount ?? 0), 0)}
-            </p>
-          </div>
-        </div>
-
-        {/* Search & Filter Bar */}
-        <div className="rounded-t-xl border border-[#e1e3e5] border-b-0 bg-white p-3.5">
-          <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
-            {/* Search Input */}
-            <div className="relative flex-1">
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 20 20"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8c9196]"
-              >
-                <circle cx="8.5" cy="8.5" r="5.5" />
-                <path d="m13 13 4 4" strokeLinecap="round" />
+            <button
+              type="button"
+              onClick={() => router.push("/staff/users/new")}
+              style={{ color: "#ffffff", backgroundColor: "#1a1a1a" }}
+              className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg px-4 text-[13px] font-medium !text-white shadow-sm hover:!bg-[#303030] transition-colors active:!bg-[#000]"
+            >
+              <svg viewBox="0 0 16 16" fill="none" className="h-3.5 w-3.5">
+                <path
+                  d="M8 3v10M3 8h10"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                />
               </svg>
-              <input
-                type="text"
-                placeholder="Search by name, email, employee code, or title..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleFilterApply()}
-                className="w-full rounded-lg border border-[#c9cccf] bg-[#fdfdfd] py-1.5 pl-9 pr-3 text-xs text-[#303030] placeholder:text-[#8c9196] focus:border-[#008060] focus:bg-white focus:outline-none"
-              />
-            </div>
-
-            {/* Filter Dropdowns */}
-            <div className="flex items-center gap-2">
-              <select
-                value={selectedRole}
-                onChange={(e) => {
-                  setSelectedRole(e.target.value);
-                  if (token) loadStaff(token, 1, search, e.target.value, selectedStatus);
-                }}
-                className="rounded-lg border border-[#c9cccf] bg-white px-2.5 py-1.5 text-xs text-[#303030] focus:border-[#008060] focus:outline-none"
-              >
-                <option value="ALL">All Roles</option>
-                {roles.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.name.replace(/_/g, " ")}
-                  </option>
-                ))}
-              </select>
-
-              <select
-                value={selectedStatus}
-                onChange={(e) => {
-                  setSelectedStatus(e.target.value);
-                  if (token) loadStaff(token, 1, search, selectedRole, e.target.value);
-                }}
-                className="rounded-lg border border-[#c9cccf] bg-white px-2.5 py-1.5 text-xs text-[#303030] focus:border-[#008060] focus:outline-none"
-              >
-                {STATUS_FILTERS.map((s) => (
-                  <option key={s.value} value={s.value}>
-                    {s.label}
-                  </option>
-                ))}
-              </select>
-
-              <button
-                type="button"
-                onClick={handleFilterApply}
-                className="rounded-lg border border-[#c9cccf] bg-white px-3 py-1.5 text-xs font-semibold text-[#303030] transition hover:bg-[#f6f6f7]"
-              >
-                Filter
-              </button>
-            </div>
+              <span className="!text-white" style={{ color: "#ffffff" }}>
+                Add staff member
+              </span>
+            </button>
           </div>
         </div>
 
-        {/* Staff Table */}
-        <div className="overflow-x-auto rounded-b-xl border border-[#e1e3e5] bg-white shadow-2xs">
-          <table className="w-full text-left text-xs">
-            <thead>
-              <tr className="border-b border-[#e1e3e5] bg-[#fafbfb] text-[11px] font-semibold uppercase tracking-wider text-[#616161]">
-                <th className="px-4 py-3">Staff Member</th>
-                <th className="px-4 py-3">Code / ID</th>
-                <th className="px-4 py-3">Department & Title</th>
-                <th className="px-4 py-3">Assigned Roles</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#e1e3e5]">
+        {/* Error Notice */}
+        {error ? (
+          <div
+            className="mb-4 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-700"
+            role="alert"
+          >
+            <svg
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              className="mt-0.5 h-4 w-4 shrink-0"
+              aria-hidden="true"
+            >
+              <path
+                fillRule="evenodd"
+                d="M10 2a8 8 0 1 0 0 16 8 8 0 0 0 0-16ZM9 5.75a1 1 0 0 1 2 0v4.5a1 1 0 0 1-2 0v-4.5Zm1 8.5a1.125 1.125 0 1 0 0-2.25 1.125 1.125 0 0 0 0 2.25Z"
+                clipRule="evenodd"
+              />
+            </svg>
+            <span>{error}</span>
+          </div>
+        ) : null}
+
+        {/* Search + filter bar */}
+        <div className="flex items-stretch gap-0 rounded-xl border border-neutral-200 bg-white">
+          {/* Status Dropdown Filter */}
+          <div className="relative" data-status-filter>
+            <button
+              type="button"
+              onClick={() => {
+                setStatusMenuOpen((open) => !open);
+                setRoleMenuOpen(false);
+              }}
+              aria-haspopup="listbox"
+              aria-expanded={statusMenuOpen}
+              className="flex h-full items-center gap-1 border-r border-neutral-200 px-3 text-[13px] text-neutral-700 hover:bg-neutral-50"
+            >
+              <span className="font-medium">{activeStatusLabel}</span>
+              <svg
+                viewBox="0 0 16 16"
+                fill="none"
+                className="h-3.5 w-3.5 text-neutral-500"
+                aria-hidden="true"
+              >
+                <path
+                  d="m5 7 3-3 3 3M5 9l3 3 3-3"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
+
+            {statusMenuOpen && (
+              <div
+                role="listbox"
+                className="absolute top-full left-0 z-50 mt-1 w-36 overflow-hidden rounded-lg border border-neutral-200 bg-white py-1 shadow-lg"
+              >
+                {STATUS_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => selectStatus(opt.value)}
+                    className={`flex w-full items-center px-3 py-1.5 text-left text-[13px] hover:bg-neutral-100 ${
+                      status === opt.value
+                        ? "font-semibold text-neutral-900 bg-neutral-50"
+                        : "text-neutral-700"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Role Dropdown Filter */}
+          <div className="relative" data-role-filter>
+            <button
+              type="button"
+              onClick={() => {
+                setRoleMenuOpen((open) => !open);
+                setStatusMenuOpen(false);
+              }}
+              aria-haspopup="listbox"
+              aria-expanded={roleMenuOpen}
+              className="flex h-full items-center gap-1 border-r border-neutral-200 px-3 text-[13px] text-neutral-700 hover:bg-neutral-50"
+            >
+              <span className="font-medium">{activeRoleLabel}</span>
+              <svg
+                viewBox="0 0 16 16"
+                fill="none"
+                className="h-3.5 w-3.5 text-neutral-500"
+                aria-hidden="true"
+              >
+                <path
+                  d="m5 7 3-3 3 3M5 9l3 3 3-3"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
+
+            {roleMenuOpen && (
+              <div
+                role="listbox"
+                className="absolute top-full left-0 z-50 mt-1 w-48 overflow-hidden rounded-lg border border-neutral-200 bg-white py-1 shadow-lg max-h-60 overflow-y-auto"
+              >
+                <button
+                  type="button"
+                  onClick={() => selectRole("ALL")}
+                  className={`flex w-full items-center px-3 py-1.5 text-left text-[13px] hover:bg-neutral-100 ${
+                    selectedRole === "ALL"
+                      ? "font-semibold text-neutral-900 bg-neutral-50"
+                      : "text-neutral-700"
+                  }`}
+                >
+                  All Roles
+                </button>
+                {roles.map((r) => (
+                  <button
+                    key={r.id}
+                    type="button"
+                    onClick={() => selectRole(String(r.id))}
+                    className={`flex w-full items-center px-3 py-1.5 text-left text-[13px] hover:bg-neutral-100 ${
+                      selectedRole === String(r.id)
+                        ? "font-semibold text-neutral-900 bg-neutral-50"
+                        : "text-neutral-700"
+                    }`}
+                  >
+                    {r.name.replace(/_/g, " ")}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Search Input */}
+          <div className="relative flex-1">
+            <svg
+              viewBox="0 0 16 16"
+              fill="none"
+              className="pointer-events-none absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2 text-neutral-500"
+              aria-hidden="true"
+            >
+              <circle cx="7" cy="7" r="4.5" stroke="currentColor" strokeWidth="1.5" />
+              <path
+                d="m10.5 10.5 3 3"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              />
+            </svg>
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={handleSearchKeyDown}
+              placeholder="Search by name, email, employee code, or department..."
+              className="h-full w-full bg-transparent py-2.5 pr-3 pl-9 text-[13px] text-neutral-800 outline-none placeholder:text-neutral-500"
+            />
+          </div>
+
+          {/* Refresh Action */}
+          <div className="flex items-center gap-2 border-l border-neutral-200 px-3 py-2">
+            <button
+              type="button"
+              onClick={() => token && void loadStaff(token, 1, search, selectedRole, status)}
+              disabled={loading}
+              aria-label="Refresh"
+              className="inline-flex h-7 w-7 items-center justify-center rounded-md text-neutral-600 hover:bg-neutral-100 disabled:opacity-50"
+            >
+              <svg
+                viewBox="0 0 16 16"
+                fill="none"
+                className="h-4 w-4"
+                aria-hidden="true"
+              >
+                <path
+                  d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9M13.5 3v3h-3"
+                  stroke="currentColor"
+                  strokeWidth="1.4"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        {/* Table */}
+        <div className="mt-3 overflow-hidden rounded-xl border border-neutral-200 bg-white">
+          <div className="overflow-x-auto">
+            <div className="min-w-[960px]">
+              {/* Header row */}
+              <div className="grid grid-cols-[minmax(260px,2.5fr)_minmax(120px,1fr)_minmax(180px,1.4fr)_minmax(200px,1.5fr)_minmax(110px,0.9fr)_80px] items-center gap-3 border-b border-neutral-200 bg-[#f7f7f7] px-4 py-2.5 text-[12px] font-medium text-neutral-600">
+                <div>Staff Member</div>
+                <div>Employee Code</div>
+                <div>Department & Title</div>
+                <div>Assigned Roles</div>
+                <div>Status</div>
+                <div className="text-right">Actions</div>
+              </div>
+
+              {/* Rows */}
               {loading ? (
-                <tr>
-                  <td colSpan={6} className="px-4 py-12 text-center text-xs text-[#616161]">
-                    <div className="inline-flex items-center gap-2">
-                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-[#008060] border-t-transparent" />
-                      Loading staff accounts...
-                    </div>
-                  </td>
-                </tr>
+                <div className="flex items-center justify-center py-12 text-[13px] text-neutral-500">
+                  <div className="flex items-center gap-2">
+                    <svg className="h-4 w-4 animate-spin text-neutral-600" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                    </svg>
+                    Loading staff members...
+                  </div>
+                </div>
               ) : staff.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-4 py-12 text-center text-xs text-[#616161]">
-                    No staff members match the current filter.
-                  </td>
-                </tr>
+                <div className="py-12 text-center text-[13px] text-neutral-500">
+                  No staff members match the current filter.
+                </div>
               ) : (
-                staff.map((m) => {
-                  const isSuper = m.roles.some((r) => r.name === "SUPER_ADMIN");
-                  return (
-                    <tr key={m.id} className="transition hover:bg-[#f9fafb]">
-                      <td className="px-4 py-3.5">
-                        <Link
-                          href={`/staff/users/${m.id}`}
-                          className="group block"
-                        >
-                          <div className="flex items-center gap-2.5">
-                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#e3e5e7] text-xs font-bold text-[#303030]">
-                              {m.firstName.charAt(0)}
-                              {m.lastName ? m.lastName.charAt(0) : ""}
-                            </div>
-                            <div>
-                              <p className="font-semibold text-[#1a1a1a] group-hover:text-[#008060]">
-                                {m.name}
-                              </p>
-                              <p className="text-[11px] text-[#616161]">{m.email}</p>
-                            </div>
-                          </div>
-                        </Link>
-                      </td>
+                <div className="divide-y divide-neutral-200">
+                  {staff.map((m) => {
+                    const isSuper = m.roles.some((r) => r.name === "SUPER_ADMIN");
+                    return (
+                      <div
+                        key={m.id}
+                        className="grid grid-cols-[minmax(260px,2.5fr)_minmax(120px,1fr)_minmax(180px,1.4fr)_minmax(200px,1.5fr)_minmax(110px,0.9fr)_80px] items-center gap-3 px-4 py-3 hover:bg-[#f7f7f7] transition-colors"
+                      >
+                        {/* Member */}
+                        <div className="min-w-0">
+                          <Link
+                            href={`/staff/users/${m.id}`}
+                            className="font-medium text-neutral-900 hover:underline block truncate"
+                          >
+                            {m.name}
+                          </Link>
+                          <span className="text-[12px] text-neutral-500 block truncate">
+                            {m.email}
+                          </span>
+                        </div>
 
-                      <td className="px-4 py-3.5 font-mono text-[11px] text-[#303030]">
-                        {m.employeeCode || "—"}
-                      </td>
+                        {/* Code */}
+                        <div className="font-mono text-[12px] text-neutral-700">
+                          {m.employeeCode || "—"}
+                        </div>
 
-                      <td className="px-4 py-3.5">
-                        <p className="font-medium text-[#303030]">{m.department || "Operations"}</p>
-                        <p className="text-[11px] text-[#616161]">{m.jobTitle || "Staff"}</p>
-                      </td>
+                        {/* Department & Title */}
+                        <div className="min-w-0">
+                          <span className="font-medium text-neutral-900 block truncate">
+                            {m.department || "Operations"}
+                          </span>
+                          <span className="text-[12px] text-neutral-500 block truncate">
+                            {m.jobTitle || "Staff"}
+                          </span>
+                        </div>
 
-                      <td className="px-4 py-3.5">
+                        {/* Roles */}
                         <div className="flex flex-wrap gap-1">
                           {m.roles.length === 0 ? (
-                            <span className="text-[11px] text-[#8c9196]">No role</span>
+                            <span className="text-[12px] text-neutral-400">No role</span>
                           ) : (
                             m.roles.map((r) => (
                               <span
                                 key={r.id}
-                                className={`inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-semibold ${
+                                className={`inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-medium ${
                                   r.name === "SUPER_ADMIN"
-                                    ? "bg-purple-100 text-purple-800 border border-purple-200"
-                                    : "bg-stone-100 text-stone-800 border border-stone-200"
+                                    ? "bg-purple-50 text-purple-700 border border-purple-200"
+                                    : "bg-neutral-100 text-neutral-700 border border-neutral-200"
                                 }`}
                               >
                                 {r.name.replace(/_/g, " ")}
@@ -333,30 +483,30 @@ export default function StaffUsersListPage() {
                             ))
                           )}
                         </div>
-                      </td>
 
-                      <td className="px-4 py-3.5">
-                        <span
-                          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-medium ${
-                            m.status === "ACTIVE"
-                              ? "bg-emerald-50 text-emerald-800"
-                              : "bg-stone-100 text-stone-600"
-                          }`}
-                        >
+                        {/* Status */}
+                        <div>
                           <span
-                            className={`h-1.5 w-1.5 rounded-full ${
-                              m.status === "ACTIVE" ? "bg-emerald-600" : "bg-stone-400"
+                            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-medium ${
+                              m.status === "ACTIVE"
+                                ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
+                                : "bg-neutral-100 text-neutral-600 border border-neutral-200"
                             }`}
-                          />
-                          {m.status}
-                        </span>
-                      </td>
+                          >
+                            <span
+                              className={`h-1.5 w-1.5 rounded-full ${
+                                m.status === "ACTIVE" ? "bg-emerald-600" : "bg-neutral-400"
+                              }`}
+                            />
+                            {m.status}
+                          </span>
+                        </div>
 
-                      <td className="px-4 py-3.5 text-right">
-                        <div className="inline-flex items-center gap-2">
+                        {/* Actions */}
+                        <div className="flex items-center justify-end gap-1.5">
                           <Link
                             href={`/staff/users/${m.id}`}
-                            className="rounded-md border border-[#c9cccf] bg-white px-2.5 py-1 text-[11px] font-medium text-[#303030] transition hover:bg-[#f6f6f7]"
+                            className="inline-flex h-7 items-center justify-center rounded-md border border-[#d4d4d4] bg-white px-2.5 text-[12px] font-medium text-neutral-700 shadow-2xs hover:bg-[#f7f7f7]"
                           >
                             Edit
                           </Link>
@@ -364,38 +514,43 @@ export default function StaffUsersListPage() {
                             <button
                               type="button"
                               onClick={() => setMemberToDisable(m)}
-                              className="rounded-md border border-red-200 bg-white px-2.5 py-1 text-[11px] font-medium text-red-700 transition hover:bg-red-50"
+                              className="inline-flex h-7 items-center justify-center rounded-md border border-red-200 bg-white px-2 text-[12px] font-medium text-red-700 shadow-2xs hover:bg-red-50"
                             >
                               Disable
                             </button>
                           )}
                         </div>
-                      </td>
-                    </tr>
-                  );
-                })
+                      </div>
+                    );
+                  })}
+                </div>
               )}
-            </tbody>
-          </table>
+            </div>
+          </div>
 
-          {/* Pagination Footer */}
+          {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between border-t border-[#e1e3e5] px-4 py-3 text-xs text-[#616161]">
-              <span>Page {page} of {totalPages} ({total} total staff)</span>
-              <div className="flex gap-1.5">
+            <div className="flex items-center justify-between border-t border-neutral-200 px-4 py-2.5 text-[12px] text-neutral-500">
+              <div>
+                Showing {staff.length} of {total} staff members
+              </div>
+              <div className="flex items-center gap-1">
                 <button
                   type="button"
                   disabled={page <= 1}
-                  onClick={() => token && loadStaff(token, page - 1, search, selectedRole, selectedStatus)}
-                  className="rounded-md border border-[#c9cccf] bg-white px-2.5 py-1 font-medium disabled:opacity-50"
+                  onClick={() => token && loadStaff(token, page - 1, search, selectedRole, status)}
+                  className="inline-flex h-7 items-center justify-center rounded-md border border-neutral-200 px-2.5 text-[12px] font-medium text-neutral-700 hover:bg-neutral-50 disabled:opacity-40"
                 >
                   Previous
                 </button>
+                <span className="px-2 font-medium text-neutral-800">
+                  {page} / {totalPages}
+                </span>
                 <button
                   type="button"
                   disabled={page >= totalPages}
-                  onClick={() => token && loadStaff(token, page + 1, search, selectedRole, selectedStatus)}
-                  className="rounded-md border border-[#c9cccf] bg-white px-2.5 py-1 font-medium disabled:opacity-50"
+                  onClick={() => token && loadStaff(token, page + 1, search, selectedRole, status)}
+                  className="inline-flex h-7 items-center justify-center rounded-md border border-neutral-200 px-2.5 text-[12px] font-medium text-neutral-700 hover:bg-neutral-50 disabled:opacity-40"
                 >
                   Next
                 </button>
@@ -408,17 +563,17 @@ export default function StaffUsersListPage() {
       {/* Confirmation Modal to Disable Staff */}
       {memberToDisable && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-2xs">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-            <h3 className="text-base font-bold text-[#1a1a1a]">Disable Staff Account</h3>
-            <p className="mt-2 text-xs leading-relaxed text-[#616161]">
-              Are you sure you want to disable <strong className="text-[#303030]">{memberToDisable.name}</strong> ({memberToDisable.employeeCode})? They will lose access to the staff portal immediately.
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl border border-neutral-200">
+            <h3 className="text-base font-semibold text-[#1a1a1a]">Disable Staff Account</h3>
+            <p className="mt-2 text-[13px] leading-relaxed text-neutral-600">
+              Are you sure you want to disable <strong className="text-neutral-900">{memberToDisable.name}</strong> ({memberToDisable.employeeCode})? They will lose access to the staff portal immediately.
             </p>
             <div className="mt-6 flex justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setMemberToDisable(null)}
                 disabled={actionLoading}
-                className="rounded-lg border border-[#c9cccf] bg-white px-3 py-1.5 text-xs font-semibold text-[#303030] hover:bg-[#f6f6f7]"
+                className="inline-flex h-8 items-center justify-center rounded-lg border border-[#d4d4d4] bg-white px-3 text-[13px] font-medium text-neutral-700 hover:bg-neutral-50"
               >
                 Cancel
               </button>
@@ -426,7 +581,7 @@ export default function StaffUsersListPage() {
                 type="button"
                 onClick={handleDisableConfirm}
                 disabled={actionLoading}
-                className="rounded-lg bg-red-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-red-700 disabled:opacity-60"
+                className="inline-flex h-8 items-center justify-center rounded-lg bg-red-600 px-3.5 text-[13px] font-medium text-white shadow-xs hover:bg-red-700 disabled:opacity-60"
               >
                 {actionLoading ? "Disabling..." : "Disable Account"}
               </button>

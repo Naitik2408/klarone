@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  ParseIntPipe,
   Patch,
   Post,
   Query,
@@ -16,8 +17,10 @@ import { RequirePermission } from "../staff-auth/decorators/require-permission.d
 import { CurrentStaff } from "../staff-auth/decorators/current-staff.decorator";
 import type { AuthenticatedStaff } from "../staff-auth/staff-auth.types";
 import type {
+  CreateRoleDto,
   CreateStaffMemberDto,
   ListStaffQueryDto,
+  UpdateRoleDto,
   UpdateStaffMemberDto,
 } from "./dto/staff-member.dto";
 
@@ -32,6 +35,43 @@ export class StaffManagementController {
   @RequirePermission("roles.read")
   async listRoles() {
     return this.staffManagementService.listRoles();
+  }
+
+  @Get("roles/:id")
+  @RequirePermission("roles.read")
+  async getRole(@Param("id", ParseIntPipe) id: number) {
+    return this.staffManagementService.getRole(id);
+  }
+
+  @Post("roles")
+  @RequirePermission("roles.assign")
+  async createRole(
+    @Body() dto: CreateRoleDto,
+    @CurrentStaff() actor: AuthenticatedStaff,
+  ) {
+    const actorId = actor ? BigInt(actor.userAccountId) : undefined;
+    return this.staffManagementService.createRole(dto, actorId);
+  }
+
+  @Patch("roles/:id")
+  @RequirePermission("roles.assign")
+  async updateRole(
+    @Param("id", ParseIntPipe) id: number,
+    @Body() dto: UpdateRoleDto,
+    @CurrentStaff() actor: AuthenticatedStaff,
+  ) {
+    const actorId = actor ? BigInt(actor.userAccountId) : undefined;
+    return this.staffManagementService.updateRole(id, dto, actorId);
+  }
+
+  @Delete("roles/:id")
+  @RequirePermission("roles.assign")
+  async deleteRole(
+    @Param("id", ParseIntPipe) id: number,
+    @CurrentStaff() actor: AuthenticatedStaff,
+  ) {
+    const actorId = actor ? BigInt(actor.userAccountId) : undefined;
+    return this.staffManagementService.deleteRole(id, actorId);
   }
 
   @Get("permissions")
