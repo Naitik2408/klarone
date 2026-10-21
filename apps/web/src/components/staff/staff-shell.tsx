@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -356,18 +357,19 @@ export function StaffShell({
     <div className="flex h-screen overflow-hidden bg-[#1c1c1c]">
       <aside className="hidden h-screen w-[240px] shrink-0 flex-col bg-[#1c1c1c] text-white md:flex">
         <div className="flex items-center gap-2.5 px-3 pt-3 pb-2">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#008060] text-[13px] font-bold text-white">
-            K
+          <div className="relative flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-md">
+            <Image
+              src="/logo/icon2.png"
+              alt="Logo"
+              width={32}
+              height={32}
+              className="h-full w-full object-contain"
+            />
           </div>
           <div className="min-w-0 flex-1">
             <div className="truncate text-[13.5px] leading-tight font-semibold text-white">
-              Klarone
+              SUPER ADMIN
             </div>
-            {profile && (
-              <div className="truncate text-[11px] text-[#8c9196]">
-                {profile.roles[0]?.replace(/_/g, " ") ?? "Staff"}
-              </div>
-            )}
           </div>
           <button
             type="button"
@@ -399,18 +401,19 @@ export function StaffShell({
 
         <div className="border-t border-white/[0.07] p-2">
           <div className="flex items-center gap-2 px-2 py-1.5">
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[#008060] text-[10px] font-bold text-white">
-              {profile ? profile.name.slice(0, 2).toUpperCase() : "NK"}
+            <div className="relative flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-md">
+              <Image
+                src="/logo/icon2.png"
+                alt="Avatar"
+                width={28}
+                height={28}
+                className="h-full w-full object-contain"
+              />
             </div>
             <div className="min-w-0 flex-1">
               <div className="truncate text-[12px] leading-tight font-medium text-white">
-                {profile ? profile.name : "My Store"}
+                {profile ? profile.name : "Klarone Admin"}
               </div>
-              {profile?.employeeCode && (
-                <div className="truncate font-mono text-[10px] text-[#8c9196]">
-                  {profile.employeeCode}
-                </div>
-              )}
             </div>
             <button
               type="button"
