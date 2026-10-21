@@ -54,6 +54,16 @@ function CustomersIcon() {
   );
 }
 
+function StaffIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6">
+      <path d="M13.5 17c.5-2 2.2-3.5 4.5-3.5M2 17c.7-3 3.3-5 6.5-5s5.8 2 6.5 5" strokeLinecap="round" />
+      <circle cx="8.5" cy="7" r="3" />
+      <circle cx="15.5" cy="8" r="2" />
+    </svg>
+  );
+}
+
 function AnalyticsIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6">
@@ -136,6 +146,7 @@ const navigation: NavItem[] = [
     ],
   },
   { label: "Customers", href: "/staff/customers", icon: <CustomersIcon /> },
+  { label: "Staff", href: "/staff/users", icon: <StaffIcon /> },
   { label: "Analytics", href: "/staff/analytics", icon: <AnalyticsIcon /> },
 ];
 

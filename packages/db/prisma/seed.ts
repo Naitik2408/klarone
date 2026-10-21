@@ -459,6 +459,66 @@ async function main(): Promise<void> {
 
   console.log(`Permissions ready: ${permissions.length}`);
 
+  // Seed Predefined Specialized Staff Roles
+  const specializedRoles = [
+    {
+      name: "PRODUCT_MANAGER",
+      description: "Manage product catalogue, collections, brands, categories, inventory, and reviews",
+      modules: ["catalogue", "inventory", "reviews"],
+    },
+    {
+      name: "ORDER_SPECIALIST",
+      description: "Process orders, draft orders, payments, shipments, and customer communication",
+      modules: ["orders", "payments", "customers"],
+    },
+    {
+      name: "SERVICE_TECHNICIAN",
+      description: "Manage laptop diagnostics, service jobs, repairs, warranties, and device assets",
+      modules: ["service", "warranty", "devices", "support"],
+    },
+    {
+      name: "CUSTOMER_SUPPORT",
+      description: "Handle support tickets, customer inquiries, and customer profile updates",
+      modules: ["support", "customers", "notifications"],
+    },
+  ];
+
+  const allDbPermissions = await prisma.permission.findMany();
+  for (const r of specializedRoles) {
+    const roleRecord = await prisma.role.upsert({
+      where: { name: r.name },
+      update: {
+        description: r.description,
+        isSystemRole: true,
+        status: "ACTIVE",
+      },
+      create: {
+        name: r.name,
+        description: r.description,
+        isSystemRole: true,
+        status: "ACTIVE",
+      },
+    });
+
+    const matchingPerms = allDbPermissions.filter((p) => r.modules.includes(p.module));
+    for (const p of matchingPerms) {
+      await prisma.rolePermission.upsert({
+        where: {
+          roleId_permissionId: {
+            roleId: roleRecord.id,
+            permissionId: p.id,
+          },
+        },
+        update: {},
+        create: {
+          roleId: roleRecord.id,
+          permissionId: p.id,
+        },
+      });
+    }
+    console.log(`Specialized Role ready: ${roleRecord.name} (${matchingPerms.length} permissions)`);
+  }
+
   for (const setting of platformSettings) {
     await prisma.platformSetting.upsert({
       where: {
