@@ -53,6 +53,55 @@ export const metadata: Metadata = {
     },
 };
 
+// Root LocalBusiness & Organization Schema for Google Knowledge Graph & Local SEO
+const organizationJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "LocalBusiness",
+    name: "Klarone",
+    alternateName: "Krishna Infotech Solution",
+    description:
+        "Laptop Ownership Ecosystem in Kolkata offering AI-guided laptop advisory, authentic brand sales, white-glove setup, repairs, and lifetime hardware upgrades.",
+    url: "https://klarone.com",
+    telephone: "+91 98300 00000",
+    priceRange: "₹₹₹",
+    address: {
+        "@type": "PostalAddress",
+        addressLocality: "Kolkata",
+        addressRegion: "West Bengal",
+        addressCountry: "IN",
+    },
+    geo: {
+        "@type": "GeoCoordinates",
+        latitude: "22.5726",
+        longitude: "88.3639",
+    },
+    areaServed: [
+        {
+            "@type": "City",
+            name: "Kolkata",
+        },
+        {
+            "@type": "AdministrativeArea",
+            name: "West Bengal",
+        },
+    ],
+    openingHoursSpecification: [
+        {
+            "@type": "OpeningHoursSpecification",
+            dayOfWeek: [
+                "Monday",
+                "Tuesday",
+                "Wednesday",
+                "Thursday",
+                "Friday",
+                "Saturday",
+            ],
+            opens: "10:00",
+            closes: "20:00",
+        },
+    ],
+};
+
 export default function RootLayout({
     children,
 }: Readonly<{
@@ -64,6 +113,14 @@ export default function RootLayout({
             className={`${sansFont.variable} ${serifFont.variable}`}
             suppressHydrationWarning
         >
+            <head>
+                <script
+                    type="application/ld+json"
+                    dangerouslySetInnerHTML={{
+                        __html: JSON.stringify(organizationJsonLd),
+                    }}
+                />
+            </head>
             <body className="antialiased">
                 <CustomerAuthProvider>
                     <CartProvider>{children}</CartProvider>

@@ -36,11 +36,17 @@ export async function generateMetadata({
   const { slug } = await params;
   try {
     const product = await getProduct(slug);
+    const primaryImage = product.media?.[0]?.url;
     return {
-      title: `${product.name} — Klarone`,
+      title: `${product.name} — Klarone | Verified Laptops Kolkata`,
       description:
         product.shortDescription ||
-        `Discover specifications, authentic warranty, and pricing for ${product.name} at Klarone.`,
+        `Buy authentic ${product.name} with official manufacturer warranty, transparent specs, and fast local support in Kolkata.`,
+      openGraph: {
+        title: `${product.name} | Klarone`,
+        description: product.shortDescription || `Authentic ${product.name} in Kolkata.`,
+        images: primaryImage ? [{ url: primaryImage }] : undefined,
+      },
     };
   } catch {
     return {
@@ -65,8 +71,47 @@ export default async function ProductPage({
     notFound();
   }
 
+  const primaryVariant = product.variants[0];
+  const primaryImage = product.media?.[0]?.url;
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://klarone.com";
+
+  // Google Rich Results Product & Offer Schema (JSON-LD)
+  const productJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: product.name,
+    image: primaryImage ? [primaryImage] : undefined,
+    description:
+      product.shortDescription ||
+      `Authentic ${product.name} with official brand warranty and local Kolkata setup.`,
+    sku: primaryVariant?.sku || product.slug,
+    brand: {
+      "@type": "Brand",
+      name: product.brand?.name || "Klarone",
+    },
+    offers: {
+      "@type": "Offer",
+      url: `${baseUrl}/laptops/${product.slug}`,
+      priceCurrency: primaryVariant?.currency || "INR",
+      price: primaryVariant?.sellingPrice || "0",
+      itemCondition: "https://schema.org/NewCondition",
+      availability: "https://schema.org/InStock",
+      seller: {
+        "@type": "Organization",
+        name: "Klarone",
+        url: baseUrl,
+      },
+    },
+  };
+
   return (
     <div className="min-h-screen bg-white">
+      {/* Google Product Schema for Rich Snippets */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }}
+      />
+
       {/* 1. Global Storefront Floating Header */}
       <StorefrontHeader />
 
