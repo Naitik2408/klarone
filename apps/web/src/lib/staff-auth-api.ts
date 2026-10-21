@@ -94,3 +94,30 @@ export async function staffLogin(
     accessToken: string;
   };
 }
+
+export interface CurrentStaffProfile {
+  userAccountId: string;
+  staffProfileId: string;
+  name: string;
+  email: string;
+  department: string | null;
+  jobTitle: string | null;
+  employeeCode: string;
+  roles: string[];
+  isSuperAdmin: boolean;
+  permissions: string[];
+}
+
+export async function getCurrentStaffProfile(token: string): Promise<CurrentStaffProfile> {
+  const response = await fetch(`${API_BASE_URL}/staff-auth/me`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new StaffAuthError(await readError(response));
+  }
+
+  return response.json();
+}

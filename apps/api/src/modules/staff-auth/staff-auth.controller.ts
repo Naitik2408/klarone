@@ -33,15 +33,10 @@ export class StaffAuthController {
 
   @Get("me")
   @UseGuards(StaffAuthGuard)
-  getCurrentStaff(
+  async getCurrentStaff(
     @CurrentStaff() staff: AuthenticatedStaff,
   ) {
-    return {
-      userAccountId: staff.userAccountId.toString(),
-      staffProfileId: staff.staffProfileId.toString(),
-      roles: staff.roles,
-      tokenType: staff.tokenType,
-    };
+    return this.staffAuthService.getStaffProfileWithPermissions(staff.userAccountId);
   }
 
   @Get("permission-test")
