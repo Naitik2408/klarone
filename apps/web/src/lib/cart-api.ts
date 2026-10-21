@@ -30,6 +30,7 @@ export interface ServerCartItem {
       name: string;
       slug: string;
     };
+    imageUrl?: string | null;
   };
   variant: {
     id: string;
@@ -182,7 +183,7 @@ export function mapServerCartItemToCartItem(
       item.variant.compareAtPrice,
     currency: item.variant.currency,
     quantity: item.quantity,
-    imageUrl: null,
+    imageUrl: item.product.imageUrl ?? null,
     brandName: item.product.brand.name,
     ramGb: item.variant.ramGb,
     storageGb: item.variant.storageGb,

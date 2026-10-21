@@ -32,6 +32,10 @@ export class CartService {
                 product: {
                   include: {
                     brand: true,
+                    media: {
+                      orderBy: { displayOrder: "asc" },
+                      take: 1,
+                    },
                   },
                 },
                 inventories: true,
@@ -166,6 +170,10 @@ export class CartService {
                   product: {
                     include: {
                       brand: true,
+                      media: {
+                        orderBy: { displayOrder: "asc" },
+                        take: 1,
+                      },
                     },
                   },
                   inventories: true,
@@ -329,6 +337,7 @@ export class CartService {
             name: item.productVariant.product.brand.name,
             slug: item.productVariant.product.brand.slug,
           },
+          imageUrl: (item.productVariant.product as any).media?.[0]?.url ?? null,
         },
         variant: {
           id: item.productVariant.id.toString(),
