@@ -162,7 +162,6 @@ const navigation: NavItem[] = [
     icon: <StaffIcon />,
     permission: "users.read",
     children: [
-      { label: "Staff Members", href: "/staff/users", permission: "users.read" },
       { label: "Roles & Permissions", href: "/staff/roles", permission: "roles.read" },
     ],
   },
