@@ -250,6 +250,24 @@ export function SelectAdvisorChat() {
             <p className="mt-3 max-w-md px-4 text-xs sm:text-sm leading-relaxed text-stone-600 sm:max-w-lg">
               Describe your workload, favorite software, battery needs, and budget. Our AI matches verified laptops with transparent specification fit analysis.
             </p>
+
+            {/* Quick-starter prompt chips from AI UI Patterns */}
+            <div className="mt-6 grid w-full max-w-xl grid-cols-1 sm:grid-cols-2 gap-2.5 px-2 text-left">
+              {INITIAL_SUGGESTIONS.map((item, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => handleSubmit(item.prompt)}
+                  className="group flex items-start gap-2.5 rounded-xl border border-stone-200/90 bg-white/90 p-3 text-left shadow-2xs transition hover:border-slate-800 hover:bg-white active:scale-[0.98]"
+                >
+                  <span className="text-xl shrink-0 select-none">{item.icon}</span>
+                  <div className="min-w-0">
+                    <h4 className="text-xs font-semibold text-slate-900 group-hover:text-slate-950 leading-snug">{item.title}</h4>
+                    <p className="mt-0.5 text-[11px] text-stone-500 line-clamp-2 leading-relaxed">{item.prompt}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
           </div>
         ) : (
           <div className="space-y-6">
@@ -414,6 +432,61 @@ export function SelectAdvisorChat() {
                   <span className="mt-1 block text-[10px] text-stone-400">
                     {msg.timestamp}
                   </span>
+
+                  {/* Contextual Action Chips (AI UI Pattern) */}
+                  {msg.sender === "advisor" && !isLoading && (
+                    <div className="mt-3 flex flex-wrap gap-1.5">
+                      {!msg.recommendations || msg.recommendations.length === 0 ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => handleSubmit("I mostly need it for everyday office tasks and video calls under ₹65,000")}
+                            className="rounded-full border border-stone-300 bg-white/80 px-2.5 py-1 text-[11px] font-medium text-stone-700 transition hover:border-slate-900 hover:bg-white active:scale-95"
+                          >
+                            💼 Office & Zoom calls (₹65k)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleSubmit("I need it for programming and running local containers under ₹1.2 Lakhs")}
+                            className="rounded-full border border-stone-300 bg-white/80 px-2.5 py-1 text-[11px] font-medium text-stone-700 transition hover:border-slate-900 hover:bg-white active:scale-95"
+                          >
+                            💻 Coding & Containers (₹1.2L)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleSubmit("I prioritize 10+ hours battery life and lightweight travel under 1.3kg")}
+                            className="rounded-full border border-stone-300 bg-white/80 px-2.5 py-1 text-[11px] font-medium text-stone-700 transition hover:border-slate-900 hover:bg-white active:scale-95"
+                          >
+                            🔋 Max Battery & Portability
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => handleSubmit("What are the real-world battery life differences between these options?")}
+                            className="rounded-full border border-stone-300 bg-white/80 px-2.5 py-1 text-[11px] font-medium text-stone-700 transition hover:border-slate-900 hover:bg-white active:scale-95"
+                          >
+                            🔋 Compare battery life
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleSubmit("Which of these has the best display and keyboard for long sessions?")}
+                            className="rounded-full border border-stone-300 bg-white/80 px-2.5 py-1 text-[11px] font-medium text-stone-700 transition hover:border-slate-900 hover:bg-white active:scale-95"
+                          >
+                            ✨ Screen & keyboard quality
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleSubmit("Are there any reliable options ₹10,000 lower in price?")}
+                            className="rounded-full border border-stone-300 bg-white/80 px-2.5 py-1 text-[11px] font-medium text-stone-700 transition hover:border-slate-900 hover:bg-white active:scale-95"
+                          >
+                            💰 Lower budget alternatives
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  )}
                 </div>
               </motion.div>
             ))}
