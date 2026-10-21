@@ -269,8 +269,6 @@ export class GeminiAdvisorExplainerService {
         body: JSON.stringify({
           model: this.groqModelName,
           messages: followUpMessages,
-          tools,
-          tool_choice: "none",
           temperature: 0.6,
         }),
       });
