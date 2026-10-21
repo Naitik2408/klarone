@@ -295,6 +295,74 @@ export function OrderDetail({
           </div>
         </section>
 
+        {/* Post-Purchase Ownership Upsell & Care Flow (CRO & Lifecycle Boost) */}
+        <section className="rounded-2xl sm:rounded-3xl border border-stone-200/90 bg-gradient-to-br from-[#f8faf6] via-white to-[#f0f4ea] p-4 sm:p-6 shadow-sm">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="inline-flex items-center gap-1.5 rounded-full bg-[#d6f088]/60 px-3 py-1 text-[11px] font-semibold text-slate-900 mb-2.5">
+                <span>⚡</span>
+                <span>Klarone Ownership Ecosystem</span>
+              </div>
+              <h2 className="font-serif text-xl sm:text-2xl font-normal text-slate-900 tracking-tight">
+                Complete Your Laptop Setup
+              </h2>
+              <p className="mt-1 text-xs sm:text-[13px] text-stone-600 leading-relaxed max-w-xl">
+                Protect and optimize your new laptop from day one. Add local on-site setup or Kolkata VIP maintenance coverage before delivery.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            {/* Offer 1: White-Glove Setup */}
+            <div className="flex flex-col justify-between rounded-xl sm:rounded-2xl border border-stone-200/80 bg-white p-4 sm:p-5 shadow-2xs">
+              <div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xl">🛠️</span>
+                  <span className="text-xs sm:text-sm font-bold text-slate-900">₹999 / Handover</span>
+                </div>
+                <h3 className="mt-2.5 text-xs sm:text-sm font-semibold text-slate-900">
+                  White-Glove Setup &amp; Data Migration
+                </h3>
+                <p className="mt-1 text-[11px] sm:text-xs text-stone-500 leading-relaxed">
+                  Full OS unbloating, thermal optimization, biometric passkeys, software installations, and seamless file transfer from your old PC/Mac.
+                </p>
+              </div>
+              <a
+                href="https://wa.me/919830000000?text=Hi%20Klarone,%20I%20just%20placed%20order%20and%20would%20like%20to%20add%20White-Glove%20Setup%20to%20my%20delivery."
+                target="_blank"
+                rel="noreferrer"
+                className="mt-4 inline-flex items-center justify-center rounded-xl bg-slate-950 px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-slate-800 active:scale-95 text-center"
+              >
+                Add Setup to Delivery →
+              </a>
+            </div>
+
+            {/* Offer 2: Klarone Care Pro AMC */}
+            <div className="flex flex-col justify-between rounded-xl sm:rounded-2xl border border-stone-200/80 bg-white p-4 sm:p-5 shadow-2xs">
+              <div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xl">🛡️</span>
+                  <span className="text-xs sm:text-sm font-bold text-slate-900">₹1,499 / Year</span>
+                </div>
+                <h3 className="mt-2.5 text-xs sm:text-sm font-semibold text-slate-900">
+                  Klarone Care Pro (Kolkata AMC)
+                </h3>
+                <p className="mt-1 text-[11px] sm:text-xs text-stone-500 leading-relaxed">
+                  Includes 2 annual deep thermal repastes &amp; internal cleaning, priority technician support, and an immediate loaner laptop during any repair claims.
+                </p>
+              </div>
+              <a
+                href="https://wa.me/919830000000?text=Hi%20Klarone,%20I%20just%20placed%20order%20and%20would%20like%20to%20activate%20Klarone%20Care%20Pro%20AMC."
+                target="_blank"
+                rel="noreferrer"
+                className="mt-4 inline-flex items-center justify-center rounded-xl bg-[#d6f088] px-4 py-2.5 text-xs font-semibold text-slate-950 transition hover:bg-[#c9e874] active:scale-95 text-center"
+              >
+                Activate Pro Care →
+              </a>
+            </div>
+          </div>
+        </section>
+
         {/* 2-column layout: Items on Left, Address & Timeline on Right */}
         <div className="grid grid-cols-12 gap-5 sm:gap-6 items-start">
           {/* Left Column: Products List */}
@@ -463,11 +531,19 @@ export function OrderDetail({
           >
             ← Back to orders list
           </Link>
-          <Link
-            href="/laptops"
+          <a
+            href="https://wa.me/919830000000?text=Hi%20Klarone,%20regarding%20my%20order"
+            target="_blank"
+            rel="noreferrer"
             className="rounded-full bg-[#d6f088] px-6 py-2.5 text-xs font-semibold text-slate-950 transition hover:bg-[#c9e874] active:scale-95"
           >
-            Browse More Laptops
+            Contact Kolkata Concierge
+          </a>
+          <Link
+            href="/select"
+            className="rounded-full border border-stone-300 bg-white px-5 py-2.5 text-xs font-semibold text-slate-950 transition hover:bg-stone-50 active:scale-95"
+          >
+            Consult AI Advisor
           </Link>
         </div>
       </div>
