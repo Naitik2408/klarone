@@ -165,7 +165,12 @@ const navigation: NavItem[] = [
       { label: "Roles & Permissions", href: "/staff/roles", permission: "roles.read" },
     ],
   },
-  { label: "Analytics", href: "/staff/analytics", icon: <AnalyticsIcon />, permission: "platform.settings.read" },
+  {
+    label: "Monitoring",
+    href: "/staff/analytics",
+    icon: <AnalyticsIcon />,
+    permission: "platform.settings.read",
+  },
 ];
 
 function SidebarNavItem({
