@@ -1,20 +1,28 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import {
   clearStaffAccessToken,
+  getCurrentStaffProfile,
   getStaffAccessToken,
+  type CurrentStaffProfile,
 } from "@/lib/staff-auth-api";
 
-type NavChild = { label: string; href: string };
+type NavChild = {
+  label: string;
+  href: string;
+  permission?: string;
+};
 
 type NavItem = {
   label: string;
   href: string;
   icon: React.ReactNode;
+  permission?: string;
   children?: NavChild[];
 };
 
@@ -50,6 +58,16 @@ function CustomersIcon() {
     <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6">
       <circle cx="10" cy="7" r="3" />
       <path d="M3.5 17c.7-3 3.3-5 6.5-5s5.8 2 6.5 5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function StaffIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6">
+      <path d="M13.5 17c.5-2 2.2-3.5 4.5-3.5M2 17c.7-3 3.3-5 6.5-5s5.8 2 6.5 5" strokeLinecap="round" />
+      <circle cx="8.5" cy="7" r="3" />
+      <circle cx="15.5" cy="8" r="2" />
     </svg>
   );
 }
@@ -120,23 +138,34 @@ const navigation: NavItem[] = [
     label: "Orders",
     href: "/staff/orders",
     icon: <OrdersIcon />,
+    permission: "orders.read",
     children: [
-      { label: "Drafts", href: "/staff/orders/drafts" },
+      { label: "Drafts", href: "/staff/orders/drafts", permission: "orders.read" },
     ],
   },
   {
     label: "Products",
     href: "/staff/catalogue/products",
     icon: <ProductsIcon />,
+    permission: "catalogue.read",
     children: [
-      { label: "Collections", href: "/staff/catalogue/collections" },
-      { label: "Inventory", href: "/staff/inventory" },
-      { label: "Brands", href: "/staff/catalogue/brands" },
-      { label: "Categories", href: "/staff/catalogue/categories" },
+      { label: "Collections", href: "/staff/catalogue/collections", permission: "catalogue.read" },
+      { label: "Inventory", href: "/staff/inventory", permission: "inventory.read" },
+      { label: "Brands", href: "/staff/catalogue/brands", permission: "catalogue.read" },
+      { label: "Categories", href: "/staff/catalogue/categories", permission: "catalogue.read" },
     ],
   },
-  { label: "Customers", href: "/staff/customers", icon: <CustomersIcon /> },
-  { label: "Analytics", href: "/staff/analytics", icon: <AnalyticsIcon /> },
+  { label: "Customers", href: "/staff/customers", icon: <CustomersIcon />, permission: "customers.read" },
+  {
+    label: "Staff",
+    href: "/staff/users",
+    icon: <StaffIcon />,
+    permission: "users.read",
+    children: [
+      { label: "Roles & Permissions", href: "/staff/roles", permission: "roles.read" },
+    ],
+  },
+  { label: "Analytics", href: "/staff/analytics", icon: <AnalyticsIcon />, permission: "platform.settings.read" },
 ];
 
 function SidebarNavItem({
@@ -247,6 +276,7 @@ export function StaffShell({
   const pathname = usePathname();
   const router = useRouter();
   const [ready, setReady] = useState(false);
+  const [profile, setProfile] = useState<CurrentStaffProfile | null>(null);
 
   const isLoginPage = pathname === "/staff/login";
 
@@ -255,17 +285,62 @@ export function StaffShell({
       setReady(true);
       return;
     }
-    if (!getStaffAccessToken()) {
+    const token = getStaffAccessToken();
+    if (!token) {
       router.replace("/staff/login");
       return;
     }
-    setReady(true);
+
+    getCurrentStaffProfile(token)
+      .then((p) => {
+        setProfile(p);
+        setReady(true);
+      })
+      .catch(() => {
+        // Fallback: token valid, proceed
+        setReady(true);
+      });
   }, [isLoginPage, router]);
 
   function logout() {
     clearStaffAccessToken();
     router.replace("/staff/login");
   }
+
+  function hasPermission(code?: string): boolean {
+    if (!code) return true;
+    if (!profile) return true; // optimistic while loading
+    if (profile.isSuperAdmin || profile.roles.includes("SUPER_ADMIN")) return true;
+    return profile.permissions.includes(code);
+  }
+
+  // Filter navigation items by active user permissions
+  const visibleNavigation: NavItem[] = [];
+  for (const item of navigation) {
+    if (item.permission && !hasPermission(item.permission)) {
+      continue;
+    }
+    const visibleChildren = item.children
+      ? item.children.filter((child) => hasPermission(child.permission))
+      : undefined;
+
+    visibleNavigation.push({
+      ...item,
+      children: visibleChildren,
+    });
+  }
+
+  // Check URL guard: If user navigated directly to an unauthorized URL, block with friendly access denied UI
+  const currentRouteRequires = (() => {
+    if (pathname.startsWith("/staff/orders")) return "orders.read";
+    if (pathname.startsWith("/staff/catalogue/products") || pathname.startsWith("/staff/catalogue/brands") || pathname.startsWith("/staff/catalogue/categories") || pathname.startsWith("/staff/catalogue/collections")) return "catalogue.read";
+    if (pathname.startsWith("/staff/inventory")) return "inventory.read";
+    if (pathname.startsWith("/staff/customers")) return "customers.read";
+    if (pathname.startsWith("/staff/users")) return "users.read";
+    return null;
+  })();
+
+  const isAccessDenied = currentRouteRequires && !hasPermission(currentRouteRequires);
 
   if (isLoginPage) return <>{children}</>;
 
@@ -281,12 +356,18 @@ export function StaffShell({
     <div className="flex h-screen overflow-hidden bg-[#1c1c1c]">
       <aside className="hidden h-screen w-[240px] shrink-0 flex-col bg-[#1c1c1c] text-white md:flex">
         <div className="flex items-center gap-2.5 px-3 pt-3 pb-2">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#008060] text-[13px] font-bold text-white">
-            K
+          <div className="relative flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-md">
+            <Image
+              src="/logo/icon2.png"
+              alt="Logo"
+              width={32}
+              height={32}
+              className="h-full w-full object-contain"
+            />
           </div>
           <div className="min-w-0 flex-1">
             <div className="truncate text-[13.5px] leading-tight font-semibold text-white">
-              Klarone
+              SUPER ADMIN
             </div>
           </div>
           <button
@@ -312,19 +393,25 @@ export function StaffShell({
         </div>
 
         <nav className="flex-1 space-y-[2px] overflow-y-auto px-2 pb-3">
-          {navigation.map((item) => (
+          {visibleNavigation.map((item) => (
             <SidebarNavItem key={item.href} item={item} pathname={pathname} />
           ))}
         </nav>
 
         <div className="border-t border-white/[0.07] p-2">
           <div className="flex items-center gap-2 px-2 py-1.5">
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[#008060] text-[10px] font-bold text-white">
-              NK
+            <div className="relative flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-md">
+              <Image
+                src="/logo/icon2.png"
+                alt="Avatar"
+                width={28}
+                height={28}
+                className="h-full w-full object-contain"
+              />
             </div>
             <div className="min-w-0 flex-1">
               <div className="truncate text-[12px] leading-tight font-medium text-white">
-                My Store
+                {profile ? profile.name : "Klarone Admin"}
               </div>
             </div>
             <button
@@ -351,7 +438,32 @@ export function StaffShell({
 
       <div className="min-w-0 flex-1 overflow-y-auto bg-[#1c1c1c] pt-1">
         <main className="min-h-[calc(100vh-4px)] min-w-0 overflow-hidden rounded-tl-2xl bg-white">
-          {children}
+          {isAccessDenied ? (
+            <div className="flex min-h-[70vh] flex-col items-center justify-center px-4 text-center">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-50 text-red-600">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
+                </svg>
+              </div>
+              <h2 className="mt-4 text-base font-bold text-[#1a1a1a]">
+                Access Restricted
+              </h2>
+              <p className="mt-1.5 max-w-sm text-xs leading-relaxed text-[#616161]">
+                Your account ({profile?.roles.join(", ") || "Staff"}) does not have the required <code className="rounded bg-stone-100 px-1 py-0.5 font-mono text-[11px] text-red-700">{currentRouteRequires}</code> permission to view this section.
+              </p>
+              <div className="mt-5 flex gap-2">
+                <Link
+                  href="/staff"
+                  className="rounded-lg bg-[#008060] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#006e52]"
+                >
+                  Return to Dashboard
+                </Link>
+              </div>
+            </div>
+          ) : (
+            children
+          )}
         </main>
       </div>
     </div>

@@ -138,4 +138,68 @@ export class StaffAuthService {
       },
     };
   }
+
+  async getStaffProfileWithPermissions(userAccountId: bigint) {
+    const account = await this.prisma.userAccount.findUnique({
+      where: { id: userAccountId },
+      include: {
+        person: true,
+        staffProfile: true,
+        userRoles: {
+          where: {
+            status: "ACTIVE",
+            OR: [
+              { expiresAt: null },
+              { expiresAt: { gt: new Date() } },
+            ],
+            role: { status: "ACTIVE" },
+          },
+          include: {
+            role: {
+              include: {
+                permissions: {
+                  include: {
+                    permission: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!account || !account.staffProfile) {
+      throw new UnauthorizedException("Staff member not found");
+    }
+
+    const isSuperAdmin = account.userRoles.some((ur) => ur.role.name === "SUPER_ADMIN");
+
+    let permissionCodes: string[] = [];
+    if (isSuperAdmin) {
+      const allPerms = await this.prisma.permission.findMany({ select: { code: true } });
+      permissionCodes = allPerms.map((p) => p.code);
+    } else {
+      const codeSet = new Set<string>();
+      for (const ur of account.userRoles) {
+        for (const rp of ur.role.permissions) {
+          codeSet.add(rp.permission.code);
+        }
+      }
+      permissionCodes = Array.from(codeSet);
+    }
+
+    return {
+      userAccountId: account.id.toString(),
+      staffProfileId: account.staffProfile.id.toString(),
+      name: `${account.person.firstName} ${account.person.lastName ?? ""}`.trim(),
+      email: account.person.email,
+      department: account.staffProfile.department,
+      jobTitle: account.staffProfile.jobTitle,
+      employeeCode: account.staffProfile.employeeCode,
+      roles: account.userRoles.map((ur) => ur.role.name),
+      isSuperAdmin,
+      permissions: permissionCodes,
+    };
+  }
 }

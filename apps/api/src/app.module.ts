@@ -16,6 +16,7 @@ import { PaymentsModule } from "./modules/payments/payments.module";
 import { RecommendationsModule } from "./modules/recommendations/recommendations.module";
 import { InventoryModule } from "./modules/inventory/inventory.module";
 import { MetaobjectsModule } from "./modules/metaobjects/metaobjects.module";
+import { StaffManagementModule } from "./modules/staff-management/staff-management.module";
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { MetaobjectsModule } from "./modules/metaobjects/metaobjects.module";
     BetterAuthModule,
     AuditModule,
     StaffAuthModule,
+    StaffManagementModule,
     PlatformSettingsModule,
     CustomersModule,
     CatalogueModule,
