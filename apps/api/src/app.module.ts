@@ -17,6 +17,7 @@ import { RecommendationsModule } from "./modules/recommendations/recommendations
 import { InventoryModule } from "./modules/inventory/inventory.module";
 import { MetaobjectsModule } from "./modules/metaobjects/metaobjects.module";
 import { StaffManagementModule } from "./modules/staff-management/staff-management.module";
+import { MonitoringModule } from "./modules/monitoring/monitoring.module";
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { StaffManagementModule } from "./modules/staff-management/staff-manageme
     PaymentsModule,
     RecommendationsModule,
     MetaobjectsModule,
+    MonitoringModule,
   ],
 })
 export class AppModule {}
