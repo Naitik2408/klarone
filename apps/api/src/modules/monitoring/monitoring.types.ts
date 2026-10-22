@@ -1,4 +1,25 @@
+export type LogLevel = "info" | "warn" | "error" | "debug";
+
+export interface LogEntry {
+  id: string;
+  timestamp: string;
+  level: LogLevel;
+  event: string;
+  message: string;
+  requestId: string;
+  module: string;
+  route?: string;
+  method?: string;
+  statusCode?: number;
+  durationMs?: number;
+  userId?: string;
+  ip?: string;
+  stackTrace?: string;
+  metadata?: Record<string, unknown>;
+}
+
 export interface RequestTelemetryRecord {
+  requestId: string;
   timestamp: number;
   method: string;
   path: string;
@@ -6,7 +27,9 @@ export interface RequestTelemetryRecord {
   durationMs: number;
   ipAddress?: string;
   userAgent?: string;
+  userId?: string;
   errorMessage?: string;
+  stackTrace?: string;
 }
 
 export interface LatencyPercentiles {
@@ -63,6 +86,20 @@ export interface SystemHealthAlert {
   timestamp: string;
   value?: number;
   threshold?: number;
+  runbook?: string;
+  acknowledged?: boolean;
+}
+
+export interface AlertRuleConfig {
+  id: string;
+  name: string;
+  category: "AVAILABILITY" | "LATENCY" | "ERRORS" | "HARDWARE";
+  enabled: boolean;
+  threshold: number;
+  unit: string;
+  severity: "CRITICAL" | "WARNING";
+  description: string;
+  runbook: string;
 }
 
 export interface MonitoringOverviewDto {

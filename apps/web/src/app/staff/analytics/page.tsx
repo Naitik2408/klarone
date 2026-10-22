@@ -23,13 +23,20 @@ import {
   getStaffAccessToken,
 } from "../../../lib/staff-auth-api";
 import {
+  acknowledgeAlert,
+  getAlertRules,
   getApiMetrics,
+  getMonitoringLogs,
   getMonitoringOverview,
   getSystemResources,
   StaffMonitoringApiError,
+  updateAlertRule,
 } from "../../../lib/staff-monitoring-api";
 import type {
+  AlertRuleConfig,
   ApiMetricsResponse,
+  LogEntry,
+  LogLevel,
   MonitoringOverview,
   SystemResourceMetrics,
 } from "../../../types/staff-monitoring";
@@ -60,13 +67,34 @@ type TimelinePoint = {
   memory: number;
 };
 
+type ActiveTab = "overview" | "logs" | "alerts";
+
 export default function StaffMonitoringPage() {
   const router = useRouter();
 
   const [token, setToken] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<ActiveTab>("overview");
+
+  // Telemetry data
   const [overview, setOverview] = useState<MonitoringOverview | null>(null);
   const [apiMetrics, setApiMetrics] = useState<ApiMetricsResponse | null>(null);
   const [resources, setResources] = useState<SystemResourceMetrics | null>(null);
+
+  // Logging & Alerts data
+  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [totalLogsCount, setTotalLogsCount] = useState<number>(0);
+  const [alertRules, setAlertRules] = useState<AlertRuleConfig[]>([]);
+
+  // Log filters
+  const [logSearch, setLogSearch] = useState("");
+  const [selectedLogLevel, setSelectedLogLevel] = useState<string>("ALL");
+  const [selectedRequestId, setSelectedRequestId] = useState<string>("");
+  const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
+
+  // Runbook modal or expanded alert
+  const [expandedRunbookId, setExpandedRunbookId] = useState<string | null>(null);
+  const [ackLoadingId, setAckLoadingId] = useState<string | null>(null);
+  const [ruleToggleLoadingId, setRuleToggleLoadingId] = useState<string | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -95,14 +123,25 @@ export default function StaffMonitoringPage() {
     setError("");
 
     try {
-      const [ov, am, res] = await Promise.all([
+      const [ov, am, res, logRes, rulesRes] = await Promise.all([
         getMonitoringOverview(t),
         getApiMetrics(t, 300),
         getSystemResources(t),
+        getMonitoringLogs(t, {
+          search: logSearch || undefined,
+          level: selectedLogLevel !== "ALL" ? (selectedLogLevel.toLowerCase() as LogLevel) : undefined,
+          requestId: selectedRequestId || undefined,
+          limit: 100,
+        }),
+        getAlertRules(t),
       ]);
+
       setOverview(ov);
       setApiMetrics(am);
       setResources(res);
+      setLogs(logRes.logs);
+      setTotalLogsCount(logRes.total);
+      setAlertRules(rulesRes.rules);
 
       const nowStr = new Date().toLocaleTimeString("en-IN", {
         hour: "2-digit",
@@ -162,7 +201,63 @@ export default function StaffMonitoringPage() {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [token, autoRefreshInterval]);
+  }, [token, autoRefreshInterval, logSearch, selectedLogLevel, selectedRequestId]);
+
+  // Re-fetch logs specifically when log filters change without resetting full UI
+  async function refreshLogsOnly() {
+    if (!token) return;
+    try {
+      const logRes = await getMonitoringLogs(token, {
+        search: logSearch || undefined,
+        level: selectedLogLevel !== "ALL" ? (selectedLogLevel.toLowerCase() as LogLevel) : undefined,
+        requestId: selectedRequestId || undefined,
+        limit: 100,
+      });
+      setLogs(logRes.logs);
+      setTotalLogsCount(logRes.total);
+    } catch (e) {
+      console.error("Failed to filter logs:", e);
+    }
+  }
+
+  // Handle alert acknowledgement
+  async function handleAcknowledge(alertId: string) {
+    if (!token) return;
+    setAckLoadingId(alertId);
+    try {
+      await acknowledgeAlert(token, alertId);
+      // Immediately reflect in local state
+      setOverview((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          activeAlerts: prev.activeAlerts.map((a) =>
+            a.id === alertId ? { ...a, acknowledged: true } : a,
+          ),
+        };
+      });
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to acknowledge alert");
+    } finally {
+      setAckLoadingId(null);
+    }
+  }
+
+  // Handle toggle alert rule
+  async function handleToggleRule(rule: AlertRuleConfig) {
+    if (!token) return;
+    setRuleToggleLoadingId(rule.id);
+    try {
+      const res = await updateAlertRule(token, rule.id, { enabled: !rule.enabled });
+      setAlertRules((prev) =>
+        prev.map((r) => (r.id === rule.id ? res.rule : r)),
+      );
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to update alert rule");
+    } finally {
+      setRuleToggleLoadingId(null);
+    }
+  }
 
   // Status code donut/pie data
   const statusPieData = useMemo(() => {
@@ -248,709 +343,882 @@ export default function StaffMonitoringPage() {
                         overview.status === "CRITICAL"
                           ? "bg-[#b30000] animate-pulse"
                           : overview.status === "DEGRADED"
-                            ? "bg-[#d97706]"
+                            ? "bg-[#b54708]"
                             : "bg-[#008060]"
                       }`}
                     />
                     {overview.status}
                   </span>
                 )}
-                {refreshing && (
-                  <svg className="h-3.5 w-3.5 animate-spin text-[#616161]" viewBox="0 0 24 24" fill="none">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
-                )}
               </div>
               <p className="text-[12px] text-[#616161]">
-                {today}{lastRefreshedAt ? ` · Live chart telemetry synced at ${lastRefreshedAt}` : ""}
+                {today} • Real-time telemetry, Loki-style log tracing & SRE alerts
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
-            <div className="flex items-center gap-1.5 rounded-lg border border-[#d4d4d4] bg-white px-2.5 py-1 text-[12px] text-[#303030]">
-              <span className="text-[#8c9196]">Interval:</span>
+          <div className="flex flex-wrap items-center gap-2">
+            <Link
+              href="/staff"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-[#e3e3e3] bg-white px-3 py-1.5 text-[12px] font-medium text-[#303030] hover:bg-[#f7f7f7] shadow-2xs transition"
+            >
+              ← Back to Portal
+            </Link>
+
+            {/* Refresh Interval Selector */}
+            <div className="flex items-center gap-1.5 rounded-lg border border-[#e3e3e3] bg-[#fafafa] px-2 py-1 text-[11px]">
+              <span className="text-[#616161] font-medium">Auto:</span>
               <select
                 value={autoRefreshInterval}
                 onChange={(e) => setAutoRefreshInterval(Number(e.target.value))}
                 className="bg-transparent font-medium text-[#1a1a1a] outline-none cursor-pointer"
               >
-                <option value={0}>Pause</option>
-                <option value={3}>3s live</option>
+                <option value={3}>3s (Fast)</option>
                 <option value={5}>5s</option>
                 <option value={10}>10s</option>
                 <option value={30}>30s</option>
+                <option value={0}>Paused</option>
               </select>
             </div>
 
             <button
-              type="button"
-              onClick={() => token && void loadData(token, true)}
-              disabled={refreshing}
-              title="Refresh Telemetry"
-              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[#d4d4d4] bg-white text-[#303030] shadow-xs transition hover:bg-[#f7f7f7] disabled:opacity-50"
+              onClick={() => token && void loadData(token, false)}
+              disabled={loading || refreshing}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-[#e3e3e3] bg-white px-3 py-1.5 text-[12px] font-medium text-[#303030] hover:bg-[#f7f7f7] shadow-2xs transition disabled:opacity-50"
             >
-              <svg viewBox="0 0 16 16" fill="none" className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`}>
-                <path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9M13.5 3v3h-3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 20 20"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                className={refreshing ? "animate-spin text-[#008060]" : ""}
+              >
+                <path d="M4 4v5h5M16 16v-5h-5" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M5.5 14.5a7 7 0 0 0 10.4-2.5M14.5 5.5a7 7 0 0 0-10.4 2.5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
+              <span>{refreshing ? "Syncing..." : "Refresh"}</span>
             </button>
-
-            <Link
-              href="/staff"
-              className="inline-flex h-8 items-center justify-center rounded-lg border border-[#d4d4d4] bg-white px-3 text-[13px] font-medium text-[#303030] shadow-xs hover:bg-[#f7f7f7]"
-            >
-              Dashboard
-            </Link>
           </div>
+        </div>
+
+        {/* Navigation Tabs (Grafana Style: Golden Signals | Logs Stream | Alert Rules) */}
+        <div className="mx-auto flex max-w-[1300px] gap-6 px-6 pt-1">
+          <button
+            onClick={() => setActiveTab("overview")}
+            className={`border-b-2 pb-2.5 text-[13px] font-semibold transition ${
+              activeTab === "overview"
+                ? "border-[#008060] text-[#008060]"
+                : "border-transparent text-[#616161] hover:text-[#1a1a1a]"
+            }`}
+          >
+            📊 Golden Signals & Metrics
+          </button>
+          <button
+            onClick={() => setActiveTab("logs")}
+            className={`flex items-center gap-1.5 border-b-2 pb-2.5 text-[13px] font-semibold transition ${
+              activeTab === "logs"
+                ? "border-[#008060] text-[#008060]"
+                : "border-transparent text-[#616161] hover:text-[#1a1a1a]"
+            }`}
+          >
+            📜 Loki Log Stream & Tracing
+            <span className="rounded-full bg-[#f1f1f1] px-1.5 py-0.2 text-[10px] font-bold text-[#616161]">
+              {totalLogsCount}
+            </span>
+          </button>
+          <button
+            onClick={() => setActiveTab("alerts")}
+            className={`flex items-center gap-1.5 border-b-2 pb-2.5 text-[13px] font-semibold transition ${
+              activeTab === "alerts"
+                ? "border-[#008060] text-[#008060]"
+                : "border-transparent text-[#616161] hover:text-[#1a1a1a]"
+            }`}
+          >
+            🚨 Alerts & Runbooks
+            {overview && overview.activeAlerts.length > 0 && (
+              <span className="rounded-full bg-[#ffe5e5] px-1.5 py-0.2 text-[10px] font-bold text-[#b30000]">
+                {overview.activeAlerts.filter((a) => !a.acknowledged).length} active
+              </span>
+            )}
+          </button>
         </div>
       </header>
 
-      {/* ── Main Dashboard Body ── */}
-      <main className="mx-auto max-w-[1300px] px-6 pt-5 pb-12 space-y-6 bg-white">
-        {/* Error Notice */}
+      {/* ── Main Content ── */}
+      <main className="mx-auto max-w-[1300px] px-6 py-6 space-y-6">
         {error && (
-          <div className="flex items-center justify-between gap-3 rounded-lg border border-[#fed3d1] bg-[#fff4f4] px-4 py-2.5 text-[13px] text-[#8a1c14]">
+          <div className="flex items-center justify-between rounded-xl border border-[#fed3d1] bg-[#ffe5e5] p-3.5 text-[#b30000]">
             <div className="flex items-center gap-2">
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" className="shrink-0">
-                <path d="M8 1a7 7 0 1 0 7 7A7 7 0 0 0 8 1Zm-.75 4a.75.75 0 0 1 1.5 0v3.5a.75.75 0 0 1-1.5 0Zm.75 7a.875.875 0 1 1 .875-.875A.875.875 0 0 1 8 12Z" />
-              </svg>
-              <span>{error}</span>
+              <span className="text-[14px]">⚠️</span>
+              <span className="font-medium text-[12px]">{error}</span>
             </div>
             <button
-              type="button"
               onClick={() => token && void loadData(token)}
-              className="shrink-0 font-medium underline hover:text-[#5a100c]"
+              className="text-[11px] font-semibold underline hover:no-underline"
             >
               Retry
             </button>
           </div>
         )}
 
-        {/* Active Alert Banners */}
-        {overview && overview.activeAlerts.length > 0 && (
-          <div className="space-y-2">
-            {overview.activeAlerts.map((alert) => {
-              const isCrit = alert.severity === "CRITICAL";
-              return (
-                <div
-                  key={alert.id}
-                  className={`flex items-start gap-3 rounded-xl border p-3.5 ${
-                    isCrit ? "bg-[#fff4f4] border-[#fed3d1] text-[#8a1c14]" : "bg-[#fffbeb] border-[#fef3c7] text-[#92400e]"
-                  }`}
-                >
-                  <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white ${
-                    isCrit ? "bg-[#b30000]" : "bg-[#d97706]"
-                  }`}>
-                    !
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <h4 className="font-semibold text-[13px] leading-tight">{alert.title}</h4>
-                      <span className="rounded bg-white/80 border border-current/20 px-1.5 py-0.2 text-[10px] font-mono uppercase">
-                        {alert.type}
-                      </span>
-                    </div>
-                    <p className="mt-0.5 text-[12px] opacity-90">{alert.message}</p>
+        {/* ── TAB 1: GOLDEN SIGNALS & OVERVIEW ── */}
+        {activeTab === "overview" && (
+          <div className="space-y-6">
+            {/* ── Golden Signals Grid ── */}
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
+              {/* Throughput */}
+              <div className="rounded-xl border border-[#e3e3e3] bg-white p-4 shadow-2xs hover:shadow-xs transition">
+                <div className="flex items-center justify-between text-[#616161] mb-1">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider">Rate (Traffic)</span>
+                  <span className="h-2 w-2 rounded-full bg-[#008060]" />
+                </div>
+                <div className="text-[22px] font-bold text-[#1a1a1a] tracking-tight">
+                  {overview?.goldenSignals.throughputRps ?? 0}
+                  <span className="text-[12px] font-normal text-[#616161] ml-1">req/s</span>
+                </div>
+                <p className="mt-1 text-[11px] text-[#8c9196]">
+                  Total requests: <strong className="text-[#303030]">{overview?.statusCodes.total ?? 0}</strong>
+                </p>
+              </div>
+
+              {/* Avg Latency */}
+              <div className="rounded-xl border border-[#e3e3e3] bg-white p-4 shadow-2xs hover:shadow-xs transition">
+                <div className="flex items-center justify-between text-[#616161] mb-1">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider">Avg Duration</span>
+                  <span className="h-2 w-2 rounded-full bg-[#0ea5e9]" />
+                </div>
+                <div className="text-[22px] font-bold text-[#1a1a1a] tracking-tight">
+                  {overview?.goldenSignals.avgLatencyMs ?? 0}
+                  <span className="text-[12px] font-normal text-[#616161] ml-1">ms</span>
+                </div>
+                <p className="mt-1 text-[11px] text-[#8c9196]">
+                  Min: {apiMetrics?.latencyPercentiles.min ?? 0}ms • Max: {apiMetrics?.latencyPercentiles.max ?? 0}ms
+                </p>
+              </div>
+
+              {/* p95 Latency */}
+              <div className="rounded-xl border border-[#e3e3e3] bg-white p-4 shadow-2xs hover:shadow-xs transition">
+                <div className="flex items-center justify-between text-[#616161] mb-1">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider">p95 Latency</span>
+                  <span className="h-2 w-2 rounded-full bg-[#7c3aed]" />
+                </div>
+                <div className="text-[22px] font-bold text-[#1a1a1a] tracking-tight">
+                  {overview?.goldenSignals.p95LatencyMs ?? 0}
+                  <span className="text-[12px] font-normal text-[#616161] ml-1">ms</span>
+                </div>
+                <p className="mt-1 text-[11px] text-[#8c9196]">
+                  p90: {apiMetrics?.latencyPercentiles.p90 ?? 0}ms • p99: {apiMetrics?.latencyPercentiles.p99 ?? 0}ms
+                </p>
+              </div>
+
+              {/* Error Rate */}
+              <div className="rounded-xl border border-[#e3e3e3] bg-white p-4 shadow-2xs hover:shadow-xs transition">
+                <div className="flex items-center justify-between text-[#616161] mb-1">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider">Errors (4xx+5xx)</span>
+                  <span
+                    className={`h-2 w-2 rounded-full ${
+                      (overview?.goldenSignals.errorRatePercent ?? 0) > 5
+                        ? "bg-[#b30000]"
+                        : "bg-[#008060]"
+                    }`}
+                  />
+                </div>
+                <div className="text-[22px] font-bold text-[#1a1a1a] tracking-tight">
+                  {overview?.goldenSignals.errorRatePercent ?? 0}
+                  <span className="text-[12px] font-normal text-[#616161] ml-1">%</span>
+                </div>
+                <p className="mt-1 text-[11px] text-[#8c9196]">
+                  5xx: <strong className="text-[#b30000]">{overview?.statusCodes.status5xx ?? 0}</strong> • 4xx: {overview?.statusCodes.status4xx ?? 0}
+                </p>
+              </div>
+
+              {/* Node Process Heap */}
+              <div className="rounded-xl border border-[#e3e3e3] bg-white p-4 shadow-2xs hover:shadow-xs transition">
+                <div className="flex items-center justify-between text-[#616161] mb-1">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider">Node Heap (Used)</span>
+                  <span className="h-2 w-2 rounded-full bg-[#10b981]" />
+                </div>
+                <div className="text-[22px] font-bold text-[#1a1a1a] tracking-tight">
+                  {resources ? formatBytes(resources.processMemory.heapUsedBytes) : "0 MB"}
+                </div>
+                <p className="mt-1 text-[11px] text-[#8c9196]">
+                  Total: {resources ? formatBytes(resources.processMemory.heapTotalBytes) : "0 MB"} • RSS: {resources ? formatBytes(resources.processMemory.rssBytes) : "0 MB"}
+                </p>
+              </div>
+
+              {/* DB Ping */}
+              <div className="rounded-xl border border-[#e3e3e3] bg-white p-4 shadow-2xs hover:shadow-xs transition">
+                <div className="flex items-center justify-between text-[#616161] mb-1">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider">PostgreSQL</span>
+                  <span
+                    className={`h-2 w-2 rounded-full ${
+                      overview?.database.status === "CONNECTED"
+                        ? "bg-[#008060]"
+                        : "bg-[#b30000]"
+                    }`}
+                  />
+                </div>
+                <div className="text-[22px] font-bold text-[#1a1a1a] tracking-tight">
+                  {overview?.database.latencyMs ?? 0}
+                  <span className="text-[12px] font-normal text-[#616161] ml-1">ms</span>
+                </div>
+                <p className="mt-1 text-[11px] text-[#8c9196]">
+                  Status: <strong className="text-[#008060]">{overview?.database.status ?? "CONNECTED"}</strong>
+                </p>
+              </div>
+            </div>
+
+            {/* ── Live Visualizations Grid ── */}
+            <div className="grid gap-6 lg:grid-cols-3">
+              {/* Chart 1: Real-time Throughput & p95 Area Chart */}
+              <div className="lg:col-span-2 overflow-hidden rounded-xl border border-[#e3e3e3] bg-white p-5 shadow-xs flex flex-col">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="text-[14px] font-semibold text-[#1a1a1a]">Throughput & Latency Trend</h3>
+                    <p className="text-[12px] text-[#8c9196]">Sliding live window (last 20 sample intervals)</p>
+                  </div>
+                  <div className="flex items-center gap-3 text-[11px]">
+                    <span className="flex items-center gap-1.5 font-medium text-[#008060]">
+                      <span className="h-2 w-2 rounded-full bg-[#008060]" /> Req/s
+                    </span>
+                    <span className="flex items-center gap-1.5 font-medium text-[#7c3aed]">
+                      <span className="h-2 w-2 rounded-full bg-[#7c3aed]" /> p95 (ms)
+                    </span>
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        )}
 
-        {/* ══ Row 1 — Golden Signals (Top KPI Grid) ══ */}
-        <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-          <div className="rounded-xl border border-[#e3e3e3] bg-white p-4 shadow-xs">
-            <span className="text-[11.5px] font-semibold uppercase tracking-wider text-[#616161]">Throughput</span>
-            <div className="mt-1 text-[24px] font-semibold tracking-tight text-[#1a1a1a] leading-none">
-              {loading ? "—" : overview?.goldenSignals.throughputRps ?? 0}
-              <span className="ml-1 text-[12px] font-normal text-[#616161]">req/s</span>
-            </div>
-            <div className="mt-2 text-[11.5px] text-[#008060] font-medium">Rate (RED)</div>
-          </div>
-
-          <div className="rounded-xl border border-[#e3e3e3] bg-white p-4 shadow-xs">
-            <span className="text-[11.5px] font-semibold uppercase tracking-wider text-[#616161]">Avg Duration</span>
-            <div className="mt-1 text-[24px] font-semibold tracking-tight text-[#1a1a1a] leading-none">
-              {loading ? "—" : overview?.goldenSignals.avgLatencyMs ?? 0}
-              <span className="ml-1 text-[12px] font-normal text-[#616161]">ms</span>
-            </div>
-            <div className="mt-2 text-[11.5px] text-[#0284c7] font-medium">Duration (RED)</div>
-          </div>
-
-          <div className="rounded-xl border border-[#e3e3e3] bg-white p-4 shadow-xs">
-            <span className="text-[11.5px] font-semibold uppercase tracking-wider text-[#616161]">p95 Latency</span>
-            <div className="mt-1 text-[24px] font-semibold tracking-tight text-[#7c3aed] leading-none">
-              {loading ? "—" : overview?.goldenSignals.p95LatencyMs ?? 0}
-              <span className="ml-1 text-[12px] font-normal text-[#616161]">ms</span>
-            </div>
-            <div className="mt-2 text-[11.5px] text-[#8c9196]">95% below this</div>
-          </div>
-
-          <div className="rounded-xl border border-[#e3e3e3] bg-white p-4 shadow-xs">
-            <span className="text-[11.5px] font-semibold uppercase tracking-wider text-[#616161]">Error Rate</span>
-            <div className={`mt-1 text-[24px] font-semibold tracking-tight leading-none ${
-              (overview?.goldenSignals.errorRatePercent ?? 0) > 0 ? "text-[#b30000]" : "text-[#008060]"
-            }`}>
-              {loading ? "—" : `${overview?.goldenSignals.errorRatePercent ?? 0}%`}
-            </div>
-            <div className="mt-2 text-[11.5px] text-[#8c9196]">Errors (RED)</div>
-          </div>
-
-          <div className="rounded-xl border border-[#e3e3e3] bg-white p-4 shadow-xs">
-            <span className="text-[11.5px] font-semibold uppercase tracking-wider text-[#616161]">Host CPU</span>
-            <div className="mt-1 text-[24px] font-semibold tracking-tight text-[#1a1a1a] leading-none">
-              {loading ? "—" : `${overview?.goldenSignals.cpuUsagePercent ?? 0}%`}
-            </div>
-            <div className="mt-2 text-[11.5px] text-[#8c9196]">{resources?.cpuCount ?? 1} Cores</div>
-          </div>
-
-          <div className="rounded-xl border border-[#e3e3e3] bg-white p-4 shadow-xs">
-            <span className="text-[11.5px] font-semibold uppercase tracking-wider text-[#616161]">API Process Heap</span>
-            <div className="mt-1 text-[24px] font-semibold tracking-tight text-[#008060] leading-none">
-              {loading ? "—" : resources ? formatBytes(resources.processMemory.heapUsedBytes) : "—"}
-            </div>
-            <div className="mt-2 text-[11.5px] text-[#8c9196]">
-              RSS: {resources ? formatBytes(resources.processMemory.rssBytes) : "—"}
-            </div>
-          </div>
-        </section>
-
-        {/* ══ Row 2 — Dual Shadcn/Recharts Charts (Live Area Stream + Latency Percentiles Bar) ══ */}
-        <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* Chart 1: Live Area Throughput & Latency Trend */}
-          <div className="overflow-hidden rounded-xl border border-[#e3e3e3] bg-white p-5 shadow-xs flex flex-col">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="text-[14px] font-semibold text-[#1a1a1a]">Live Throughput & Latency Stream</h3>
-                <p className="text-[12px] text-[#8c9196]">Continuous time series tracking requests/sec and duration</p>
-              </div>
-              <div className="flex items-center gap-3 text-[11.5px]">
-                <div className="flex items-center gap-1.5">
-                  <span className="h-2.5 w-2.5 rounded-full bg-[#008060]" />
-                  <span className="text-[#616161]">Throughput (req/s)</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="h-2.5 w-2.5 rounded-full bg-[#7c3aed]" />
-                  <span className="text-[#616161]">p95 Latency (ms)</span>
+                <div className="h-[220px] w-full">
+                  {timeline.length === 0 ? (
+                    <div className="flex h-full items-center justify-center text-[12px] text-[#8c9196]">
+                      Collecting telemetry samples...
+                    </div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={timeline} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="colorThroughput" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#008060" stopOpacity={0.25} />
+                            <stop offset="95%" stopColor="#008060" stopOpacity={0.0} />
+                          </linearGradient>
+                          <linearGradient id="colorP95" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#7c3aed" stopOpacity={0.25} />
+                            <stop offset="95%" stopColor="#7c3aed" stopOpacity={0.0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f1f1" />
+                        <XAxis dataKey="time" tick={{ fontSize: 11, fill: "#8c9196" }} tickLine={false} axisLine={false} />
+                        <YAxis tick={{ fontSize: 11, fill: "#8c9196" }} tickLine={false} axisLine={false} />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: "#ffffff",
+                            borderColor: "#e3e3e3",
+                            borderRadius: "10px",
+                            fontSize: "12px",
+                            boxShadow: "0 4px 12px rgba(0,0,0,0.06)",
+                          }}
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="throughput"
+                          name="Throughput (req/s)"
+                          stroke="#008060"
+                          strokeWidth={2}
+                          fillOpacity={1}
+                          fill="url(#colorThroughput)"
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="p95Latency"
+                          name="p95 Latency (ms)"
+                          stroke="#7c3aed"
+                          strokeWidth={2}
+                          fillOpacity={1}
+                          fill="url(#colorP95)"
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  )}
                 </div>
               </div>
-            </div>
 
-            <div className="h-[240px] w-full">
-              {timeline.length < 2 ? (
-                <div className="flex h-full items-center justify-center text-xs text-[#8c9196] italic">
-                  Sampling real-time requests...
+              {/* Chart 2: Latency Percentiles Bar Chart */}
+              <div className="overflow-hidden rounded-xl border border-[#e3e3e3] bg-white p-5 shadow-xs flex flex-col">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="text-[14px] font-semibold text-[#1a1a1a]">Latency Percentiles</h3>
+                    <p className="text-[12px] text-[#8c9196]">Distribution across all active endpoints</p>
+                  </div>
                 </div>
-              ) : (
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={timeline} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="colorThroughput" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#008060" stopOpacity={0.25} />
-                        <stop offset="95%" stopColor="#008060" stopOpacity={0.0} />
-                      </linearGradient>
-                      <linearGradient id="colorP95" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#7c3aed" stopOpacity={0.25} />
-                        <stop offset="95%" stopColor="#7c3aed" stopOpacity={0.0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f1f1" />
-                    <XAxis dataKey="time" tick={{ fontSize: 11, fill: "#8c9196" }} tickLine={false} axisLine={false} />
-                    <YAxis tick={{ fontSize: 11, fill: "#8c9196" }} tickLine={false} axisLine={false} />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: "#ffffff",
-                        borderColor: "#e3e3e3",
-                        borderRadius: "10px",
-                        fontSize: "12px",
-                        boxShadow: "0 4px 12px rgba(0,0,0,0.06)",
-                      }}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="throughput"
-                      name="Throughput (req/s)"
-                      stroke="#008060"
-                      strokeWidth={2}
-                      fillOpacity={1}
-                      fill="url(#colorThroughput)"
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="p95Latency"
-                      name="p95 Latency (ms)"
-                      stroke="#7c3aed"
-                      strokeWidth={2}
-                      fillOpacity={1}
-                      fill="url(#colorP95)"
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              )}
-            </div>
-          </div>
 
-          {/* Chart 2: Latency Percentiles Bar Chart */}
-          <div className="overflow-hidden rounded-xl border border-[#e3e3e3] bg-white p-5 shadow-xs flex flex-col">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="text-[14px] font-semibold text-[#1a1a1a]">Latency Percentile Distribution</h3>
-                <p className="text-[12px] text-[#8c9196]">Duration metrics in milliseconds across all routes</p>
-              </div>
-              <span className="text-[11.5px] font-medium text-[#7c3aed] bg-[#f3f0ff] px-2.5 py-1 rounded-md">
-                Active 5-min window
-              </span>
-            </div>
-
-            <div className="h-[240px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={latencyBarData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f1f1" />
-                  <XAxis dataKey="percentile" tick={{ fontSize: 11, fill: "#616161" }} tickLine={false} axisLine={false} />
-                  <YAxis tick={{ fontSize: 11, fill: "#8c9196" }} tickLine={false} axisLine={false} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "#ffffff",
-                      borderColor: "#e3e3e3",
-                      borderRadius: "10px",
-                      fontSize: "12px",
-                      boxShadow: "0 4px 12px rgba(0,0,0,0.06)",
-                    }}
-                    formatter={(val) => [`${val} ms`, "Duration"]}
-                  />
-                  <Bar dataKey="duration" radius={[6, 6, 0, 0]}>
-                    {latencyBarData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.fill} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </section>
-
-        {/* ══ Row 3 — Status Breakdown Donut & System Resource Gauges ══ */}
-        <section className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {/* Donut Chart: HTTP Status Breakdown */}
-          <div className="overflow-hidden rounded-xl border border-[#e3e3e3] bg-white p-5 shadow-xs flex flex-col">
-            <h3 className="text-[14px] font-semibold text-[#1a1a1a] mb-0.5">HTTP Status Codes</h3>
-            <p className="text-[12px] text-[#8c9196] mb-3">Total: {overview?.statusCodes.total ?? 0} requests</p>
-
-            <div className="h-[180px] w-full relative">
-              {statusPieData.length === 0 ? (
-                <div className="flex h-full items-center justify-center text-xs text-[#8c9196] italic">
-                  Awaiting request traffic...
-                </div>
-              ) : (
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={statusPieData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={50}
-                      outerRadius={75}
-                      paddingAngle={3}
-                      dataKey="value"
-                    >
-                      {statusPieData.map((entry, idx) => (
-                        <Cell key={`slice-${idx}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: "#ffffff",
-                        borderColor: "#e3e3e3",
-                        borderRadius: "8px",
-                        fontSize: "12px",
-                      }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-              )}
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 mt-2 pt-3 border-t border-[#f1f1f1] text-[12px]">
-              <div className="flex items-center gap-1.5">
-                <span className="h-2.5 w-2.5 rounded-full bg-[#008060]" />
-                <span className="text-[#616161]">2xx:</span>
-                <span className="font-semibold text-[#1a1a1a]">{overview?.statusCodes.status2xx ?? 0}</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="h-2.5 w-2.5 rounded-full bg-[#0ea5e9]" />
-                <span className="text-[#616161]">3xx:</span>
-                <span className="font-semibold text-[#1a1a1a]">{overview?.statusCodes.status3xx ?? 0}</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="h-2.5 w-2.5 rounded-full bg-[#f59e0b]" />
-                <span className="text-[#616161]">4xx:</span>
-                <span className="font-semibold text-[#1a1a1a]">{overview?.statusCodes.status4xx ?? 0}</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="h-2.5 w-2.5 rounded-full bg-[#dc2626]" />
-                <span className="text-[#616161]">5xx:</span>
-                <span className="font-semibold text-[#1a1a1a]">{overview?.statusCodes.status5xx ?? 0}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Hardware CPU Gauge & Memory Meter */}
-          <div className="overflow-hidden rounded-xl border border-[#e3e3e3] bg-white p-5 shadow-xs flex flex-col lg:col-span-2">
-            <div className="flex items-center justify-between mb-2">
-              <div>
-                <h3 className="text-[14px] font-semibold text-[#1a1a1a]">Host Hardware & Resource Saturation (USE)</h3>
-                <p className="text-[12px] text-[#8c9196]">{resources?.platform} · Node {resources?.nodeVersion}</p>
-              </div>
-              <span className="text-[12px] font-mono font-medium text-[#616161] bg-[#f7f7f7] px-2.5 py-1 rounded-md border border-[#e3e3e3]">
-                Uptime: {resources ? formatUptime(resources.uptimeSeconds) : "—"}
-              </span>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2 mt-3">
-              {/* CPU Meter */}
-              <div className="rounded-xl border border-[#e3e3e3] bg-[#fafafa] p-4 space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-[12px] font-semibold uppercase text-[#616161]">CPU Utilization</span>
-                  <span className={`text-[15px] font-bold ${
-                    (resources?.cpuUsagePercent ?? 0) >= 75 ? "text-[#d97706]" : "text-[#1a1a1a]"
-                  }`}>
-                    {resources?.cpuUsagePercent ?? 0}%
-                  </span>
-                </div>
-                <div className="h-2.5 w-full overflow-hidden rounded-full bg-[#e3e3e3]">
-                  <div
-                    style={{ width: `${resources?.cpuUsagePercent ?? 0}%` }}
-                    className={`h-full rounded-full transition-all ${
-                      (resources?.cpuUsagePercent ?? 0) >= 75 ? "bg-[#d97706]" : "bg-[#008060]"
-                    }`}
-                  />
-                </div>
-                <span className="text-[11.5px] text-[#8c9196] block">
-                  Alert threshold: &gt;75% warning, &gt;90% critical
-                </span>
-              </div>
-
-              {/* Memory Meter */}
-              <div className="rounded-xl border border-[#e3e3e3] bg-[#fafafa] p-4 space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-[12px] font-semibold uppercase text-[#616161]">RAM Utilization</span>
-                  <span className={`text-[15px] font-bold ${
-                    (resources?.memoryUsagePercent ?? 0) >= 80 ? "text-[#d97706]" : "text-[#1a1a1a]"
-                  }`}>
-                    {resources?.memoryUsagePercent ?? 0}%
-                  </span>
-                </div>
-                <div className="h-2.5 w-full overflow-hidden rounded-full bg-[#e3e3e3]">
-                  <div
-                    style={{ width: `${resources?.memoryUsagePercent ?? 0}%` }}
-                    className={`h-full rounded-full transition-all ${
-                      (resources?.memoryUsagePercent ?? 0) >= 80 ? "bg-[#d97706]" : "bg-[#008060]"
-                    }`}
-                  />
-                </div>
-                <div className="flex justify-between text-[11.5px] text-[#8c9196]">
-                  <span>Used: {resources ? formatBytes(resources.usedMemoryBytes) : "—"}</span>
-                  <span>Total: {resources ? formatBytes(resources.totalMemoryBytes) : "—"}</span>
+                <div className="h-[220px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={latencyBarData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f1f1" />
+                      <XAxis dataKey="percentile" tick={{ fontSize: 11, fill: "#8c9196" }} tickLine={false} axisLine={false} />
+                      <YAxis tick={{ fontSize: 11, fill: "#8c9196" }} tickLine={false} axisLine={false} unit="ms" />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "#ffffff",
+                          borderColor: "#e3e3e3",
+                          borderRadius: "10px",
+                          fontSize: "12px",
+                        }}
+                      />
+                      <Bar dataKey="duration" name="Duration (ms)" radius={[4, 4, 0, 0]}>
+                        {latencyBarData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.fill} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
                 </div>
               </div>
             </div>
 
-            {/* Node Process Heap summary */}
-            <div className="mt-4 pt-3 border-t border-[#f1f1f1] grid grid-cols-3 gap-2 text-center text-[12px]">
-              <div>
-                <span className="text-[#8c9196] block text-[11px]">RSS Memory</span>
-                <span className="font-semibold text-[#1a1a1a]">{resources ? formatBytes(resources.processMemory.rssBytes) : "—"}</span>
-              </div>
-              <div>
-                <span className="text-[#8c9196] block text-[11px]">Heap Used</span>
-                <span className="font-semibold text-[#1a1a1a]">{resources ? formatBytes(resources.processMemory.heapUsedBytes) : "—"}</span>
-              </div>
-              <div>
-                <span className="text-[#8c9196] block text-[11px]">Heap Allocated</span>
-                <span className="font-semibold text-[#616161]">{resources ? formatBytes(resources.processMemory.heapTotalBytes) : "—"}</span>
-              </div>
-            </div>
-          </div>
-        </section>
+            {/* ── Status Code Distribution & Routes Breakdown ── */}
+            <div className="grid gap-6 lg:grid-cols-3">
+              {/* Donut Chart: HTTP Status Breakdown */}
+              <div className="overflow-hidden rounded-xl border border-[#e3e3e3] bg-white p-5 shadow-xs flex flex-col">
+                <div className="mb-4">
+                  <h3 className="text-[14px] font-semibold text-[#1a1a1a]">HTTP Status Code Distribution</h3>
+                  <p className="text-[12px] text-[#8c9196]">Breakdown of response codes in buffer</p>
+                </div>
 
-        {/* ══ Collapsible Section 1: Detailed Route Telemetry Table ══ */}
-        <section className="overflow-hidden rounded-xl border border-[#e3e3e3] bg-white shadow-xs">
-          <div
-            onClick={() => setApiOpen((v) => !v)}
-            className="flex flex-wrap items-center justify-between gap-3 border-b border-[#e3e3e3] px-4 py-3 cursor-pointer bg-[#fafafa] hover:bg-[#f7f7f7] transition"
-          >
-            <div className="flex items-center gap-2.5">
-              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white border border-[#e3e3e3] text-[#303030] shadow-2xs">
-                ⚡
-              </span>
-              <div>
-                <span className="text-[14px] font-semibold text-[#1a1a1a]">
-                  Active Routes & Telemetry Drill-Down
-                </span>
-                <span className="ml-2 text-[12px] text-[#8c9196]">
-                  Method, latency percentiles, and error counts per route
-                </span>
+                <div className="h-[180px] w-full">
+                  {statusPieData.length === 0 ? (
+                    <div className="flex h-full items-center justify-center text-[12px] text-[#8c9196]">
+                      No traffic recorded yet
+                    </div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={statusPieData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={50}
+                          outerRadius={75}
+                          paddingAngle={3}
+                          dataKey="value"
+                        >
+                          {statusPieData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  )}
+                </div>
+
+                <div className="mt-3 grid grid-cols-2 gap-2 text-[11px] pt-3 border-t border-[#f1f1f1]">
+                  <div className="flex items-center gap-1.5 font-medium text-[#008060]">
+                    <span className="h-2 w-2 rounded-full bg-[#008060]" />
+                    2xx: {overview?.statusCodes.status2xx ?? 0}
+                  </div>
+                  <div className="flex items-center gap-1.5 font-medium text-[#0ea5e9]">
+                    <span className="h-2 w-2 rounded-full bg-[#0ea5e9]" />
+                    3xx: {overview?.statusCodes.status3xx ?? 0}
+                  </div>
+                  <div className="flex items-center gap-1.5 font-medium text-[#f59e0b]">
+                    <span className="h-2 w-2 rounded-full bg-[#f59e0b]" />
+                    4xx: {overview?.statusCodes.status4xx ?? 0}
+                  </div>
+                  <div className="flex items-center gap-1.5 font-medium text-[#dc2626]">
+                    <span className="h-2 w-2 rounded-full bg-[#dc2626]" />
+                    5xx: {overview?.statusCodes.status5xx ?? 0}
+                  </div>
+                </div>
               </div>
-            </div>
 
-            <div className="flex items-center gap-2">
-              <svg
-                viewBox="0 0 16 16"
-                fill="none"
-                className={`h-4 w-4 text-[#616161] transition-transform ${apiOpen ? "rotate-180" : ""}`}
-              >
-                <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </div>
-          </div>
-
-          {apiOpen && (
-            <div className="p-5">
-              <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-                <span className="text-[12px] text-[#8c9196]">
-                  Showing {filteredRoutes.length} active routes
-                </span>
-
-                <div className="relative">
-                  <svg
-                    width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6"
-                    className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[#8c9196]"
-                  >
-                    <circle cx="7" cy="7" r="4.5" />
-                    <path d="m10.5 10.5 3 3" strokeLinecap="round" />
-                  </svg>
+              {/* Endpoint Table */}
+              <div className="lg:col-span-2 overflow-hidden rounded-xl border border-[#e3e3e3] bg-white shadow-xs">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#e3e3e3] px-5 py-3.5 bg-[#fafafa]">
+                  <div>
+                    <h3 className="text-[14px] font-semibold text-[#1a1a1a]">Top Endpoints by Latency & Volume</h3>
+                    <p className="text-[12px] text-[#8c9196]">Real-time per-route latency percentiles</p>
+                  </div>
                   <input
                     type="text"
                     value={routeSearch}
                     onChange={(e) => setRouteSearch(e.target.value)}
-                    placeholder="Search routes…"
-                    className="h-8 w-56 rounded-lg border border-[#d4d4d4] bg-white pl-8 pr-3 text-[12.5px] text-[#303030] placeholder-[#8c9196] outline-none focus:border-[#1a1a1a] focus:ring-1 focus:ring-[#1a1a1a]"
+                    placeholder="Search route or method..."
+                    className="rounded-lg border border-[#e3e3e3] bg-white px-3 py-1 text-[11px] text-[#1a1a1a] placeholder-[#8c9196] focus:border-[#008060] focus:outline-none"
                   />
                 </div>
-              </div>
 
-              <div className="overflow-x-auto rounded-xl border border-[#e3e3e3]">
-                <table className="w-full text-left text-[12.5px]">
-                  <thead>
-                    <tr className="border-b border-[#e3e3e3] bg-[#fafafa] text-[#616161]">
-                      <th className="px-4 py-2.5 font-medium">Method & Route Path</th>
-                      <th className="px-4 py-2.5 text-right font-medium">Calls</th>
-                      <th className="px-4 py-2.5 text-right font-medium">Avg Latency</th>
-                      <th className="px-4 py-2.5 text-right font-medium">p95 Latency</th>
-                      <th className="px-4 py-2.5 text-right font-medium">Errors</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#f1f1f1]">
-                    {filteredRoutes.length === 0 ? (
+                <div className="max-h-[260px] overflow-auto">
+                  <table className="w-full text-left text-[12px]">
+                    <thead className="bg-[#fafafa] text-[#616161] font-medium border-b border-[#e3e3e3] sticky top-0">
                       <tr>
-                        <td colSpan={5} className="py-10 text-center text-[#8c9196] italic">
-                          No matching routes recorded.
-                        </td>
+                        <th className="py-2 px-4">Method & Route</th>
+                        <th className="py-2 px-4 text-right">Requests</th>
+                        <th className="py-2 px-4 text-right">Avg Latency</th>
+                        <th className="py-2 px-4 text-right">p95 Latency</th>
+                        <th className="py-2 px-4 text-right">Errors</th>
                       </tr>
-                    ) : (
-                      filteredRoutes.map((r, i) => (
-                        <tr key={i} className="hover:bg-[#f7f7f7] transition-colors">
-                          <td className="px-4 py-2.5 font-mono">
-                            <span className={`inline-block w-14 text-[10.5px] font-bold ${
-                              r.method === "GET"
-                                ? "text-[#008060]"
-                                : r.method === "POST"
-                                  ? "text-[#0284c7]"
-                                  : r.method === "PATCH" || r.method === "PUT"
-                                    ? "text-[#d97706]"
-                                    : "text-[#dc2626]"
-                            }`}>
-                              {r.method}
-                            </span>
-                            <span className="text-[#1a1a1a]">{r.path}</span>
-                          </td>
-                          <td className="px-4 py-2.5 text-right font-medium text-[#1a1a1a]">{r.count}</td>
-                          <td className="px-4 py-2.5 text-right text-[#616161]">{r.avgDurationMs} ms</td>
-                          <td className="px-4 py-2.5 text-right text-[#7c3aed] font-medium">{r.p95DurationMs} ms</td>
-                          <td className="px-4 py-2.5 text-right">
-                            {r.errorCount > 0 ? (
-                              <span className="inline-flex rounded-full bg-[#ffe5e5] px-2 py-0.5 text-[11px] font-bold text-[#b30000]">
-                                {r.errorCount}
-                              </span>
-                            ) : (
-                              <span className="text-[#8c9196]">0</span>
-                            )}
+                    </thead>
+                    <tbody className="divide-y divide-[#f1f1f1]">
+                      {filteredRoutes.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="py-6 text-center text-[#8c9196]">
+                            No routes matched filter
                           </td>
                         </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-        </section>
-
-        {/* ══ Collapsible Section 2: Faults & Unhandled Server Errors ══ */}
-        <section className="overflow-hidden rounded-xl border border-[#e3e3e3] bg-white shadow-xs">
-          <div
-            onClick={() => setFaultsOpen((v) => !v)}
-            className="flex flex-wrap items-center justify-between gap-3 border-b border-[#e3e3e3] px-4 py-3 cursor-pointer bg-[#fafafa] hover:bg-[#f7f7f7] transition"
-          >
-            <div className="flex items-center gap-2.5">
-              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white border border-[#e3e3e3] text-[#303030] shadow-2xs">
-                ⚠️
-              </span>
-              <div>
-                <span className="text-[14px] font-semibold text-[#1a1a1a]">
-                  Recent Faults & Unhandled Server Errors
-                </span>
-                <span className="ml-2 text-[12px] text-[#8c9196]">
-                  5xx exceptions, critical rejections, and error traces
-                </span>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <svg
-                viewBox="0 0 16 16"
-                fill="none"
-                className={`h-4 w-4 text-[#616161] transition-transform ${faultsOpen ? "rotate-180" : ""}`}
-              >
-                <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </div>
-          </div>
-
-          {faultsOpen && (
-            <div className="p-5">
-              {!overview || overview.recentErrors.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-[#e3e3e3] p-8 text-center bg-[#fafafa]">
-                  <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#edfcf3] text-[#008060] mb-2 font-bold text-base">
-                    ✓
-                  </span>
-                  <p className="font-semibold text-[#1a1a1a] text-[13px]">Clean Telemetry: Zero 5xx exceptions</p>
-                  <p className="text-[12px] text-[#8c9196] mt-0.5">All services are executing without unhandled faults.</p>
+                      ) : (
+                        filteredRoutes.map((r, i) => (
+                          <tr key={i} className="hover:bg-[#fafafa] transition">
+                            <td className="py-2.5 px-4 font-mono font-medium text-[#1a1a1a]">
+                              <span
+                                className={`mr-2 rounded px-1.5 py-0.5 text-[10px] font-bold ${
+                                  r.method === "GET"
+                                    ? "bg-[#edfcf3] text-[#008060]"
+                                    : r.method === "POST"
+                                      ? "bg-[#eff6ff] text-[#2563eb]"
+                                      : r.method === "PATCH" || r.method === "PUT"
+                                        ? "bg-[#fffbeb] text-[#d97706]"
+                                        : "bg-[#ffe5e5] text-[#b30000]"
+                                }`}
+                              >
+                                {r.method}
+                              </span>
+                              {r.path}
+                            </td>
+                            <td className="py-2.5 px-4 text-right font-medium text-[#303030]">{r.count}</td>
+                            <td className="py-2.5 px-4 text-right text-[#616161]">{r.avgDurationMs} ms</td>
+                            <td className="py-2.5 px-4 text-right font-semibold text-[#7c3aed]">
+                              {r.p95DurationMs} ms
+                            </td>
+                            <td className="py-2.5 px-4 text-right font-medium">
+                              {r.errorCount > 0 ? (
+                                <span className="text-[#b30000]">{r.errorCount}</span>
+                              ) : (
+                                <span className="text-[#8c9196]">0</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
                 </div>
-              ) : (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[12px] text-[#8c9196]">
-                      Showing {filteredErrors.length} recent error traces
-                    </span>
-                    <input
-                      type="text"
-                      value={errorSearch}
-                      onChange={(e) => setErrorSearch(e.target.value)}
-                      placeholder="Filter error traces…"
-                      className="h-8 w-56 rounded-lg border border-[#d4d4d4] bg-white px-3 text-[12px] text-[#303030] outline-none focus:border-[#1a1a1a]"
-                    />
+              </div>
+            </div>
+
+            {/* ── Collapsible Infrastructure & Dependencies ── */}
+            <section className="overflow-hidden rounded-xl border border-[#e3e3e3] bg-white shadow-xs">
+              <div
+                onClick={() => setInfraOpen((v) => !v)}
+                className="flex items-center justify-between border-b border-[#e3e3e3] px-5 py-3 cursor-pointer bg-[#fafafa] hover:bg-[#f7f7f7] transition"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-[#1a1a1a]">🖥️ Node.js Container & Process Memory</span>
+                  <span className="text-[12px] text-[#8c9196]">• Safe container limits (Render MVP)</span>
+                </div>
+                <span className="text-[12px] text-[#616161]">{infraOpen ? "Collapse ▲" : "Expand ▼"}</span>
+              </div>
+
+              {infraOpen && resources && (
+                <div className="p-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="rounded-xl border border-[#e3e3e3] p-3.5 bg-[#fafafa]">
+                    <div className="text-[11px] font-medium text-[#616161]">Heap Used / Total</div>
+                    <div className="text-[18px] font-bold text-[#1a1a1a] mt-1">
+                      {formatBytes(resources.processMemory.heapUsedBytes)}{" "}
+                      <span className="text-[12px] font-normal text-[#616161]">
+                        / {formatBytes(resources.processMemory.heapTotalBytes)}
+                      </span>
+                    </div>
                   </div>
 
-                  <div className="divide-y divide-[#f1f1f1] rounded-xl border border-[#e3e3e3] overflow-hidden">
-                    {filteredErrors.map((err, i) => (
-                      <div key={i} className="p-3.5 hover:bg-[#fff9f9] transition-colors text-[12.5px]">
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-2">
-                            <span className="rounded-md bg-[#ffe5e5] px-2 py-0.5 text-[11px] font-bold text-[#b30000]">
-                              {err.statusCode}
-                            </span>
-                            <span className="font-mono font-semibold text-[#1a1a1a]">
-                              {err.method} {err.path}
-                            </span>
-                          </div>
-                          <span className="text-[11.5px] text-[#8c9196] font-mono">
-                            {new Date(err.timestamp).toLocaleTimeString()} ({err.durationMs}ms)
-                          </span>
-                        </div>
-                        {err.errorMessage && (
-                          <pre className="mt-2 font-mono text-[11px] text-[#8a1c14] bg-[#fff4f4] border border-[#fed3d1] p-2.5 rounded-lg whitespace-pre-wrap">
-                            {err.errorMessage}
-                          </pre>
-                        )}
-                      </div>
-                    ))}
+                  <div className="rounded-xl border border-[#e3e3e3] p-3.5 bg-[#fafafa]">
+                    <div className="text-[11px] font-medium text-[#616161]">Process RSS (Resident Set)</div>
+                    <div className="text-[18px] font-bold text-[#1a1a1a] mt-1">
+                      {formatBytes(resources.processMemory.rssBytes)}
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-[#e3e3e3] p-3.5 bg-[#fafafa]">
+                    <div className="text-[11px] font-medium text-[#616161]">Runtime Uptime</div>
+                    <div className="text-[18px] font-bold text-[#1a1a1a] mt-1">
+                      {formatUptime(resources.uptimeSeconds)}
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-[#e3e3e3] p-3.5 bg-[#fafafa]">
+                    <div className="text-[11px] font-medium text-[#616161]">Node & Platform</div>
+                    <div className="text-[16px] font-semibold text-[#1a1a1a] mt-1">
+                      {resources.nodeVersion} ({resources.platform})
+                    </div>
                   </div>
                 </div>
               )}
-            </div>
-          )}
-        </section>
+            </section>
+          </div>
+        )}
 
-        {/* ══ Collapsible Section 3: Subsystems & Dependencies Health ══ */}
-        <section className="overflow-hidden rounded-xl border border-[#e3e3e3] bg-white shadow-xs">
-          <div
-            onClick={() => setSubsystemsOpen((v) => !v)}
-            className="flex flex-wrap items-center justify-between gap-3 border-b border-[#e3e3e3] px-4 py-3 cursor-pointer bg-[#fafafa] hover:bg-[#f7f7f7] transition"
-          >
-            <div className="flex items-center gap-2.5">
-              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white border border-[#e3e3e3] text-[#303030] shadow-2xs">
-                📦
-              </span>
-              <div>
-                <span className="text-[14px] font-semibold text-[#1a1a1a]">
-                  Subsystems & Dependencies Health
-                </span>
-                <span className="ml-2 text-[12px] text-[#8c9196]">
-                  PostgreSQL connection latency, AI gateways, and cloud storage
-                </span>
+        {/* ── TAB 2: LOKI LOG STREAM & TRACE EXPLORER ── */}
+        {activeTab === "logs" && (
+          <div className="space-y-4">
+            {/* Filter & Search Bar */}
+            <div className="rounded-xl border border-[#e3e3e3] bg-white p-4 shadow-xs">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex flex-1 items-center gap-2 min-w-[280px]">
+                  <span className="text-[14px] text-[#616161]">🔍</span>
+                  <input
+                    type="text"
+                    value={logSearch}
+                    onChange={(e) => setLogSearch(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && void refreshLogsOnly()}
+                    placeholder="Search logs by keyword, endpoint, message, or error..."
+                    className="flex-1 rounded-lg border border-[#e3e3e3] bg-[#fafafa] px-3 py-1.5 text-[12px] text-[#1a1a1a] placeholder-[#8c9196] focus:border-[#008060] focus:bg-white focus:outline-none"
+                  />
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  {/* Correlation Request ID filter */}
+                  <input
+                    type="text"
+                    value={selectedRequestId}
+                    onChange={(e) => setSelectedRequestId(e.target.value)}
+                    placeholder="Filter by Request ID (x-request-id)..."
+                    className="w-56 font-mono rounded-lg border border-[#e3e3e3] bg-[#fafafa] px-3 py-1.5 text-[11px] text-[#1a1a1a] placeholder-[#8c9196] focus:border-[#008060] focus:bg-white focus:outline-none"
+                  />
+
+                  {/* Level Pill filters */}
+                  <div className="flex rounded-lg border border-[#e3e3e3] bg-[#fafafa] p-0.5">
+                    {["ALL", "INFO", "WARN", "ERROR"].map((lvl) => (
+                      <button
+                        key={lvl}
+                        onClick={() => setSelectedLogLevel(lvl)}
+                        className={`rounded-md px-2.5 py-1 text-[11px] font-semibold transition ${
+                          selectedLogLevel === lvl
+                            ? lvl === "ERROR"
+                              ? "bg-[#dc2626] text-white shadow-2xs"
+                              : lvl === "WARN"
+                                ? "bg-[#d97706] text-white shadow-2xs"
+                                : "bg-[#008060] text-white shadow-2xs"
+                            : "text-[#616161] hover:text-[#1a1a1a]"
+                        }`}
+                      >
+                        {lvl}
+                      </button>
+                    ))}
+                  </div>
+
+                  <button
+                    onClick={() => void refreshLogsOnly()}
+                    className="rounded-lg bg-[#008060] px-3 py-1.5 text-[12px] font-semibold text-white hover:bg-[#006e52] transition shadow-2xs"
+                  >
+                    Query Logs
+                  </button>
+                </div>
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <svg
-                viewBox="0 0 16 16"
-                fill="none"
-                className={`h-4 w-4 text-[#616161] transition-transform ${subsystemsOpen ? "rotate-180" : ""}`}
-              >
-                <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
+            {/* Logs Viewer (Grafana Loki Style Console) */}
+            <div className="overflow-hidden rounded-xl border border-[#e3e3e3] bg-[#1e1e1e] text-[#d4d4d4] font-mono text-[12px] shadow-sm">
+              <div className="flex items-center justify-between border-b border-[#333] px-4 py-2.5 bg-[#252526]">
+                <div className="flex items-center gap-2 text-[11px] text-[#888]">
+                  <span className="h-2 w-2 rounded-full bg-[#008060]" />
+                  <span>LOG BUFFER: {logs.length} entries shown (capacity 2,000)</span>
+                </div>
+                <div className="text-[11px] text-[#888]">
+                  Click any row to view correlation trace and stack trace
+                </div>
+              </div>
+
+              <div className="max-h-[580px] overflow-auto divide-y divide-[#2a2a2a]">
+                {logs.length === 0 ? (
+                  <div className="py-12 text-center text-[#888]">
+                    No log records match current query filter.
+                  </div>
+                ) : (
+                  logs.map((log) => {
+                    const isExpanded = expandedLogId === log.id;
+                    const isError = log.level === "error";
+                    const isWarn = log.level === "warn";
+
+                    return (
+                      <div
+                        key={log.id}
+                        className={`p-3 transition cursor-pointer hover:bg-[#2a2a2d] ${
+                          isError ? "bg-[#2b1616]" : isWarn ? "bg-[#2b2516]" : ""
+                        }`}
+                        onClick={() => setExpandedLogId(isExpanded ? null : log.id)}
+                      >
+                        {/* Summary Line */}
+                        <div className="flex flex-wrap items-center gap-3">
+                          <span className="text-[#888] text-[11px] shrink-0">
+                            {new Date(log.timestamp).toLocaleTimeString([], {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                              second: "2-digit",
+                            })}
+                          </span>
+
+                          <span
+                            className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase shrink-0 ${
+                              isError
+                                ? "bg-[#dc2626] text-white"
+                                : isWarn
+                                  ? "bg-[#d97706] text-white"
+                                  : "bg-[#008060] text-white"
+                            }`}
+                          >
+                            {log.level}
+                          </span>
+
+                          <span className="rounded bg-[#333] px-1.5 py-0.5 text-[10px] text-[#ccc]">
+                            {log.module}
+                          </span>
+
+                          {log.method && (
+                            <span className="font-semibold text-[#9cdcfe]">
+                              {log.method} {log.route}
+                            </span>
+                          )}
+
+                          {log.statusCode && (
+                            <span
+                              className={`text-[11px] font-bold ${
+                                log.statusCode >= 500
+                                  ? "text-[#f87171]"
+                                  : log.statusCode >= 400
+                                    ? "text-[#fbbf24]"
+                                    : "text-[#4ade80]"
+                              }`}
+                            >
+                              [{log.statusCode}]
+                            </span>
+                          )}
+
+                          {log.durationMs !== undefined && (
+                            <span className="text-[#888] text-[11px]">{log.durationMs}ms</span>
+                          )}
+
+                          <span className="text-[#e2e8f0] flex-1 truncate">{log.message}</span>
+
+                          {/* Quick copy request ID */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void navigator.clipboard.writeText(log.requestId);
+                              alert(`Copied Request ID: ${log.requestId}`);
+                            }}
+                            title="Copy correlation trace ID"
+                            className="text-[10px] rounded border border-[#444] px-1.5 py-0.5 text-[#aaa] hover:bg-[#333] hover:text-white"
+                          >
+                            Trace: {log.requestId.slice(0, 8)}...
+                          </button>
+                        </div>
+
+                        {/* Expanded Drawer (Full Details, Headers, Stack Trace) */}
+                        {isExpanded && (
+                          <div className="mt-3 rounded-lg border border-[#444] bg-[#141414] p-3 text-[11px] space-y-2">
+                            <div className="grid grid-cols-2 gap-2 text-[#aaa]">
+                              <div>
+                                <span className="text-[#888]">Correlation Request ID: </span>
+                                <strong className="text-white font-mono select-all">{log.requestId}</strong>
+                              </div>
+                              <div>
+                                <span className="text-[#888]">Event: </span>
+                                <strong className="text-white">{log.event}</strong>
+                              </div>
+                              <div>
+                                <span className="text-[#888]">Client IP: </span>
+                                <strong className="text-white">{log.ip ?? "unknown"}</strong>
+                              </div>
+                              <div>
+                                <span className="text-[#888]">User ID: </span>
+                                <strong className="text-white">{log.userId ?? "unauthenticated"}</strong>
+                              </div>
+                            </div>
+
+                            {log.stackTrace && (
+                              <div className="mt-2">
+                                <div className="text-[11px] font-semibold text-[#f87171] mb-1">
+                                  Exception Stack Trace:
+                                </div>
+                                <pre className="max-h-48 overflow-auto rounded bg-[#000] p-2 text-[10.5px] text-[#fca5a5] whitespace-pre font-mono">
+                                  {log.stackTrace}
+                                </pre>
+                              </div>
+                            )}
+
+                            {log.metadata && Object.keys(log.metadata).length > 0 && (
+                              <div className="mt-2">
+                                <div className="text-[11px] font-semibold text-[#9cdcfe] mb-1">Metadata:</div>
+                                <pre className="max-h-36 overflow-auto rounded bg-[#000] p-2 text-[10.5px] text-[#ce9178] whitespace-pre font-mono">
+                                  {JSON.stringify(log.metadata, null, 2)}
+                                </pre>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
+              </div>
             </div>
           </div>
+        )}
 
-          {subsystemsOpen && overview && (
-            <div className="p-5">
-              <div className="grid gap-3 sm:grid-cols-3">
-                <div className="rounded-xl border border-[#e3e3e3] p-4 bg-[#fafafa]">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="font-semibold text-[#1a1a1a] text-[13px]">PostgreSQL Database</span>
-                    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] font-semibold ${
-                      overview.database.status === "CONNECTED"
-                        ? "bg-[#edfcf3] text-[#008060]"
-                        : "bg-[#ffe5e5] text-[#b30000]"
-                    }`}>
-                      {overview.database.status}
-                    </span>
-                  </div>
-                  <div className="text-[12px] text-[#616161]">
-                    Ping Latency: <strong className="text-[#1a1a1a]">{overview.database.latencyMs} ms</strong>
-                  </div>
-                </div>
+        {/* ── TAB 3: SRE ALERTS & RUNBOOKS ── */}
+        {activeTab === "alerts" && (
+          <div className="space-y-6">
+            {/* Active Triggered Alerts Banner */}
+            <div className="overflow-hidden rounded-xl border border-[#e3e3e3] bg-white shadow-xs">
+              <div className="border-b border-[#e3e3e3] px-5 py-3.5 bg-[#fafafa]">
+                <h3 className="text-[14px] font-semibold text-[#1a1a1a]">
+                  Active System Health Alerts ({overview?.activeAlerts.length ?? 0})
+                </h3>
+                <p className="text-[12px] text-[#8c9196]">
+                  Actionable symptom-based alerts. Every alert has a designated troubleshooting runbook.
+                </p>
+              </div>
 
-                <div className="rounded-xl border border-[#e3e3e3] p-4 bg-[#fafafa]">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="font-semibold text-[#1a1a1a] text-[13px]">AI Gateway (Groq / Gemini)</span>
-                    <span className="inline-flex items-center gap-1 rounded-full bg-[#edfcf3] px-2 py-0.5 text-[10.5px] font-semibold text-[#008060]">
-                      OPERATIONAL
-                    </span>
+              <div className="divide-y divide-[#e3e3e3]">
+                {!overview || overview.activeAlerts.length === 0 ? (
+                  <div className="py-8 text-center text-[#008060] font-medium text-[13px]">
+                    ✅ All alert monitors operational. Zero symptom breaches.
                   </div>
-                  <div className="text-[12px] text-[#616161]">
-                    Dual Fallback: Llama 3.3 70B & Gemini
-                  </div>
-                </div>
+                ) : (
+                  overview.activeAlerts.map((alert) => (
+                    <div
+                      key={alert.id}
+                      className={`p-4 transition ${
+                        alert.acknowledged
+                          ? "bg-[#fafafa] opacity-60"
+                          : alert.severity === "CRITICAL"
+                            ? "bg-[#fff5f5]"
+                            : "bg-[#fffdf5]"
+                      }`}
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`rounded px-2 py-0.5 text-[10.5px] font-bold ${
+                                alert.severity === "CRITICAL"
+                                  ? "bg-[#b30000] text-white"
+                                  : "bg-[#d97706] text-white"
+                              }`}
+                            >
+                              {alert.severity}
+                            </span>
+                            <span className="rounded bg-[#f1f1f1] px-1.5 py-0.5 text-[10.5px] font-semibold text-[#616161]">
+                              {alert.type}
+                            </span>
+                            <span className="font-semibold text-[#1a1a1a] text-[13px]">{alert.title}</span>
+                          </div>
+                          <p className="text-[12px] text-[#303030]">{alert.message}</p>
+                          <div className="text-[11px] text-[#8c9196]">
+                            Triggered: {new Date(alert.timestamp).toLocaleTimeString()} • Current:{" "}
+                            <strong className="text-[#1a1a1a]">{alert.value}</strong> (Threshold: {alert.threshold})
+                          </div>
+                        </div>
 
-                <div className="rounded-xl border border-[#e3e3e3] p-4 bg-[#fafafa]">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="font-semibold text-[#1a1a1a] text-[13px]">Media & Object Storage</span>
-                    <span className="inline-flex items-center gap-1 rounded-full bg-[#edfcf3] px-2 py-0.5 text-[10.5px] font-semibold text-[#008060]">
-                      CONNECTED
-                    </span>
-                  </div>
-                  <div className="text-[12px] text-[#616161]">
-                    Cloudflare R2 & Local Adapter
-                  </div>
-                </div>
+                        <div className="flex items-center gap-2">
+                          {alert.runbook && (
+                            <button
+                              onClick={() =>
+                                setExpandedRunbookId(expandedRunbookId === alert.id ? null : alert.id)
+                              }
+                              className="rounded-lg border border-[#e3e3e3] bg-white px-3 py-1.5 text-[11px] font-semibold text-[#303030] hover:bg-[#f7f7f7] shadow-2xs transition"
+                            >
+                              📖 {expandedRunbookId === alert.id ? "Hide Runbook" : "View Runbook"}
+                            </button>
+                          )}
+
+                          {!alert.acknowledged ? (
+                            <button
+                              onClick={() => void handleAcknowledge(alert.id)}
+                              disabled={ackLoadingId === alert.id}
+                              className="rounded-lg bg-[#1a1a1a] px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-[#333] transition shadow-2xs disabled:opacity-50"
+                            >
+                              {ackLoadingId === alert.id ? "Acknowledging..." : "Acknowledge"}
+                            </button>
+                          ) : (
+                            <span className="rounded-lg bg-[#edfcf3] px-2.5 py-1 text-[11px] font-medium text-[#008060] border border-[#c4f0d5]">
+                              ✓ Acknowledged
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Expandable Runbook Instructions */}
+                      {expandedRunbookId === alert.id && alert.runbook && (
+                        <div className="mt-3 rounded-lg border border-[#fed3d1] bg-white p-4 text-[12px]">
+                          <div className="font-semibold text-[#b30000] mb-1">
+                            📋 SRE Incident Runbook:
+                          </div>
+                          <p className="text-[#303030] leading-relaxed whitespace-pre-line">
+                            {alert.runbook}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  ))
+                )}
               </div>
             </div>
-          )}
-        </section>
+
+            {/* Configured Alert Rules */}
+            <div className="overflow-hidden rounded-xl border border-[#e3e3e3] bg-white shadow-xs">
+              <div className="border-b border-[#e3e3e3] px-5 py-3.5 bg-[#fafafa]">
+                <h3 className="text-[14px] font-semibold text-[#1a1a1a]">Alert Rules & Thresholds</h3>
+                <p className="text-[12px] text-[#8c9196]">
+                  Tune thresholds or toggle alerting rules without restarting the API
+                </p>
+              </div>
+
+              <div className="divide-y divide-[#e3e3e3]">
+                {alertRules.map((rule) => (
+                  <div key={rule.id} className="p-4 flex flex-wrap items-center justify-between gap-4">
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-[#1a1a1a]">{rule.name}</span>
+                        <span className="rounded bg-[#f1f1f1] px-1.5 py-0.5 text-[10px] font-semibold text-[#616161]">
+                          {rule.category}
+                        </span>
+                        <span
+                          className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${
+                            rule.severity === "CRITICAL"
+                              ? "bg-[#ffe5e5] text-[#b30000]"
+                              : "bg-[#fffbeb] text-[#b54708]"
+                          }`}
+                        >
+                          {rule.severity}
+                        </span>
+                      </div>
+                      <p className="text-[12px] text-[#616161]">{rule.description}</p>
+                      <div className="text-[11px] text-[#8c9196]">
+                        Condition: &gt; <strong>{rule.threshold} {rule.unit}</strong>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => void handleToggleRule(rule)}
+                        disabled={ruleToggleLoadingId === rule.id}
+                        className={`rounded-lg px-3 py-1.5 text-[11px] font-semibold transition shadow-2xs ${
+                          rule.enabled
+                            ? "bg-[#edfcf3] text-[#008060] border border-[#c4f0d5] hover:bg-[#d8f9e6]"
+                            : "bg-[#f1f1f1] text-[#616161] hover:bg-[#e3e3e3]"
+                        }`}
+                      >
+                        {rule.enabled ? "Active (Enabled)" : "Disabled"}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

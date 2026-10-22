@@ -1,5 +1,8 @@
 import type {
+  AlertRuleConfig,
   ApiMetricsResponse,
+  LogEntry,
+  LogLevel,
   MonitoringOverview,
   RequestTelemetryRecord,
   SystemResourceMetrics,
@@ -76,3 +79,63 @@ export async function getRecentErrors(
     token,
   );
 }
+
+export async function getMonitoringLogs(
+  token: string,
+  query?: {
+    search?: string;
+    level?: LogLevel;
+    requestId?: string;
+    limit?: number;
+  },
+): Promise<{ logs: LogEntry[]; total: number }> {
+  const params = new URLSearchParams();
+  if (query?.search) params.set("search", query.search);
+  if (query?.level) params.set("level", query.level);
+  if (query?.requestId) params.set("requestId", query.requestId);
+  if (query?.limit) params.set("limit", String(query.limit));
+
+  const queryString = params.toString() ? `?${params.toString()}` : "";
+  return request<{ logs: LogEntry[]; total: number }>(
+    `/staff/monitoring/logs${queryString}`,
+    token,
+  );
+}
+
+export async function getAlertRules(
+  token: string,
+): Promise<{ rules: AlertRuleConfig[] }> {
+  return request<{ rules: AlertRuleConfig[] }>(
+    "/staff/monitoring/alert-rules",
+    token,
+  );
+}
+
+export async function updateAlertRule(
+  token: string,
+  id: string,
+  data: Partial<AlertRuleConfig>,
+): Promise<{ rule: AlertRuleConfig }> {
+  return request<{ rule: AlertRuleConfig }>(
+    `/staff/monitoring/alert-rules/${encodeURIComponent(id)}`,
+    token,
+    {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    },
+  );
+}
+
+export async function acknowledgeAlert(
+  token: string,
+  id: string,
+): Promise<{ success: boolean; alertId: string }> {
+  return request<{ success: boolean; alertId: string }>(
+    `/staff/monitoring/alerts/${encodeURIComponent(id)}/ack`,
+    token,
+    {
+      method: "POST",
+    },
+  );
+}
+

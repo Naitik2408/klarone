@@ -1,8 +1,18 @@
-import { Controller, Get, Query, UseGuards } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+} from "@nestjs/common";
 import { StaffAuthGuard } from "../staff-auth/guards/staff-auth.guard";
 import { StaffPermissionGuard } from "../staff-auth/guards/permission.guard";
 import { RequirePermission } from "../staff-auth/decorators/require-permission.decorator";
 import { MonitoringMetricsService } from "./monitoring-metrics.service";
+import type { AlertRuleConfig } from "./monitoring.types";
 
 @Controller("staff/monitoring")
 @UseGuards(StaffAuthGuard, StaffPermissionGuard)
@@ -34,11 +44,41 @@ export class MonitoringController {
     return this.metricsService.getSystemResourceMetrics();
   }
 
-  @Get("errors")
+  @Get("logs")
   @RequirePermission("platform.settings.read")
-  async getErrors() {
-    return {
-      errors: this.metricsService.getRecentErrors(),
-    };
+  async getLogs(
+    @Query("search") search?: string,
+    @Query("level") level?: string,
+    @Query("requestId") requestId?: string,
+    @Query("limit") limit?: string,
+  ) {
+    return this.metricsService.getLogs({
+      search,
+      level,
+      requestId,
+      limit: limit ? Number(limit) : 100,
+    });
+  }
+
+  @Get("alert-rules")
+  @RequirePermission("platform.settings.read")
+  async getAlertRules() {
+    return { rules: this.metricsService.getAlertRules() };
+  }
+
+  @Patch("alert-rules/:id")
+  @RequirePermission("platform.settings.read")
+  async updateAlertRule(
+    @Param("id") id: string,
+    @Body() body: Partial<AlertRuleConfig>,
+  ) {
+    return this.metricsService.updateAlertRule(id, body);
+  }
+
+  @Post("alerts/:id/ack")
+  @RequirePermission("platform.settings.read")
+  async acknowledgeAlert(@Param("id") id: string) {
+    this.metricsService.acknowledgeAlert(id);
+    return { success: true, alertId: id };
   }
 }
