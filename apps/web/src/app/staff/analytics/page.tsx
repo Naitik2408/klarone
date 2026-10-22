@@ -407,11 +407,13 @@ export default function StaffMonitoringPage() {
           </div>
 
           <div className="rounded-xl border border-[#e3e3e3] bg-white p-4 shadow-xs">
-            <span className="text-[11.5px] font-semibold uppercase tracking-wider text-[#616161]">Host RAM</span>
-            <div className="mt-1 text-[24px] font-semibold tracking-tight text-[#1a1a1a] leading-none">
-              {loading ? "—" : `${overview?.goldenSignals.memoryUsagePercent ?? 0}%`}
+            <span className="text-[11.5px] font-semibold uppercase tracking-wider text-[#616161]">API Process Heap</span>
+            <div className="mt-1 text-[24px] font-semibold tracking-tight text-[#008060] leading-none">
+              {loading ? "—" : resources ? formatBytes(resources.processMemory.heapUsedBytes) : "—"}
             </div>
-            <div className="mt-2 text-[11.5px] text-[#8c9196]">{resources ? formatBytes(resources.usedMemoryBytes) : "—"}</div>
+            <div className="mt-2 text-[11.5px] text-[#8c9196]">
+              RSS: {resources ? formatBytes(resources.processMemory.rssBytes) : "—"}
+            </div>
           </div>
         </section>
 

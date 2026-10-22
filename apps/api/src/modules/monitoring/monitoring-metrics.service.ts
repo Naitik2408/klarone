@@ -265,28 +265,22 @@ export class MonitoringMetricsService {
       });
     }
 
-    // 2. Hardware: Memory Pressure
-    if (resources.memoryUsagePercent >= 92) {
-      alerts.push({
-        id: "alert-mem-critical",
-        type: "HARDWARE",
-        severity: "CRITICAL",
-        title: "Critical System Memory Exhaustion",
-        message: `System RAM utilization is ${resources.memoryUsagePercent}%. Risk of out-of-memory (OOM) crash.`,
-        timestamp: now,
-        value: resources.memoryUsagePercent,
-        threshold: 92,
-      });
-    } else if (resources.memoryUsagePercent >= 80) {
+    // 2. Process / Container Memory Pressure
+    // Check the actual Node.js process heap & RSS memory rather than host Windows laptop RAM
+    const procHeapMB = Math.round(resources.processMemory.heapUsedBytes / (1024 * 1024));
+    const procRssMB = Math.round(resources.processMemory.rssBytes / (1024 * 1024));
+    
+    // In Render/container environments, memory limits typically range from 512MB to 2GB
+    if (procRssMB > 800) {
       alerts.push({
         id: "alert-mem-warning",
         type: "HARDWARE",
         severity: "WARNING",
-        title: "High System Memory Pressure",
-        message: `Host RAM is at ${resources.memoryUsagePercent}%. Monitor node process heap.`,
+        title: "High Node.js Process Memory",
+        message: `API process RSS is using ${procRssMB} MB (Heap: ${procHeapMB} MB). Check for large queries or memory leaks.`,
         timestamp: now,
-        value: resources.memoryUsagePercent,
-        threshold: 80,
+        value: procRssMB,
+        threshold: 800,
       });
     }
 
