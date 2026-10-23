@@ -243,7 +243,7 @@ async function main() {
         shortDescription: item.shortDescription,
         description: item.description,
         productType: item.productType || "LAPTOP",
-        status: "ACTIVE",
+        status: "PUBLISHED",
         createdByUserId: adminId,
       },
     });
