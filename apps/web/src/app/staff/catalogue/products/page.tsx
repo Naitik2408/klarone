@@ -525,7 +525,16 @@ export default function StaffCatalogueProductsPage() {
 
                       <div className="flex min-w-0 items-center gap-2.5">
                         <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-md border border-neutral-200 bg-neutral-100 text-[11px] font-semibold text-neutral-500">
-                          {product.name.slice(0, 2).toUpperCase()}
+                          {product.imageUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={product.imageUrl}
+                              alt={product.name}
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            product.name.slice(0, 2).toUpperCase()
+                          )}
                         </div>
                         <div className="min-w-0">
                           <Link
