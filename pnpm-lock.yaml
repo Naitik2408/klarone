@@ -382,6 +382,9 @@ importers:
       '@types/pg':
         specifier: ^8.23.1
         version: 8.23.1
+      cloudinary:
+        specifier: ^2.11.0
+        version: 2.11.0
       dotenv:
         specifier: ^17.2.2
         version: 17.4.2
