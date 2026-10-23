@@ -9,6 +9,7 @@ import {
   clearStaffAccessToken,
   getCurrentStaffProfile,
   getStaffAccessToken,
+  StaffAuthError,
   type CurrentStaffProfile,
 } from "@/lib/staff-auth-api";
 
@@ -301,8 +302,13 @@ export function StaffShell({
         setProfile(p);
         setReady(true);
       })
-      .catch(() => {
-        // Fallback: token valid, proceed
+      .catch((err) => {
+        if (err instanceof StaffAuthError && err.status === 401) {
+          clearStaffAccessToken();
+          router.replace("/staff/login");
+          return;
+        }
+        // Fallback: token valid or transient network error, proceed
         setReady(true);
       });
   }, [isLoginPage, router]);

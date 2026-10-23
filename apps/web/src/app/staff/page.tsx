@@ -8,6 +8,7 @@ import {
   clearStaffAccessToken,
   getCurrentStaffProfile,
   getStaffAccessToken,
+  StaffAuthError,
   type CurrentStaffProfile,
 } from "../../lib/staff-auth-api";
 import {
@@ -322,7 +323,8 @@ export default function StaffDashboardPage() {
         if (r.status !== "rejected") return false;
         const reason = r.reason;
         return (
-          (reason instanceof StaffCatalogueApiError ||
+          (reason instanceof StaffAuthError ||
+            reason instanceof StaffCatalogueApiError ||
             reason instanceof StaffOrdersApiError ||
             reason instanceof StaffCustomersApiError ||
             reason instanceof StaffInventoryApiError) &&
@@ -385,6 +387,11 @@ export default function StaffDashboardPage() {
         setError(`Could not load: ${issues.join(", ")}. Some data may be stale.`);
       }
     } catch (caught) {
+      if (caught instanceof StaffAuthError && caught.status === 401) {
+        clearStaffAccessToken();
+        router.replace("/staff/login");
+        return;
+      }
       setError(caught instanceof Error ? caught.message : "Unable to load dashboard.");
     } finally {
       setLoading(false);

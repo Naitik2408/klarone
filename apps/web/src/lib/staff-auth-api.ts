@@ -4,9 +4,12 @@ const API_BASE_URL =
 const STAFF_TOKEN_KEY = "klarone-staff-access-token";
 
 export class StaffAuthError extends Error {
-  constructor(message: string) {
+  status: number;
+
+  constructor(message: string, status: number = 401) {
     super(message);
     this.name = "StaffAuthError";
+    this.status = status;
   }
 }
 
@@ -87,6 +90,7 @@ export async function staffLogin(
   if (!response.ok) {
     throw new StaffAuthError(
       await readError(response),
+      response.status,
     );
   }
 
@@ -116,7 +120,7 @@ export async function getCurrentStaffProfile(token: string): Promise<CurrentStaf
   });
 
   if (!response.ok) {
-    throw new StaffAuthError(await readError(response));
+    throw new StaffAuthError(await readError(response), response.status);
   }
 
   return response.json();
