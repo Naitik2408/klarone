@@ -212,7 +212,7 @@ export function StorefrontHeader() {
                   />
                 </svg>
                 {itemCount > 0 && (
-                  <span className="absolute -right-1 -top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[#d6f088] px-1 text-[10px] font-bold text-slate-950 shadow-sm">
+                  <span key={itemCount} className="absolute -right-1 -top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[#d6f088] px-1 text-[10px] font-bold text-slate-950 shadow-sm animate-cart-bounce">
                     {itemCount}
                   </span>
                 )}

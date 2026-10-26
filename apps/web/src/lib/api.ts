@@ -17,6 +17,7 @@ const API_BASE_URL =
 async function apiFetch<T>(
   path: string,
   init?: RequestInit,
+  nextOptions?: NextFetchRequestConfig,
 ): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
@@ -24,7 +25,7 @@ async function apiFetch<T>(
       Accept: "application/json",
       ...init?.headers,
     },
-    cache: "no-store",
+    next: nextOptions,
   });
 
   if (!response.ok) {
@@ -37,15 +38,24 @@ async function apiFetch<T>(
 }
 
 export const getBrands = cache(async function getBrands(): Promise<CatalogueBrand[]> {
-  return apiFetch<CatalogueBrand[]>("/catalogue/brands");
+  return apiFetch<CatalogueBrand[]>("/catalogue/brands", undefined, {
+    tags: ["catalogue", "brands"],
+    revalidate: 3600,
+  });
 });
 
 export const getCategories = cache(async function getCategories(): Promise<CatalogueCategory[]> {
-  return apiFetch<CatalogueCategory[]>("/catalogue/categories");
+  return apiFetch<CatalogueCategory[]>("/catalogue/categories", undefined, {
+    tags: ["catalogue", "categories"],
+    revalidate: 3600,
+  });
 });
 
 export const getCollections = cache(async function getCollections(): Promise<CatalogueCollection[]> {
-  return apiFetch<CatalogueCollection[]>("/catalogue/collections");
+  return apiFetch<CatalogueCollection[]>("/catalogue/collections", undefined, {
+    tags: ["catalogue", "collections"],
+    revalidate: 3600,
+  });
 });
 
 export const getFacets = cache(async function getFacets(params?: {
@@ -56,7 +66,14 @@ export const getFacets = cache(async function getFacets(params?: {
   if (params?.categorySlug) searchParams.set("categorySlug", params.categorySlug);
   if (params?.collectionSlug) searchParams.set("collectionSlug", params.collectionSlug);
   const query = searchParams.toString();
-  return apiFetch<CatalogueFacets>(`/catalogue/facets${query ? `?${query}` : ""}`);
+  return apiFetch<CatalogueFacets>(
+    `/catalogue/facets${query ? `?${query}` : ""}`,
+    undefined,
+    {
+      tags: ["catalogue", "facets"],
+      revalidate: 300,
+    },
+  );
 });
 
 export async function getProducts(params?: {
@@ -98,8 +115,26 @@ export async function getProducts(params?: {
 
   const query = searchParams.toString();
 
+  // If user is searching or applying granular filters, fetch dynamically.
+  // Default listing pages are cached with tag 'products-list'.
+  const isFiltered = Boolean(
+    params?.search ||
+      params?.minPrice !== undefined ||
+      params?.maxPrice !== undefined ||
+      params?.ramGb?.length ||
+      params?.storageGb?.length ||
+      params?.inStockOnly,
+  );
+
   return apiFetch<CatalogueProductsResponse>(
     `/catalogue/products${query ? `?${query}` : ""}`,
+    undefined,
+    isFiltered
+      ? { revalidate: 30 }
+      : {
+          tags: ["catalogue", "products-list"],
+          revalidate: 300,
+        },
   );
 }
 
@@ -108,6 +143,11 @@ export const getProduct = cache(async function getProduct(
 ): Promise<CatalogueProductDetail> {
   return apiFetch<CatalogueProductDetail>(
     `/catalogue/products/${encodeURIComponent(slug)}`,
+    undefined,
+    {
+      tags: ["catalogue", `product-${slug}`],
+      revalidate: 3600, // Instant cache-tag revalidation
+    },
   );
 });
 
@@ -125,5 +165,6 @@ export async function startRecommendation(params: {
       },
       body: JSON.stringify(params),
     },
+    { revalidate: 0 },
   );
 }

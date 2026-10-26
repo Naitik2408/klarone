@@ -65,13 +65,13 @@ export function ProductCard({
   }
 
   return (
-    <article className="group relative flex flex-col justify-between rounded-[20px] sm:rounded-[24px] bg-[#f0f2ee] p-2.5 sm:p-4 transition-transform duration-200">
+    <article className="group relative flex flex-col justify-between rounded-[20px] sm:rounded-[24px] bg-[#f0f2ee] p-2.5 sm:p-4 transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-[0_12px_30px_rgb(0,0,0,0.06)] active:scale-[0.985]">
       <Link
         href={`/laptops/${product.slug}`}
-        className="block w-full"
+        className="block w-full focus:outline-none"
       >
         {/* Clean Unified Product Stage matching aspect ratio */}
-        <div className="relative flex aspect-[4/4.4] min-h-[120px] sm:min-h-[200px] w-full items-center justify-center overflow-hidden rounded-[14px] sm:rounded-[18px] bg-white/40">
+        <div className="relative flex aspect-[4/4.4] min-h-[120px] sm:min-h-[200px] w-full items-center justify-center overflow-hidden rounded-[14px] sm:rounded-[18px] bg-white/60 transition-colors duration-300 group-hover:bg-white/80">
           {primaryMedia?.url ? (
             <Image
               src={primaryMedia.url}
@@ -79,7 +79,7 @@ export function ProductCard({
               fill
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
               priority={priority}
-              className="object-contain p-2.5 sm:p-4 transition-transform duration-200 group-hover:scale-105"
+              className="object-contain p-2.5 sm:p-4 transition-transform duration-300 ease-out group-hover:scale-105"
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center text-2xl sm:text-4xl text-stone-400 select-none">
@@ -87,13 +87,13 @@ export function ProductCard({
             </div>
           )}
 
-          {/* Floating Cart Button placed directly on the bottom right of the image stage on mobile like user reference image */}
+          {/* Floating Cart Button placed directly on the bottom right of the image stage on mobile */}
           <button
             type="button"
             onClick={handleAddToCart}
             disabled={isAdding}
             aria-label={`Add ${product.name} to cart`}
-            className="absolute bottom-2 right-2 flex sm:hidden h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-950 text-white shadow-md transition-all active:scale-90 disabled:opacity-50 z-20 cursor-pointer touch-manipulation"
+            className="absolute bottom-2 right-2 flex sm:hidden h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-950 text-white shadow-md transition-all duration-150 active:scale-90 disabled:opacity-50 z-20 cursor-pointer touch-manipulation"
           >
             {isAdding ? (
               <div className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" />
@@ -123,7 +123,7 @@ export function ProductCard({
             <p className="text-[10px] sm:text-[11px] font-medium tracking-wide uppercase text-stone-500 truncate">
               {product.brand?.name ?? "Klarone"}
             </p>
-            <h3 className="font-serif text-[13px] sm:text-[15px] font-normal leading-snug text-slate-900 group-hover:text-slate-700 transition-colors line-clamp-2">
+            <h3 className="font-serif text-[13px] sm:text-[15px] font-normal leading-snug text-slate-900 group-hover:text-emerald-950 transition-colors duration-200 line-clamp-2">
               {product.name}
             </h3>
           </div>
@@ -166,17 +166,17 @@ export function ProductCard({
           )}
         </div>
 
-        {/* Desktop Add to Cart Pill button */}
+        {/* Desktop Add to Cart Pill button with Apple-level tactile micro-interactions */}
         <button
           type="button"
           onClick={handleAddToCart}
           disabled={isAdding}
-          className="hidden sm:inline-flex items-center gap-1 rounded-full bg-slate-900 hover:bg-slate-800 text-white px-3 py-1 text-[11px] font-medium transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
+          className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-slate-900 hover:bg-slate-800 text-white px-3.5 py-1.5 text-[11px] font-medium shadow-sm transition-all duration-150 ease-out hover:scale-[1.03] hover:shadow active:scale-[0.95] disabled:opacity-50 cursor-pointer"
         >
           {isAdding ? (
             <div className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" />
           ) : justAdded ? (
-            <span className="text-lime-300">Added</span>
+            <span className="text-lime-300 font-semibold">✓ Added</span>
           ) : (
             <span>Add</span>
           )}
