@@ -78,13 +78,13 @@ export function StorefrontHero() {
         />
 
         {/* Top Dark Vignette: keeps floating navbar & upper text perfectly legible */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/55 to-black/75" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/45 via-black/20 to-black/40" />
 
         {/* Radial Center Glow: softens illuminated office cubicles in midground */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(0,0,0,0.15)_0%,_rgba(0,0,0,0.75)_100%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(0,0,0,0)_0%,_rgba(0,0,0,0.40)_100%)]" />
 
         {/* Bottom Atmospheric Fade: seamlessly grounds into the following section */}
-        <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-[#07090e] via-[#07090e]/70 to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#07090e] to-transparent" />
       </div>
 
       <div className="relative mx-auto flex h-full max-w-7xl flex-col items-center justify-between px-4 pt-24 pb-8 text-center sm:px-6 sm:justify-center sm:pt-16 sm:pb-12 lg:px-8">
