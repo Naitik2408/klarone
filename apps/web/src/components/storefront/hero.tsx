@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "motion/react";
 
@@ -66,7 +66,11 @@ export function StorefrontHero() {
       Sticky hero container: Stays anchored on screen while the following product
       section scrolls and slides over it smoothly with rounded corners and shadow elevation.
     */
-    <div className="sticky top-0 z-0 h-screen w-full overflow-hidden bg-[#07090e]">
+    <div 
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
+      className="sticky top-0 z-0 h-screen w-full overflow-hidden bg-[#07090e]"
+    >
       {/* Cinematic Night Cityscape Architecture Background */}
       <div className="absolute inset-0 -z-10 h-full w-full overflow-hidden">
         {/* Photographic Dusk Cityscape Layer */}
