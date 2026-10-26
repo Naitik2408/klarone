@@ -73,12 +73,12 @@ export function StorefrontHero() {
         <div
           className="absolute inset-0 h-full w-full bg-cover bg-center bg-no-repeat transition-transform duration-1000 scale-[1.02]"
           style={{
-            backgroundImage: "url('/hero-night-cityscape.jpg')",
+            backgroundImage: "url('/hero-laptop-detail.jpg')",
           }}
         />
 
         {/* Top Dark Vignette: keeps floating navbar & upper text perfectly legible */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/85 via-black/45 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/55 to-black/75" />
 
         {/* Radial Center Glow: softens illuminated office cubicles in midground */}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(0,0,0,0.15)_0%,_rgba(0,0,0,0.75)_100%)]" />
