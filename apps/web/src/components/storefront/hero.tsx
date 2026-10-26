@@ -59,6 +59,15 @@ export function StorefrontHero() {
     setCurrentSlideIndex((prev) => (prev - 1 + SLIDES.length) % SLIDES.length);
   }
 
+  // Continuous auto-slide every 4.5 seconds (never pauses on hover)
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentSlideIndex((prev) => (prev + 1) % SLIDES.length);
+    }, 4500);
+
+    return () => clearInterval(timer);
+  }, []);
+
   const slide = SLIDES[currentSlideIndex];
 
   return (
@@ -66,11 +75,7 @@ export function StorefrontHero() {
       Sticky hero container: Stays anchored on screen while the following product
       section scrolls and slides over it smoothly with rounded corners and shadow elevation.
     */
-    <div 
-      onMouseEnter={() => setIsPaused(true)}
-      onMouseLeave={() => setIsPaused(false)}
-      className="sticky top-0 z-0 h-screen w-full overflow-hidden bg-[#07090e]"
-    >
+    <div className="sticky top-0 z-0 h-screen w-full overflow-hidden bg-[#07090e]">
       {/* Cinematic Night Cityscape Architecture Background */}
       <div className="absolute inset-0 -z-10 h-full w-full overflow-hidden">
         {/* Photographic Dusk Cityscape Layer */}
