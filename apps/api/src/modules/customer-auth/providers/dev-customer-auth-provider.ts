@@ -3,7 +3,7 @@ import {
   Injectable,
   UnauthorizedException,
 } from "@nestjs/common";
-import { randomUUID } from "node:crypto";
+import { randomInt, randomUUID } from "node:crypto";
 import type {
   CustomerAuthProvider,
   CustomerOtpRequestResult,
@@ -46,8 +46,13 @@ export class DevCustomerAuthProvider
       this.normalizeIdentifier(identifier);
 
     const challengeId = randomUUID();
-    // Default to 123456 for demo / dev testing
-    const generatedOtp = this.demoOtp;
+    // For emails, generate a genuine, cryptographically secure 6-digit dynamic OTP.
+    // For test phone numbers in dev, use demoOtp unless in production.
+    const generatedOtp = isEmail
+      ? randomInt(100000, 1000000).toString()
+      : (process.env.NODE_ENV === "production"
+          ? randomInt(100000, 1000000).toString()
+          : this.demoOtp);
 
     this.challenges.set(challengeId, {
       challengeId,
@@ -74,7 +79,7 @@ export class DevCustomerAuthProvider
           }
           const { Resend } = await import("resend");
           const resend = new Resend(resendApiKey);
-          const fromEmail = process.env.RESEND_FROM_EMAIL || "Klarone <onboarding@resend.dev>";
+          const fromEmail = process.env.RESEND_FROM_EMAIL || "Klarone <admin@klarone.in>";
 
           const res = await resend.emails.send({
             from: fromEmail,
