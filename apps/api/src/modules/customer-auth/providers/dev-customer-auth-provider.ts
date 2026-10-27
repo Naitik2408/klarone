@@ -152,10 +152,11 @@ export class DevCustomerAuthProvider
     }
 
     const inputCode = input.code.trim();
-    let isCodeValid =
-      inputCode === challenge.code ||
-      inputCode === "123456" ||
-      inputCode === "1234";
+    let isCodeValid = inputCode === challenge.code;
+    // Allow demo fallback ONLY in local development for mock phone numbers
+    if (!isCodeValid && process.env.NODE_ENV !== "production" && !challenge.isEmail) {
+      isCodeValid = inputCode === "123456" || inputCode === "1234";
+    }
 
     // Check if code was generated and saved by Better Auth in verification table
     if (!isCodeValid) {
