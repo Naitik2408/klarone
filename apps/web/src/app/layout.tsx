@@ -1,3 +1,4 @@
+import Script from "next/script";
 import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans, Instrument_Serif } from "next/font/google";
 import "./globals.css";
@@ -61,7 +62,7 @@ const organizationJsonLd = {
     alternateName: "Krishna Infotech Solution",
     description:
         "Laptop Ownership Ecosystem in Kolkata offering AI-guided laptop advisory, authentic brand sales, white-glove setup, repairs, and lifetime hardware upgrades.",
-    url: "https://klarone.com",
+    url: "https://klarone.in",
     telephone: "+91 98300 00000",
     priceRange: "₹₹₹",
     address: {
@@ -102,6 +103,8 @@ const organizationJsonLd = {
     ],
 };
 
+const GA_MEASUREMENT_ID = "G-F8B7BDHFCS";
+
 export default function RootLayout({
     children,
 }: Readonly<{
@@ -125,6 +128,26 @@ export default function RootLayout({
                 <CustomerAuthProvider>
                     <CartProvider>{children}</CartProvider>
                 </CustomerAuthProvider>
+
+                {/* Google Analytics 4 (GA4) Tag */}
+                <Script
+                    strategy="afterInteractive"
+                    src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
+                />
+                <Script
+                    id="google-analytics-init"
+                    strategy="afterInteractive"
+                    dangerouslySetInnerHTML={{
+                        __html: `
+                            window.dataLayer = window.dataLayer || [];
+                            function gtag(){dataLayer.push(arguments);}
+                            gtag('js', new Date());
+                            gtag('config', '${GA_MEASUREMENT_ID}', {
+                                page_path: window.location.pathname,
+                            });
+                        `,
+                    }}
+                />
             </body>
         </html>
     );
