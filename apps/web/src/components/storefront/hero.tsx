@@ -78,9 +78,17 @@ export function StorefrontHero() {
     <div className="sticky top-0 z-0 h-screen w-full overflow-hidden bg-[#07090e]">
       {/* Cinematic Night Cityscape Architecture Background */}
       <div className="absolute inset-0 -z-10 h-full w-full overflow-hidden">
-        {/* Photographic Dusk Cityscape Layer */}
+        {/* Mobile Background Image (phones / small screens) */}
         <div
-          className="absolute inset-0 h-full w-full bg-cover bg-center bg-no-repeat transition-transform duration-1000 scale-[1.02]"
+          className="block sm:hidden absolute inset-0 h-full w-full bg-cover bg-center bg-no-repeat transition-transform duration-1000 scale-[1.02]"
+          style={{
+            backgroundImage: "url('/mobile.png')",
+          }}
+        />
+
+        {/* Desktop / Tablet Background Image */}
+        <div
+          className="hidden sm:block absolute inset-0 h-full w-full bg-cover bg-center bg-no-repeat transition-transform duration-1000 scale-[1.02]"
           style={{
             backgroundImage: "url('/hero-laptop-detail.jpg')",
           }}
