@@ -72,7 +72,7 @@ export function CatalogueToolbar({
         {total} {total === 1 ? "product" : "products"}
       </span>
 
-      {/* Right on desktop: Sort By & View As Layout Toggle */}
+            {/* Right on desktop: Sort By */}
       <div className="hidden sm:flex items-center gap-6">
         <div className="flex items-center gap-2.5">
           <span className="text-stone-500 text-sm font-medium">Sort by</span>
@@ -93,50 +93,6 @@ export function CatalogueToolbar({
               </svg>
             </div>
           </div>
-        </div>
-
-        {/* View As Grid Icons (h-11 w-11 matching height) */}
-        <div className="hidden sm:flex items-center gap-2 text-sm text-stone-500">
-          <span className="mr-1 text-sm font-medium">View as</span>
-          <button
-            type="button"
-            onClick={() => onToggleView(3)}
-            aria-label="3 columns view"
-            className={`flex h-11 w-11 items-center justify-center rounded-full transition-all hover:scale-105 ${
-              viewColumns === 3
-                ? "bg-slate-950 text-white shadow-sm"
-                : "bg-stone-100 text-stone-700 hover:bg-stone-200"
-            }`}
-          >
-            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
-              <rect x="3" y="3" width="7" height="7" rx="1.5" />
-              <rect x="14" y="3" width="7" height="7" rx="1.5" />
-              <rect x="3" y="14" width="7" height="7" rx="1.5" />
-              <rect x="14" y="14" width="7" height="7" rx="1.5" />
-            </svg>
-          </button>
-          <button
-            type="button"
-            onClick={() => onToggleView(4)}
-            aria-label="4 columns view"
-            className={`flex h-11 w-11 items-center justify-center rounded-full transition-all hover:scale-105 ${
-              viewColumns === 4
-                ? "bg-slate-950 text-white shadow-sm"
-                : "bg-stone-100 text-stone-700 hover:bg-stone-200"
-            }`}
-          >
-            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
-              <circle cx="5" cy="5" r="2" />
-              <circle cx="12" cy="5" r="2" />
-              <circle cx="19" cy="5" r="2" />
-              <circle cx="5" cy="12" r="2" />
-              <circle cx="12" cy="12" r="2" />
-              <circle cx="19" cy="12" r="2" />
-              <circle cx="5" cy="19" r="2" />
-              <circle cx="12" cy="19" r="2" />
-              <circle cx="19" cy="19" r="2" />
-            </svg>
-          </button>
         </div>
       </div>
     </div>

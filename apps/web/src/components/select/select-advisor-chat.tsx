@@ -346,8 +346,10 @@ export function SelectAdvisorChat() {
                             maximumFractionDigits: 0,
                           }).format(price);
 
-                          const scoreNum = rec.overallScore ? Number(rec.overallScore) : 85;
-                          const displayScore = Math.min(99, Math.round(scoreNum > 1 ? scoreNum : scoreNum * 100));
+                          const rawScore = rec.overallScore ? Number(rec.overallScore) : 85;
+                          // If rawScore is already on a 0-100 scale (e.g. 88.5), clamp to max 99. If on 0-1 scale (e.g. 0.88), multiply by 100.
+                          const normalized = rawScore > 1 ? rawScore : rawScore * 100;
+                          const displayScore = Math.max(60, Math.min(99, Math.round(normalized)));
 
                           return (
                             <article
@@ -433,60 +435,7 @@ export function SelectAdvisorChat() {
                     {msg.timestamp}
                   </span>
 
-                  {/* Contextual Action Chips (AI UI Pattern) */}
-                  {msg.sender === "advisor" && !isLoading && (
-                    <div className="mt-3 flex flex-wrap gap-1.5">
-                      {!msg.recommendations || msg.recommendations.length === 0 ? (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => handleSubmit("I mostly need it for everyday office tasks and video calls under ₹65,000")}
-                            className="rounded-full border border-stone-300 bg-white/80 px-2.5 py-1 text-[11px] font-medium text-stone-700 transition hover:border-slate-900 hover:bg-white active:scale-95"
-                          >
-                            💼 Office & Zoom calls (₹65k)
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleSubmit("I need it for programming and running local containers under ₹1.2 Lakhs")}
-                            className="rounded-full border border-stone-300 bg-white/80 px-2.5 py-1 text-[11px] font-medium text-stone-700 transition hover:border-slate-900 hover:bg-white active:scale-95"
-                          >
-                            💻 Coding & Containers (₹1.2L)
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleSubmit("I prioritize 10+ hours battery life and lightweight travel under 1.3kg")}
-                            className="rounded-full border border-stone-300 bg-white/80 px-2.5 py-1 text-[11px] font-medium text-stone-700 transition hover:border-slate-900 hover:bg-white active:scale-95"
-                          >
-                            🔋 Max Battery & Portability
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => handleSubmit("What are the real-world battery life differences between these options?")}
-                            className="rounded-full border border-stone-300 bg-white/80 px-2.5 py-1 text-[11px] font-medium text-stone-700 transition hover:border-slate-900 hover:bg-white active:scale-95"
-                          >
-                            🔋 Compare battery life
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleSubmit("Which of these has the best display and keyboard for long sessions?")}
-                            className="rounded-full border border-stone-300 bg-white/80 px-2.5 py-1 text-[11px] font-medium text-stone-700 transition hover:border-slate-900 hover:bg-white active:scale-95"
-                          >
-                            ✨ Screen & keyboard quality
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleSubmit("Are there any reliable options ₹10,000 lower in price?")}
-                            className="rounded-full border border-stone-300 bg-white/80 px-2.5 py-1 text-[11px] font-medium text-stone-700 transition hover:border-slate-900 hover:bg-white active:scale-95"
-                          >
-                            💰 Lower budget alternatives
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  )}
+                  
                 </div>
               </motion.div>
             ))}

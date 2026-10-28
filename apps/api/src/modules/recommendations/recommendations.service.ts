@@ -108,10 +108,23 @@ export class RecommendationsService {
           engineCandidates,
         );
 
-        const topRanked = rankedResults.slice(0, MAX_RESULTS);
+        // Deduplicate by Product ID so we only show the best variant per laptop model (e.g. no duplicate Acer/Dell cards)
+        const seenProductIds = new Set<string>();
+        const uniqueRanked: typeof rankedResults = [];
         const candidateMap = new Map(
           pool.map((c) => [c.id.toString(), c]),
         );
+
+        for (const res of rankedResults) {
+          const cand = candidateMap.get(res.productVariantId.toString());
+          if (cand && !seenProductIds.has(cand.product.id.toString())) {
+            seenProductIds.add(cand.product.id.toString());
+            uniqueRanked.push(res);
+            if (uniqueRanked.length >= MAX_RESULTS) break;
+          }
+        }
+
+        const topRanked = uniqueRanked.map((item, idx) => ({ ...item, rank: idx + 1 }));
 
         matchingResults = topRanked.map((result) => {
           const candidate = candidateMap.get(result.productVariantId.toString());
