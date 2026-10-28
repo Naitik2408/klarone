@@ -14,7 +14,7 @@ import {
   REQUIREMENT_EXTRACTOR,
   type RequirementExtractor,
 } from "./requirement-extractor";
-import { GeminiAdvisorExplainerService } from "./gemini-advisor-explainer.service";
+import { OpenAIAgentAdvisorService } from "./openai-agent-advisor.service";
 
 const MAX_RESULTS = 5;
 
@@ -25,7 +25,7 @@ export class RecommendationsService {
     @Inject(REQUIREMENT_EXTRACTOR)
     private readonly requirementExtractor: RequirementExtractor,
     private readonly recommendationEngine: RecommendationEngineService,
-    private readonly advisorExplainer: GeminiAdvisorExplainerService,
+    private readonly advisorExplainer: OpenAIAgentAdvisorService,
   ) { }
 
   async startRecommendation(input: StartRecommendationDto) {
