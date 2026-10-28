@@ -139,8 +139,7 @@ export class OpenAIAgentAdvisorService {
     } catch (err: any) {
       this.logger.error(`[OpenAI Agents SDK Error] Execution failed: ${err.message}`, err.stack);
       return {
-        replyText:
-          "I apologize, I encountered a temporary delay checking our live stock. What kind of work or budget do you have in mind so I can guide you?",
+        replyText: `DEBUG ERROR: ${err.message}`,
         shouldSearchCatalog: false,
       };
     }
