@@ -38,15 +38,6 @@ const INITIAL_SUGGESTIONS = [
     label: "Student laptop with long battery",
     prompt: "Hii, I am a student looking for a reliable laptop with great battery life.",
   },
-  {
-    icon: (
-      <svg className="h-3.5 w-3.5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-    ),
-    label: "Performance for coding and editing",
-    prompt: "Hii, I need a capable laptop for coding, multitasking, and some video editing.",
-  },
 ];
 
 export function SelectAdvisorChat() {
