@@ -9,10 +9,14 @@ export const metadata: Metadata = {
 
 export default function LoginPage() {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-white px-4">
-      <Suspense fallback={<div className="w-full max-w-[480px] py-12 text-center text-sm text-slate-500">Loading sign in...</div>}>
-        <LoginForm />
-      </Suspense>
-    </div>
+    <Suspense
+      fallback={
+        <div className="flex min-h-dvh w-full items-center justify-center bg-white text-sm text-[#5C6B63]">
+          Loading sign in...
+        </div>
+      }
+    >
+      <LoginForm />
+    </Suspense>
   );
 }
