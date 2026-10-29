@@ -21,24 +21,31 @@ interface ChatMessage {
 
 const INITIAL_SUGGESTIONS = [
   {
-    icon: "💻",
-    title: "Software Engineering & Docker",
-    prompt: "I need a fast laptop for full-stack web dev, Docker containers, 32GB RAM, under ₹1.5 Lakhs.",
+    icon: (
+      <svg className="h-3.5 w-3.5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11" />
+      </svg>
+    ),
+    label: "Hii, I want to buy a laptop",
+    prompt: "Hii, I want to buy a laptop for my daily work and personal use.",
   },
   {
-    icon: "🎨",
-    title: "Creative Video Editing & 4K",
-    prompt: "Looking for a creator laptop with an OLED or color-accurate display for Premiere Pro and After Effects around ₹1.8 Lakhs.",
+    icon: (
+      <svg className="h-3.5 w-3.5 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+      </svg>
+    ),
+    label: "Student laptop with long battery",
+    prompt: "Hii, I am a student looking for a reliable laptop with great battery life.",
   },
   {
-    icon: "⚡",
-    title: "Casual Gaming & Daily Productivity",
-    prompt: "Need a durable laptop for work, light gaming (Valorant / GTA V), long battery life, under ₹80,000.",
-  },
-  {
-    icon: "🎓",
-    title: "College Student & High Battery Life",
-    prompt: "Need a lightweight laptop under 1.3kg with all-day battery life for college and coding, under ₹90,000.",
+    icon: (
+      <svg className="h-3.5 w-3.5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    ),
+    label: "Performance for coding and editing",
+    prompt: "Hii, I need a capable laptop for coding, multitasking, and some video editing.",
   },
 ];
 
@@ -239,32 +246,40 @@ export function SelectAdvisorChat() {
         <div className={`mx-auto max-w-4xl ${messages.length === 0 ? "h-full flex flex-col justify-center" : "pb-4"}`}>
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-4 text-center my-auto">
-            {/* Center Brand Identity */}
-            <div className="flex h-14 w-14 sm:h-16 sm:w-16 items-center justify-center rounded-2xl sm:rounded-3xl bg-[#0b241b] text-2xl sm:text-3xl text-[#d6f088] shadow-md">
-              ⚡
+            {/* Center Brand Identity with soft glowing emblem */}
+            <div className="flex h-14 w-14 sm:h-16 sm:w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500/10 via-slate-900/5 to-emerald-500/10 p-0.5 shadow-sm border border-stone-200/80">
+              <div className="flex h-full w-full items-center justify-center rounded-[14px] bg-white shadow-2xs">
+                <Image
+                  src="/logo/icon2.png"
+                  alt="Klarone Icon"
+                  width={32}
+                  height={32}
+                  className="h-8 w-8 object-contain"
+                />
+              </div>
             </div>
 
-            <h2 className="mt-5 font-serif text-3xl font-normal tracking-tight text-slate-900 sm:text-5xl">
-              Meet Klarone Select
-            </h2>
-            <p className="mt-3 max-w-md px-4 text-xs sm:text-sm leading-relaxed text-stone-600 sm:max-w-lg">
-              Describe your workload, favorite software, battery needs, and budget. Our AI matches verified laptops with transparent specification fit analysis.
+            {/* Clean Hero Headline & Subhead matching reference */}
+            <h1 className="mt-6 text-3xl font-semibold tracking-tight text-slate-900 sm:text-5xl">
+              Tell us your work.
+            </h1>
+            <p className="mt-1 text-3xl font-semibold tracking-tight text-stone-400 sm:text-5xl">
+              We find your laptop.
             </p>
 
-            {/* Quick-starter prompt chips from AI UI Patterns */}
-            <div className="mt-6 grid w-full max-w-xl grid-cols-1 sm:grid-cols-2 gap-2.5 px-2 text-left">
+            {/* Quick-starter prompt chips in single row matching reference */}
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-2.5 px-2">
               {INITIAL_SUGGESTIONS.map((item, idx) => (
                 <button
                   key={idx}
                   type="button"
                   onClick={() => handleSubmit(item.prompt)}
-                  className="group flex items-start gap-2.5 rounded-xl border border-stone-200/90 bg-white/90 p-3 text-left shadow-2xs transition hover:border-slate-800 hover:bg-white active:scale-[0.98]"
+                  className="group inline-flex items-center gap-2 rounded-xl border border-stone-200/90 bg-white/90 px-3.5 py-2 text-xs font-medium text-slate-700 shadow-2xs transition-all duration-150 hover:border-slate-300 hover:bg-white hover:text-slate-950 hover:shadow-xs active:scale-[0.98]"
                 >
-                  <span className="text-xl shrink-0 select-none">{item.icon}</span>
-                  <div className="min-w-0">
-                    <h4 className="text-xs font-semibold text-slate-900 group-hover:text-slate-950 leading-snug">{item.title}</h4>
-                    <p className="mt-0.5 text-[11px] text-stone-500 line-clamp-2 leading-relaxed">{item.prompt}</p>
-                  </div>
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-stone-50 border border-stone-100">
+                    {item.icon}
+                  </span>
+                  <span>{item.label}</span>
                 </button>
               ))}
             </div>
@@ -463,10 +478,11 @@ export function SelectAdvisorChat() {
         </div>
       </div>
 
-      {/* Modern, Highly Refined Floating Prompt Input Bar */}
-      <div className="shrink-0 border-t border-stone-200/80 bg-[#f0f2ee]/90 px-3 py-3 sm:px-6 sm:py-4 backdrop-blur-md">
+      {/* Floating Clean Prompt Container */}
+      <div className="shrink-0 bg-transparent px-3 pb-4 pt-2 sm:px-6 sm:pb-6">
         <div className="mx-auto max-w-3xl">
-          <div className="group relative flex items-end rounded-2xl sm:rounded-3xl border border-stone-300 bg-white p-1.5 sm:p-2 shadow-sm transition-all duration-200 focus-within:border-slate-900 focus-within:ring-2 focus-within:ring-slate-900/10 focus-within:shadow-md hover:border-stone-400">
+          <div className="group relative flex items-center rounded-2xl sm:rounded-3xl border border-stone-200/90 bg-white p-1.5 sm:p-2 shadow-sm transition-all duration-200 focus-within:border-slate-400 focus-within:shadow-md hover:border-stone-300">
+            {/* Clean Textarea without any outline or focus border */}
             <textarea
               ref={inputRef}
               rows={1}
@@ -477,30 +493,22 @@ export function SelectAdvisorChat() {
                 e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
               }}
               onKeyDown={handleKeyDown}
-              placeholder="Ask anything..."
+              placeholder="Ask anything or describe what you need..."
               disabled={isLoading}
-              className="max-h-32 min-h-[40px] sm:min-h-[44px] w-full resize-none bg-transparent px-3 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-[14px] leading-relaxed text-slate-900 placeholder:text-stone-400 focus:outline-none"
+              style={{ outline: "none", boxShadow: "none" }}
+              className="max-h-32 min-h-[40px] sm:min-h-[44px] w-full resize-none bg-transparent px-3 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-[14px] leading-relaxed text-slate-900 placeholder:text-stone-400 border-0 !border-none !outline-none !shadow-none focus:!outline-none focus:!ring-0 focus-visible:!outline-none focus-visible:!ring-0 focus-visible:!ring-offset-0 ring-0 shadow-none"
             />
 
+            {/* Right Send Action Button */}
             <button
               type="button"
               onClick={() => handleSubmit()}
               disabled={!inputPrompt.trim() || isLoading}
               aria-label="Send query"
-              className="flex h-10 w-10 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-xl sm:rounded-2xl bg-[#0b241b] text-white shadow-xs transition duration-150 hover:bg-slate-800 active:scale-95 disabled:cursor-not-allowed disabled:bg-stone-200 disabled:text-stone-400"
+              className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl sm:rounded-2xl bg-blue-600 text-white shadow-xs transition duration-150 hover:bg-blue-700 active:scale-95 disabled:cursor-not-allowed disabled:bg-stone-200 disabled:text-stone-400"
             >
-              <svg
-                className="h-4 w-4 sm:h-4.5 sm:w-4.5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth="2.5"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M5 12h14M12 5l7 7-7 7"
-                />
+              <svg className="h-4 w-4 sm:h-4.5 sm:w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
               </svg>
             </button>
           </div>

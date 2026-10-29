@@ -52,6 +52,15 @@ export const metadata: Metadata = {
         locale: "en_IN",
         type: "website",
     },
+    icons: {
+        icon: [
+            { url: "/logo/icon2.png", type: "image/png" },
+        ],
+        apple: [
+            { url: "/logo/icon2.png", type: "image/png" },
+        ],
+        shortcut: "/logo/icon2.png",
+    },
 };
 
 // Root LocalBusiness & Organization Schema for Google Knowledge Graph & Local SEO
